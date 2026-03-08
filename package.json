@@ -9,6 +9,7 @@
     "start": "NODE_ENV=production bun src/index.ts"
   },
   "dependencies": {
+    "@clerk/backend": "^3.0.1",
     "@clerk/react": "^6.0.1",
     "react": "^19",
     "react-dom": "^19",
