@@ -4,6 +4,7 @@ import {
   RedirectToSignIn,
   CreateOrganization,
 } from "@clerk/react";
+import { clerkAppearance } from "../lib/clerk-appearance.ts";
 
 type OrgGateProps = {
   children: React.ReactNode;
@@ -42,6 +43,7 @@ function OrgGateContent({ children }: OrgGateProps) {
         <CreateOrganization
           afterCreateOrganizationUrl="/dashboard"
           skipInvitationScreen
+          appearance={clerkAppearance}
         />
       </div>
     );

@@ -20,14 +20,16 @@ import { OrgGate } from "./components/OrgGate";
 export function App() {
   const location = useLocation();
   const isLanding = location.pathname === "/";
+  const isAuthPage = location.pathname === "/sign-in" || location.pathname === "/sign-up";
+  const showNav = !isLanding && !isAuthPage;
 
   return (
     <div
       className={
-        isLanding ? "min-h-screen bg-white" : "min-h-screen p-6"
+        isLanding || isAuthPage ? "min-h-screen bg-white" : "min-h-screen p-6"
       }
     >
-      {!isLanding && (
+      {showNav && (
         <nav className="mb-6 flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-gray-600 pb-4">
           <Link to="/" className="text-blue-500 hover:underline">
             Home
@@ -71,16 +73,34 @@ export function App() {
         <Route
           path="/sign-in"
           element={
-            <div style={{ display: "flex", justifyContent: "center", padding: "2rem" }}>
-              <SignIn fallbackRedirectUrl="/" signUpUrl="/sign-up" />
+            <div className="relative flex min-h-screen flex-col items-center justify-center bg-white p-6">
+              <Link
+                to="/"
+                className="absolute left-6 top-6 font-mono text-sm font-medium uppercase text-zinc-600 transition hover:text-zinc-900"
+              >
+                ← Back
+              </Link>
+              <SignIn
+                fallbackRedirectUrl="/"
+                signUpUrl="/sign-up"
+              />
             </div>
           }
         />
         <Route
           path="/sign-up"
           element={
-            <div style={{ display: "flex", justifyContent: "center", padding: "2rem" }}>
-              <SignUp fallbackRedirectUrl="/" signInUrl="/sign-in" />
+            <div className="relative flex min-h-screen flex-col items-center justify-center bg-white p-6">
+              <Link
+                to="/"
+                className="absolute left-6 top-6 font-mono text-sm font-medium uppercase text-zinc-600 transition hover:text-zinc-900"
+              >
+                ← Back
+              </Link>
+              <SignUp
+                fallbackRedirectUrl="/"
+                signInUrl="/sign-in"
+              />
             </div>
           }
         />

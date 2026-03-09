@@ -45,15 +45,15 @@ export function Sidebar() {
       <div className="border-t border-zinc-200 pt-6">
         <div className="flex flex-col gap-3">
           <Show when="signed-out">
-            <SignUpButton mode="modal">
+            <SignUpButton mode="redirect" forceRedirectUrl="/">
               <button
                 type="button"
-                className="font-mono w-full rounded-none border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-medium uppercase text-zinc-900 transition hover:bg-zinc-100"
+                className="font-mono w-full rounded-none border border-zinc-900 bg-zinc-900 px-4 py-3 text-sm font-medium uppercase text-white transition hover:bg-zinc-800"
               >
-                Get started
+                GET STARTED FOR FREE
               </button>
             </SignUpButton>
-            <SignInButton mode="modal">
+            <SignInButton mode="redirect" forceRedirectUrl="/">
               <button
                 type="button"
                 className="font-mono block w-full rounded-none border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-medium uppercase text-zinc-900 transition hover:bg-zinc-100"
@@ -70,7 +70,7 @@ export function Sidebar() {
               Dashboard
             </Link>
             <div className="flex justify-center">
-              <UserButton afterSignOutUrl="/" />
+              <UserButton />
             </div>
           </Show>
         </div>
