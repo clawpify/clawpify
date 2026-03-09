@@ -1,4 +1,5 @@
 import { useAudit } from "../context";
+import { BrandFavicon } from "./BrandFavicon";
 
 const GlobeIcon = () => (
   <svg
@@ -155,12 +156,15 @@ export function AuditForm() {
     generatedPrompts,
     setGeneratedPrompts,
     generatedCompetitors,
+    setGeneratedCompetitors,
     runChatGPTSearch,
     setRunChatGPTSearch,
     step,
   } = useAudit();
 
-  const isGenerating = step === "generating";
+  const isLoadingPrompts = step === "generating";
+  const isAnalyzing = step === "loading";
+  const isGenerating = isLoadingPrompts || isAnalyzing;
 
   const handleStep1Next = async () => {
     if (!form.website_url.trim() || !form.company_name.trim()) return;
@@ -173,6 +177,14 @@ export function AuditForm() {
 
   const removePrompt = (i: number) => {
     setGeneratedPrompts((prev) => prev.filter((_, idx) => idx !== i));
+  };
+
+  const addCompetitor = () => {
+    setGeneratedCompetitors((prev) => [...prev, ""]);
+  };
+
+  const removeCompetitor = (i: number) => {
+    setGeneratedCompetitors((prev) => prev.filter((_, idx) => idx !== i));
   };
 
   const canProceedStep1 = form.website_url.trim() && form.company_name.trim();
@@ -191,7 +203,36 @@ export function AuditForm() {
         </p>
       )}
 
-      {formStep === 1 && (
+      {isLoadingPrompts && (
+        <section className="space-y-4">
+          <label className="block text-sm font-normal text-zinc-600">
+            Prompts
+          </label>
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 py-2.5">
+              <div className="h-5 w-5 shrink-0 animate-pulse rounded bg-zinc-200" />
+              <div className="h-4 flex-1 animate-pulse rounded bg-zinc-200" />
+              <div className="h-4 w-4 shrink-0 animate-pulse rounded bg-zinc-200" />
+            </div>
+            <div className="space-y-2">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <div
+                  key={i}
+                  className="flex items-start gap-2 rounded-lg border border-zinc-200 bg-white px-3 py-2.5"
+                >
+                  <div className="min-h-[2.5rem] flex-1 animate-pulse rounded bg-zinc-200" />
+                </div>
+              ))}
+            </div>
+            <div className="flex w-full items-center gap-2 rounded-lg border border-dashed border-zinc-300 px-3 py-2">
+              <div className="h-5 w-5 shrink-0 animate-pulse rounded bg-zinc-200" />
+              <div className="h-4 flex-1 animate-pulse rounded bg-zinc-200" />
+            </div>
+          </div>
+        </section>
+      )}
+
+      {!isLoadingPrompts && formStep === 1 && (
         <>
           <section className="space-y-4">
             <label className="block text-sm font-normal text-zinc-600">
@@ -226,7 +267,7 @@ export function AuditForm() {
         </>
       )}
 
-      {formStep === 2 && (
+      {!isLoadingPrompts && formStep === 2 && (
         <>
           <section className="space-y-4">
             <label className="block text-sm font-normal text-zinc-600">
@@ -301,22 +342,61 @@ export function AuditForm() {
         </>
       )}
 
-      {formStep === 3 && (
+      {!isLoadingPrompts && formStep === 3 && (
         <>
           <section className="space-y-4">
             <label className="block text-sm font-normal text-zinc-600">
               Competitors & Analyze
             </label>
-            <div className="flex items-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 py-3">
-              <MetricIcon />
-              <span className="flex-1 text-sm text-zinc-600">
-                {generatedCompetitors.length > 0 ? (
-                  generatedCompetitors.join(", ")
-                ) : (
-                  <span className="text-zinc-400">No competitors suggested</span>
-                )}
-              </span>
-              <ChevronDownIcon />
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 py-2.5">
+                <MetricIcon />
+                <span className="flex-1 text-sm text-zinc-600">
+                  {generatedCompetitors.length} competitor
+                  {generatedCompetitors.length !== 1 ? "s" : ""}
+                </span>
+                <ChevronDownIcon />
+              </div>
+
+              <div className="space-y-1.5">
+                {generatedCompetitors.map((c, i) => (
+                  <div
+                    key={i}
+                    className="flex items-center gap-2 rounded-lg border border-zinc-200 bg-white px-2.5 py-1.5"
+                  >
+                    {c.trim() && (
+                      <BrandFavicon brand={c} />
+                    )}
+                    <input
+                      type="text"
+                      value={c}
+                      onChange={(e) =>
+                        setGeneratedCompetitors((prev) => {
+                          const next = [...prev];
+                          next[i] = e.target.value;
+                          return next;
+                        })
+                      }
+                      placeholder="Competitor name"
+                      className="min-h-[1.75rem] min-w-0 flex-1 bg-transparent text-sm text-zinc-900 placeholder-zinc-400 focus:outline-none"
+                    />
+                    {generatedCompetitors.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removeCompetitor(i)}
+                        className="shrink-0 rounded p-1 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-900"
+                        aria-label="Remove competitor"
+                      >
+                        ×
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              <DashedButton icon={ListIcon} onClick={addCompetitor}>
+                Add competitor
+              </DashedButton>
             </div>
           </section>
 
@@ -348,9 +428,10 @@ export function AuditForm() {
             <button
               type="button"
               onClick={submit}
-              className="flex-1 rounded-lg bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-zinc-800"
+              disabled={isAnalyzing}
+              className="flex-1 rounded-lg bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-zinc-800 disabled:opacity-50"
             >
-              Analyze
+              {isAnalyzing ? "Analyzing..." : "Analyze"}
             </button>
           </div>
         </>

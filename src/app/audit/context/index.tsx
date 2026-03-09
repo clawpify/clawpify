@@ -54,7 +54,7 @@ export function AuditProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null);
 
   const reset = useCallback(() => {
-    setStep("results");
+    setStep("form");
     setFormStep(1);
     setForm(defaultForm);
     setGeneratedPrompts([]);
@@ -83,8 +83,11 @@ export function AuditProvider({ children }: { children: ReactNode }) {
         parsed.data.company_name
       );
       setGeneratedPrompts(prompts);
-      setGeneratedCompetitors(competitors);
+      const normalized = competitors.slice(0, 7);
+      while (normalized.length < 7) normalized.push("");
+      setGeneratedCompetitors(normalized);
       setFormStep(2);
+      setStep("form");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to generate");
       setStep("results");
@@ -122,11 +125,13 @@ export function AuditProvider({ children }: { children: ReactNode }) {
         if (d.status === "completed") {
           setData(d);
           setStep("results");
+          setFormStep(1);
           return;
         }
         if (d.status === "failed") {
           setError("The citation check failed. Please try again.");
           setStep("results");
+          setFormStep(1);
           return;
         }
         setTimeout(poll, 2000);
@@ -136,6 +141,7 @@ export function AuditProvider({ children }: { children: ReactNode }) {
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong");
       setStep("results");
+      setFormStep(1);
     }
   }, [form, generatedPrompts, runChatGPTSearch]);
 

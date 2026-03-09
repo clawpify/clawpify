@@ -1,6 +1,26 @@
 import { useEffect, useState } from "react";
+import ReactMarkdown from "react-markdown";
+import rehypeRaw from "rehype-raw";
+import remarkGfm from "remark-gfm";
 import type { CitationResult } from "../types";
 import { asStringArray } from "../types";
+
+const LinkIcon = () => (
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className="text-gray-400"
+  >
+    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+  </svg>
+);
 
 const XIcon = () => (
   <svg
@@ -18,6 +38,16 @@ const XIcon = () => (
   </svg>
 );
 
+const KNOWN_PLATFORMS: Record<string, string> = {
+  "wordpress.org": "WordPress",
+  "shopify.com": "Shopify",
+  "woocommerce.com": "WooCommerce",
+  "magento.com": "Magento",
+  "bigcommerce.com": "BigCommerce",
+  "squarespace.com": "Squarespace",
+  "wix.com": "Wix",
+};
+
 function domainFromUrl(url: string): string {
   try {
     const u = new URL(url);
@@ -25,6 +55,14 @@ function domainFromUrl(url: string): string {
   } catch {
     return url;
   }
+}
+
+function platformFromDomain(domain: string): string | null {
+  const d = domain.toLowerCase();
+  for (const [key, label] of Object.entries(KNOWN_PLATFORMS)) {
+    if (d === key || d.endsWith(`.${key}`)) return label;
+  }
+  return null;
 }
 
 function titleFromUrl(url: string): string {
@@ -35,6 +73,54 @@ function titleFromUrl(url: string): string {
   } catch {
     return url.slice(0, 50) + (url.length > 50 ? "..." : "");
   }
+}
+
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function sanitizeResponseText(text: string): string {
+  let out = text
+    .replace(/\btirn0news\b/gi, "turn0news")
+    .replace(/[\uE000-\uF8FF]/g, "");
+  return out.replace(/\n{3,}/g, "\n\n").trim();
+}
+
+function replaceCitationsWithTags(text: string, urls: string[]): string {
+  const tagClass =
+    "inline-flex items-center gap-1 rounded-full border border-zinc-200 bg-white px-2 py-0.5 text-xs font-medium text-zinc-700";
+  return text.replace(
+    /(citeturn\d+(?:search|academia|news)\d*(?:turn\d+(?:search|academia|news)\d*)*)/gi,
+    (match) => {
+      const labels: string[] = [];
+      const re = /(?:cite)?turn\d+(search|academia|news)(\d*)/gi;
+      let m;
+      while ((m = re.exec(match)) !== null) {
+        const type = m[1]!.charAt(0).toUpperCase() + m[1]!.slice(1);
+        const num = m[2] || "";
+        labels.push(`${type} ${num}`.trim());
+      }
+      if (labels.length === 0) return "";
+      return labels
+        .map((l, i) => {
+          const url = urls[i];
+          const domain = url ? domainFromUrl(url) : "";
+          const faviconUrl = domain
+            ? `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=32`
+            : "";
+          const faviconHtml = faviconUrl
+            ? `<img src="${escapeHtml(faviconUrl)}" alt="" class="h-3 w-3 shrink-0 object-contain" />`
+            : "";
+          return `<span class="${tagClass}">${faviconHtml}${escapeHtml(l)}</span>`;
+        })
+        .join(" ");
+    }
+  );
 }
 
 type Props = {
@@ -89,12 +175,25 @@ export function ChatDetailView({ result, onClose }: Props) {
 
               <div>
                 <p className="text-xs font-medium uppercase tracking-wider text-gray-400">
-                  Direct answer
+                  AI output
+                </p>
+                <p className="mt-0.5 text-xs text-gray-500">
+                  AI&apos;s response to this prompt
                 </p>
                 <div className="mt-2">
                   {result.response_text ? (
-                    <div className="whitespace-pre-wrap font-sans text-sm leading-relaxed text-gray-900">
-                      {result.response_text}
+                    <div className="font-sans text-sm leading-relaxed text-gray-900 [&_ul]:list-disc [&_ol]:list-decimal [&_ul]:my-2 [&_ol]:my-2 [&_ul]:pl-5 [&_ol]:pl-5 [&_li]:my-0.5 [&_strong]:font-semibold [&_p]:my-2 [&_h1]:text-lg [&_h2]:text-base [&_h3]:text-sm [&_h1]:font-bold [&_h2]:font-bold [&_h3]:font-semibold [&_h1]:mt-4 [&_h2]:mt-3 [&_h3]:mt-2 [&_table]:my-4 [&_table]:min-w-full [&_table]:border-collapse [&_th]:border [&_th]:border-gray-200 [&_th]:bg-gray-50 [&_th]:px-3 [&_th]:py-2 [&_th]:text-left [&_th]:text-xs [&_th]:font-medium [&_th]:uppercase [&_th]:tracking-wider [&_th]:text-gray-600 [&_td]:border [&_td]:border-gray-200 [&_td]:px-3 [&_td]:py-2 [&_td]:text-sm [&_td]:align-top [&_td]:break-words [&_thead]:bg-gray-50">
+                      <div className="overflow-x-auto">
+                        <ReactMarkdown
+                          remarkPlugins={[remarkGfm]}
+                          rehypePlugins={[rehypeRaw]}
+                        >
+                          {replaceCitationsWithTags(
+                            sanitizeResponseText(result.response_text),
+                            urls
+                          )}
+                        </ReactMarkdown>
+                      </div>
                     </div>
                   ) : (
                     <p className="font-sans text-sm text-gray-500">
@@ -106,8 +205,8 @@ export function ChatDetailView({ result, onClose }: Props) {
             </div>
           </div>
 
-          <aside className="w-full border-t border-gray-200 bg-gray-50 sm:w-80 sm:border-l sm:border-t-0">
-            <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3">
+          <aside className="flex min-h-0 w-full flex-col overflow-hidden border-t border-gray-200 bg-gray-50 sm:w-80 sm:border-l sm:border-t-0">
+            <div className="shrink-0 flex items-center justify-between border-b border-gray-200 px-4 py-3">
               <h3 className="font-sans text-sm font-semibold text-gray-900">
                 Details
               </h3>
@@ -120,7 +219,7 @@ export function ChatDetailView({ result, onClose }: Props) {
                 <XIcon />
               </button>
             </div>
-            <div className="space-y-4 p-4">
+            <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4">
               <div>
                 <p className="mb-2 font-sans text-xs font-medium uppercase tracking-wider text-gray-500">
                   Search query
@@ -157,21 +256,50 @@ export function ChatDetailView({ result, onClose }: Props) {
                 ) : (
                   <>
                     <ul className="space-y-2">
-                      {displaySources.map((url) => (
-                        <li key={url}>
-                          <a
-                            href={url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="block font-sans text-sm text-blue-600 hover:underline"
-                          >
-                            {titleFromUrl(url)}
-                          </a>
-                          <p className="font-sans text-xs text-gray-500">
-                            {domainFromUrl(url)}
-                          </p>
-                        </li>
-                      ))}
+                      {displaySources.map((url) => {
+                        const domain = domainFromUrl(url);
+                        const platform = platformFromDomain(domain);
+                        const faviconUrl = `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=32`;
+                        return (
+                          <li key={url} className="flex items-start gap-2">
+                            <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center overflow-hidden rounded bg-gray-100">
+                              <img
+                                src={faviconUrl}
+                                alt=""
+                                className="h-4 w-4 object-contain"
+                                onError={(e) => {
+                                  e.currentTarget.style.display = "none";
+                                  const fallback = e.currentTarget.nextElementSibling as HTMLElement | null;
+                                  if (fallback) fallback.style.display = "flex";
+                                }}
+                              />
+                              <span className="hidden h-4 w-4 items-center justify-center" style={{ display: "none" }}>
+                                <LinkIcon />
+                              </span>
+                            </span>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex flex-wrap items-center gap-1.5">
+                                <a
+                                  href={url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="font-sans text-sm text-blue-600 hover:underline"
+                                >
+                                  {titleFromUrl(url)}
+                                </a>
+                                {platform && (
+                                  <span className="rounded bg-gray-200 px-1.5 py-0.5 font-sans text-xs text-gray-600">
+                                    ({platform})
+                                  </span>
+                                )}
+                              </div>
+                              <p className="font-sans text-xs text-gray-500">
+                                {domain}
+                              </p>
+                            </div>
+                          </li>
+                        );
+                      })}
                     </ul>
                     {hasMore && (
                       <button

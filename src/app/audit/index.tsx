@@ -10,8 +10,8 @@ function AuditContent() {
   const { step, data } = useAudit();
 
   const showEmptyState =
-    (step === "results" || step === "form") && !data;
-  const showLoading = step === "loading" || step === "generating";
+    (step === "results" || step === "form" || step === "generating") && !data;
+  const showLoading = step === "loading";
   const showResults = step === "results" && data;
 
   return (
@@ -24,12 +24,6 @@ function AuditContent() {
           </span>
         </Link>
         <div className="flex items-center gap-4">
-          <Link
-            to="/audit/web-search"
-            className="font-mono text-sm font-medium uppercase tracking-wide text-zinc-600 transition hover:text-zinc-900"
-          >
-            Web Search
-          </Link>
           <Show when="signed-out">
             <SignInButton mode="redirect" forceRedirectUrl="/audit">
               <button
@@ -53,11 +47,7 @@ function AuditContent() {
             {showLoading && (
               <div className="flex flex-1 flex-col items-center justify-center p-8">
                 <AuditLoading
-                  message={
-                    step === "generating"
-                      ? "Generating prompts and competitor suggestions..."
-                      : undefined
-                  }
+                  message="Generating prompts and competitor suggestions..."
                 />
               </div>
             )}

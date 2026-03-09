@@ -377,18 +377,42 @@ pub(crate) fn normalize_domain(url: &str) -> String {
     url.split('/').next().unwrap_or("").to_string()
 }
 
+/// Common words to exclude from brand extraction (false positives).
+const STOPWORDS: &[&str] = &[
+    "a", "an", "the", "and", "or", "but", "in", "on", "at", "to", "for", "of", "with", "by",
+    "from", "as", "is", "was", "are", "were", "be", "been", "being", "have", "has", "had",
+    "do", "does", "did", "will", "would", "could", "should", "may", "might", "must", "can",
+    "one", "two", "most", "more", "many", "some", "any", "all", "each", "every", "both",
+    "few", "other", "another", "such", "no", "not", "only", "own", "same", "so", "than",
+    "too", "very", "just", "also", "now", "here", "there", "when", "where", "why", "how",
+    "remains", "ranks", "leads", "offers", "provides", "includes", "supports", "enables",
+    "adopted", "widely", "public", "preview", "space", "model", "version", "based",
+    "privacy", "centric", "assistance", "developer", "development", "software", "code",
+    "tools", "platform", "solution", "service", "product", "company", "enterprise",
+    "integration", "workflow", "automation", "intelligence", "learning", "generative",
+];
+
+fn is_stopword(s: &str) -> bool {
+    let lower = s.to_lowercase();
+    STOPWORDS.iter().any(|&w| w == lower)
+}
+
 fn extract_brands_from_text(text: &str) -> Vec<String> {
     let mut brands = Vec::new();
     let re = regex::Regex::new(r"(?i)\b([A-Z][a-zA-Z0-9]+(?:\s+[A-Z][a-zA-Z0-9]+)*)\b").ok();
     if let Some(re) = re {
         for cap in re.captures_iter(text) {
             let name = cap.get(1).map(|m| m.as_str().trim().to_string()).unwrap_or_default();
-            if name.len() >= 2 && name.len() <= 50 && !brands.contains(&name) {
+            if name.len() >= 2
+                && name.len() <= 50
+                && !brands.contains(&name)
+                && !is_stopword(&name)
+            {
                 brands.push(name);
             }
         }
     }
-    brands.truncate(20);
+    brands.truncate(30);
     brands
 }
 
@@ -448,6 +472,7 @@ async fn run_citation_check(
                 "model": "gpt-4o",
                 "input": query,
                 "tools": [{ "type": "web_search" }],
+                "tool_choice": "required",
                 "include": ["web_search_call.action.sources"]
             });
 
