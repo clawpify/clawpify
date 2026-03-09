@@ -2,7 +2,7 @@ import { copy } from "../utils/copy";
 
 export function Testimonials() {
   return (
-    <section className="bg-zinc-50/50 py-24">
+    <section className="bg-[#f2f3f1] py-24">
       <div className="mx-auto max-w-4xl px-6">
         <div className="grid gap-8 md:grid-cols-2">
           {copy.testimonials.map(({ quote, author, role, company }) => (

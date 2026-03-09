@@ -1,6 +1,10 @@
 import { copy } from "../../utils/copy";
 
-export function StoresHeader() {
+export function StoresHeader({
+  onNewStore,
+}: {
+  onNewStore: () => void;
+}) {
   return (
     <header className="shrink-0 border-b border-gray-200 bg-white px-6 py-4">
       <div className="flex flex-wrap items-center justify-between gap-4">
@@ -25,6 +29,7 @@ export function StoresHeader() {
         </div>
         <button
           type="button"
+          onClick={onNewStore}
           className="rounded-md bg-[#2563eb] px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-600"
         >
           + {copy.header.newStore}

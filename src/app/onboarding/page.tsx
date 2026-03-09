@@ -41,7 +41,7 @@ export function OnboardingPage() {
 
   if (!user) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-white">
+      <div className="flex min-h-screen items-center justify-center bg-[#f2f3f1]">
         <span className="text-zinc-500">Loading...</span>
       </div>
     );
@@ -53,7 +53,7 @@ export function OnboardingPage() {
   }
 
   return (
-    <div className="relative flex min-h-screen flex-col items-center justify-center bg-white p-6">
+    <div className="relative flex min-h-screen flex-col items-center justify-center bg-[#f2f3f1] p-6">
       <Link
         to="/"
         className="absolute left-6 top-6 text-sm font-medium text-zinc-600 transition hover:text-zinc-900"

@@ -5,7 +5,7 @@ export const copy = {
       "Optimize product data, reveal which prompts convert, and earn more from AI-driven purchases.",
   },
   hero: {
-    headline: "Bring in discovery into the Agent economy",
+    headline: "Bring discovery into the Agent economy",
     rotatingWords: ["Commerce", "B2B", "SaaS", "E-commerce", "Agents"],
     subline:
       "Audits that reveal which prompts convert. Optimization methods that make agents buy.",
@@ -32,7 +32,17 @@ export const copy = {
   features: [
     { title: "Commerce" },
     { title: "B2B" },
-    { title: "SaaS" },
+    { title: "A2A" },
+  ],
+  introAiSearch: {
+    heading: "See what AI thinks about your brand",
+    paragraph:
+      "See what a council of AI models thinks about your prompt within AI search—and how you stack up against competitors.",
+  },
+  featuresAiSearch: [
+    { title: "AI Search" },
+    { title: "Competitors" },
+    { title: "Prompts" },
   ],
   howItWorks: {
     title: "How it works",
@@ -70,7 +80,7 @@ export const copy = {
         heading: "Company",
         links: [
           { label: "Home", href: "/" },
-          { label: "About", href: "#" },
+          { label: "About", href: "/about" },
           { label: "Writing", href: "#" },
         ],
       },

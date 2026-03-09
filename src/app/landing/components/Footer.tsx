@@ -3,7 +3,7 @@ import { copy } from "../utils/copy";
 
 export function Footer() {
   return (
-    <footer className="relative flex flex-col items-center border-t border-zinc-200 bg-white pt-8 pb-12">
+    <footer className="relative flex flex-col items-center border-t border-zinc-200 bg-[#f2f3f1] pt-8 pb-12">
       <div className="mx-auto flex max-w-6xl flex-col items-center px-6 text-center md:px-10 lg:px-12">
         {/* Nav columns */}
         <div className="flex flex-wrap justify-center gap-x-12 gap-y-6 md:gap-x-16">

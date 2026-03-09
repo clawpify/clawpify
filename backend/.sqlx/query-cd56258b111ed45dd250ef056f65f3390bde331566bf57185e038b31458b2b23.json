@@ -1,0 +1,64 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id, audit_id, product_id, product_title, scores, recommendations, raw_data, created_at FROM audit_results WHERE audit_id = $1 ORDER BY created_at",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "audit_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "product_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "product_title",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "scores",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 5,
+        "name": "recommendations",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 6,
+        "name": "raw_data",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 7,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false
+    ]
+  },
+  "hash": "cd56258b111ed45dd250ef056f65f3390bde331566bf57185e038b31458b2b23"
+}

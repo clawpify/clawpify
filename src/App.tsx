@@ -11,6 +11,9 @@ import {
 import "./index.css";
 
 import { LandingPage } from "./app/landing";
+import { AuditPage } from "./app/audit";
+import { WebSearchInfo } from "./app/audit/components/WebSearchInfo";
+import { AboutPage } from "./app/about/page";
 import {
   WorkspaceLayout,
   HomePage,
@@ -32,20 +35,23 @@ import { OnboardingGate } from "./components/OnboardingGate";
 export function App() {
   const location = useLocation();
   const isLanding = location.pathname === "/";
+  const isAudit =
+    location.pathname === "/audit" || location.pathname.startsWith("/audit/");
+  const isAbout = location.pathname === "/about";
   const isAuthPage =
     location.pathname === "/sign-in" || location.pathname === "/sign-up";
   const isOnboarding = location.pathname === "/onboarding";
   const isWorkspace =
     location.pathname === "/app" || location.pathname.startsWith("/app/");
   const showNav =
-    !isLanding && !isAuthPage && !isOnboarding && !isWorkspace;
+    !isLanding && !isAudit && !isAbout && !isAuthPage && !isOnboarding && !isWorkspace;
 
   return (
     <div
       className={
-        isLanding || isAuthPage || isOnboarding || isWorkspace
-          ? "min-h-screen bg-white"
-          : "min-h-screen p-6"
+        isLanding || isAudit || isAbout || isAuthPage || isOnboarding || isWorkspace
+          ? "min-h-screen bg-[#f2f3f1]"
+          : "min-h-screen bg-[#f2f3f1] p-6"
       }
     >
       {showNav && (
@@ -89,6 +95,9 @@ export function App() {
 
       <Routes>
         <Route path="/" element={<LandingPage />} />
+        <Route path="/about" element={<AboutPage />} />
+        <Route path="/audit" element={<AuditPage />} />
+        <Route path="/audit/web-search" element={<WebSearchInfo />} />
         <Route path="/onboarding" element={<OnboardingPage />} />
         <Route
           path="/app"
@@ -112,7 +121,7 @@ export function App() {
         <Route
           path="/sign-in"
           element={
-            <div className="relative flex min-h-screen flex-col items-center justify-center bg-white p-6">
+            <div className="relative flex min-h-screen flex-col items-center justify-center bg-[#f2f3f1] p-6">
               <Link
                 to="/"
                 className="absolute left-6 top-6 font-mono text-sm font-medium uppercase text-zinc-600 transition hover:text-zinc-900"
@@ -129,7 +138,7 @@ export function App() {
         <Route
           path="/sign-up"
           element={
-            <div className="relative flex min-h-screen flex-col items-center justify-center bg-white p-6">
+            <div className="relative flex min-h-screen flex-col items-center justify-center bg-[#f2f3f1] p-6">
               <Link
                 to="/"
                 className="absolute left-6 top-6 font-mono text-sm font-medium uppercase text-zinc-600 transition hover:text-zinc-900"

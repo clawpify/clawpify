@@ -1,12 +1,11 @@
 import { Sidebar } from "./components/Sidebar";
-import { Intro } from "./components/Intro";
-import { Features } from "./components/Features";
+import { IntroFeaturesSection } from "./components/IntroFeaturesSection";
 import { Footer } from "./components/Footer";
 import { copy } from "./utils/copy";
 
 export function LandingPage() {
   return (
-    <div className="landing flex min-h-screen bg-white">
+    <div className="landing flex min-h-screen bg-[#f2f3f1]">
       <Sidebar />
       <div className="flex flex-1 flex-col min-w-0">
         <div className="hero-pattern shrink-0 px-6 pt-9 pb-[110px] md:px-10 md:pt-9 md:pb-[110px] lg:px-12">
@@ -15,8 +14,18 @@ export function LandingPage() {
           </h1>
         </div>
         <main className="flex-1 overflow-y-auto">
-          <Intro />
-          <Features />
+          <IntroFeaturesSection
+            heading={copy.intro.heading}
+            paragraph={copy.intro.paragraph}
+            features={copy.features}
+            sectionId="products"
+          />
+          <IntroFeaturesSection
+            heading={copy.introAiSearch.heading}
+            paragraph={copy.introAiSearch.paragraph}
+            features={copy.featuresAiSearch}
+            sectionId="ai-search"
+          />
           <Footer />
         </main>
       </div>

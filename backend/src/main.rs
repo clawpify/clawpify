@@ -1,14 +1,15 @@
 use axum::{
     extract::Request,
-    http::StatusCode,
     middleware::{self, Next},
     response::{IntoResponse, Response},
-    routing::{get, put},
-    Json, Router,
+    routing::{get, post, put},
+    Extension, Json, Router,
 };
 use serde::Serialize;
 use std::net::SocketAddr;
 use tower_http::cors::{Any, CorsLayer};
+
+use backend::{audit, db, stores};
 
 #[derive(Serialize)]
 struct ApiResponse {
@@ -29,7 +30,7 @@ async fn require_internal_auth(request: Request, next: Next) -> Response {
 
     if user_id.is_none() {
         return (
-            StatusCode::UNAUTHORIZED,
+            axum::http::StatusCode::UNAUTHORIZED,
             Json(ErrorResponse {
                 error: "Missing internal auth header",
             }),
@@ -42,6 +43,12 @@ async fn require_internal_auth(request: Request, next: Next) -> Response {
 
 #[tokio::main]
 async fn main() {
+    dotenvy::dotenv().ok();
+    let database_url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+    let pool = db::create_pool(&database_url)
+        .await
+        .expect("Failed to create DB pool");
+
     let cors = CorsLayer::new()
         .allow_origin(Any)
         .allow_methods(Any)
@@ -50,10 +57,25 @@ async fn main() {
     let protected = Router::new()
         .route("/api/radar", get(|| async { Json(ApiResponse { ok: true, message: "radar" }) }))
         .route("/api/shield", put(|| async { Json(ApiResponse { ok: true, message: "shield" }) }))
-        .route_layer(middleware::from_fn(require_internal_auth));
+        .route("/api/stores", get(stores::list_stores).post(stores::create_store))
+        .route("/api/audits", post(audit::create_audit))
+        .route("/api/audits/:id", get(audit::get_audit))
+        .route_layer(middleware::from_fn(require_internal_auth))
+        .layer(Extension(pool.clone()));
+
+    let public = Router::new()
+        .route("/api/health", get(|| async { Json(serde_json::json!({ "ok": true, "service": "clawpify-backend" })) }))
+        .route(
+            "/api/chatgpt-citation/generate",
+            post(audit::citation::generate_prompts_and_competitors),
+        )
+        .route("/api/chatgpt-citation", post(audit::citation::create_citation))
+        .route("/api/chatgpt-citation/:id", get(audit::citation::get_citation))
+        .layer(Extension(pool));
 
     let app = Router::new()
         .merge(protected)
+        .merge(public)
         .layer(cors);
 
     let addr = SocketAddr::from(([127, 0, 0, 1], 3000));

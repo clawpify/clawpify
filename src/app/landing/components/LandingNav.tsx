@@ -4,16 +4,16 @@ import { Show, SignInButton, UserButton } from "@clerk/react";
 import logo from "../../../logo.svg";
 
 const navLinks = [
-  { label: "features", href: "#features" },
+  { label: "products", href: "#products" },
   { label: "pricing", href: "#pricing" },
-  { label: "about", href: "#about" },
+  { label: "about", href: "/about" },
   { label: "blog", href: "#blog" },
 ];
 
 export function LandingNav() {
   return (
     <div className="sticky top-0 z-50">
-      <nav className="mx-auto flex max-w-7xl items-center justify-between bg-white/90 px-6 py-4 backdrop-blur-sm">
+      <nav className="mx-auto flex max-w-7xl items-center justify-between bg-[#f2f3f1]/90 px-6 py-4 backdrop-blur-sm">
         <Link to="/" className="flex items-center gap-2">
           <img
             src={logo}

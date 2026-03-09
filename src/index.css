@@ -2,32 +2,37 @@
 @import "tailwindcss";
 
 :root {
-  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   line-height: 1.5;
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
+  color-scheme: light;
+  --site-bg: #f2f3f1;
+}
+
+html,
+body {
+  background-color: var(--site-bg);
+  color: #18181b;
 }
 
 /* Landing page theme - Base-style */
 .landing {
-  --landing-bg: #ffffff;
+  --landing-bg: #f2f3f1;
   --landing-accent: #111111;
 }
 
 /* Workspace theme - Linear-style light mode */
 .workspace {
-  --workspace-bg: #ffffff;
-  --workspace-sidebar-bg: #f9fafb;
+  --workspace-bg: #f2f3f1;
+  --workspace-sidebar-bg: #f2f3f1;
   --workspace-border: #e5e7eb;
   --workspace-text: #111827;
   --workspace-text-muted: #6b7280;
   --workspace-accent: #2563eb;
 }
 
-/* Hero: plain white background */
+/* Hero: site background */
 .hero-bg {
-  background-color: #ffffff;
+  background-color: var(--site-bg);
 }
 
 /* Hero: subtle radial pattern (Base-style) */
@@ -40,8 +45,13 @@
 }
 
 .hero-headline {
-  font-family: system-ui, -apple-system, sans-serif;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
   font-weight: 500;
+}
+
+/* About page: explicit monospace (matches sidebar nav) */
+.about-mono {
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, Consolas, monospace !important;
 }
 
 @keyframes slideIn {

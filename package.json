@@ -5,15 +5,21 @@
   "type": "module",
   "scripts": {
     "dev": "bun --hot src/index.ts",
+    "test:backend": "cd backend && SQLX_OFFLINE=true cargo test --lib audit::",
+    "test:backend:integration": "cd backend && cargo test --test llm_citation_test -- --ignored",
     "build": "bun build ./src/index.html --outdir=dist --sourcemap --target=browser --minify --define:process.env.NODE_ENV='\"production\"' --env='BUN_PUBLIC_*' --env='VITE_*'",
     "start": "NODE_ENV=production bun src/index.ts"
   },
   "dependencies": {
     "@clerk/backend": "^3.0.1",
     "@clerk/react": "^6.0.1",
+    "@mendable/firecrawl-js": "^4.15.4",
     "react": "^19",
     "react-dom": "^19",
-    "react-router-dom": "^7.13.1"
+    "react-router-dom": "^7.13.1",
+    "chart.js": "^4.4.0",
+    "react-chartjs-2": "^5.2.0",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@types/bun": "latest",

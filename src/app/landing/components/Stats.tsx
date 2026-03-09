@@ -8,7 +8,7 @@ export function Stats() {
   ];
 
   return (
-    <section className="border-y border-zinc-200 bg-zinc-50/80 py-12">
+    <section className="border-y border-zinc-200 bg-[#f2f3f1] py-12">
       <div className="mx-auto flex max-w-4xl flex-wrap items-center justify-center gap-12 px-6">
         {stats.map(({ value, label }) => (
           <div key={label} className="text-center">

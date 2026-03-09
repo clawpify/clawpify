@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO audits (id, store_id, status) VALUES ($1, $2, 'running')",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "4ad0e601469f3a61b3671662e34c052e9fcc3dacea164c8319b3217ab9dd6978"
+}

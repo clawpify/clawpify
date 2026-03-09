@@ -1,35 +1,12 @@
 import { serve } from "bun";
 import index from "./index.html";
 import { requireAuth, AuthError } from "./lib/auth";
-
-const RUST_API_URL = process.env.RUST_API_URL ?? "http://127.0.0.1:3000";
-
-async function proxyToRust(
-  req: Request,
-  path: string,
-  auth: { userId: string; orgId?: string; orgRole?: string }
-): Promise<Response> {
-  const url = new URL(req.url);
-  const backendUrl = `${RUST_API_URL}${path}${url.search}`;
-  const headers = new Headers(req.headers);
-  headers.set("X-Internal-User-Id", auth.userId);
-  if (auth.orgId) headers.set("X-Internal-Org-Id", auth.orgId);
-  if (auth.orgRole) headers.set("X-Internal-Org-Role", auth.orgRole);
-
-  const res = await fetch(backendUrl, {
-    method: req.method,
-    headers,
-    body: req.method !== "GET" && req.method !== "HEAD" ? req.body : undefined,
-  });
-
-  return new Response(res.body, {
-    status: res.status,
-    statusText: res.statusText,
-    headers: res.headers,
-  });
-}
+import { createProxyHandler, proxyToRustPublic } from "./utils/networkFns";
 
 const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 3001;
+
+const proxy = (path: string | ((req: Request) => string)) =>
+  createProxyHandler(path, AuthError, requireAuth);
 
 const server = serve({
   port,
@@ -37,52 +14,63 @@ const server = serve({
     "/*": index,
 
     "/api/hello": {
-      async GET(req) {
-        return Response.json({
-          message: "Hello, world!",
-          method: "GET",
-        });
+      async GET() {
+        return Response.json({ message: "Hello, world!", method: "GET" });
       },
-      async PUT(req) {
-        return Response.json({
-          message: "Hello, world!",
-          method: "PUT",
-        });
+      async PUT() {
+        return Response.json({ message: "Hello, world!", method: "PUT" });
       },
     },
 
     "/api/hello/:name": async req => {
-      const name = req.params.name;
       return Response.json({
-        message: `Hello, ${name}!`,
+        message: `Hello, ${req.params.name}!`,
       });
     },
 
-    "/api/radar": {
+    "/api/health": {
       async GET(req) {
-        try {
-          const auth = await requireAuth(req);
-          return proxyToRust(req, "/api/radar", auth);
-        } catch (e) {
-          if (e instanceof AuthError) {
-            return Response.json({ error: e.message }, { status: 401 });
-          }
-          throw e;
-        }
+        const path = new URL(req.url).pathname;
+        return proxyToRustPublic(req, path);
+      },
+    },
+    "/api/radar": { async GET(req) { return proxy("/api/radar")(req); } },
+    "/api/shield": { async PUT(req) { return proxy("/api/shield")(req); } },
+
+    "/api/stores": {
+      async GET(req) { return proxy("/api/stores")(req); },
+      async POST(req) { return proxy("/api/stores")(req); },
+    },
+
+    "/api/audits": {
+      async POST(req) { return proxy("/api/audits")(req); },
+    },
+
+    "/api/audits/:id": {
+      async GET(req) {
+        const path = new URL(req.url).pathname;
+        return proxy(path)(req);
       },
     },
 
-    "/api/shield": {
-      async PUT(req) {
-        try {
-          const auth = await requireAuth(req);
-          return proxyToRust(req, "/api/shield", auth);
-        } catch (e) {
-          if (e instanceof AuthError) {
-            return Response.json({ error: e.message }, { status: 401 });
-          }
-          throw e;
-        }
+    "/api/chatgpt-citation/generate": {
+      async POST(req) {
+        const path = new URL(req.url).pathname;
+        return proxyToRustPublic(req, path);
+      },
+    },
+
+    "/api/chatgpt-citation": {
+      async POST(req) {
+        const path = new URL(req.url).pathname;
+        return proxyToRustPublic(req, path);
+      },
+    },
+
+    "/api/chatgpt-citation/:id": {
+      async GET(req) {
+        const path = new URL(req.url).pathname;
+        return proxyToRustPublic(req, path);
       },
     },
 
@@ -125,10 +113,7 @@ const server = serve({
   },
 
   development: process.env.NODE_ENV !== "production" && {
-    // Enable browser hot reloading in development
     hmr: true,
-
-    // Echo console logs from the browser to the server
     console: true,
   },
 });

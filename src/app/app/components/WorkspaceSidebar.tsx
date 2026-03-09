@@ -15,7 +15,7 @@ export function WorkspaceSidebar() {
   const location = useLocation();
 
   return (
-    <aside className="workspace-sidebar sticky top-0 flex h-screen w-60 flex-col border-r border-gray-200 bg-[#f9fafb]">
+    <aside className="workspace-sidebar sticky top-0 flex h-screen w-60 flex-col border-r border-gray-200 bg-[#f2f3f1]">
       <div className="flex shrink-0 flex-col gap-1 border-b border-gray-200 px-4 py-4">
         <p className="text-xs font-medium uppercase tracking-wider text-gray-500">
           {copy.sidebar.team}
