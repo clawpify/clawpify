@@ -31,7 +31,7 @@ export function OnboardingPage() {
         return;
       }
       await user?.reload();
-      navigate("/dashboard", { replace: true });
+      navigate("/app", { replace: true });
     } catch (err) {
       setError("Something went wrong. Please try again.");
     } finally {
@@ -49,7 +49,7 @@ export function OnboardingPage() {
 
   const metadata = user.publicMetadata as { onboardingComplete?: boolean };
   if (metadata?.onboardingComplete) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to="/app" replace />;
   }
 
   return (

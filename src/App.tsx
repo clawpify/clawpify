@@ -11,22 +11,41 @@ import {
 import "./index.css";
 
 import { LandingPage } from "./app/landing";
+import {
+  WorkspaceLayout,
+  HomePage,
+  AgentsPage,
+  StoresPage,
+  ContentPage,
+  SearchPage,
+  ReportsPage,
+  AiVisibilityPage,
+} from "./app/app";
 import { DashboardPage } from "./app/dashboard/page";
 import { RadarPage } from "./app/radar/page";
 import { ShieldPage } from "./app/shield/page";
 import { SettingsPage } from "./app/settings/page";
+import { OnboardingPage } from "./app/onboarding/page";
 import { OrgGate } from "./components/OrgGate";
+import { OnboardingGate } from "./components/OnboardingGate";
 
 export function App() {
   const location = useLocation();
   const isLanding = location.pathname === "/";
-  const isAuthPage = location.pathname === "/sign-in" || location.pathname === "/sign-up";
-  const showNav = !isLanding && !isAuthPage;
+  const isAuthPage =
+    location.pathname === "/sign-in" || location.pathname === "/sign-up";
+  const isOnboarding = location.pathname === "/onboarding";
+  const isWorkspace =
+    location.pathname === "/app" || location.pathname.startsWith("/app/");
+  const showNav =
+    !isLanding && !isAuthPage && !isOnboarding && !isWorkspace;
 
   return (
     <div
       className={
-        isLanding || isAuthPage ? "min-h-screen bg-white" : "min-h-screen p-6"
+        isLanding || isAuthPage || isOnboarding || isWorkspace
+          ? "min-h-screen bg-white"
+          : "min-h-screen p-6"
       }
     >
       {showNav && (
@@ -34,7 +53,7 @@ export function App() {
           <Link to="/" className="text-blue-500 hover:underline">
             Home
           </Link>
-          <Link to="/dashboard" className="text-blue-500 hover:underline">
+          <Link to="/app" className="text-blue-500 hover:underline">
             Dashboard
           </Link>
           <Link to="/radar" className="text-blue-500 hover:underline">
@@ -61,7 +80,7 @@ export function App() {
                 alignItems: "center",
               }}
             >
-              <OrganizationSwitcher afterCreateOrganizationUrl="/dashboard" />
+              <OrganizationSwitcher afterCreateOrganizationUrl="/app" />
               <UserButton />
             </div>
           </Show>
@@ -70,6 +89,26 @@ export function App() {
 
       <Routes>
         <Route path="/" element={<LandingPage />} />
+        <Route path="/onboarding" element={<OnboardingPage />} />
+        <Route
+          path="/app"
+          element={
+            <OrgGate>
+              <OnboardingGate>
+                <WorkspaceLayout />
+              </OnboardingGate>
+            </OrgGate>
+          }
+        >
+          <Route index element={<HomePage />} />
+          <Route path="home" element={<HomePage />} />
+          <Route path="agents" element={<AgentsPage />} />
+          <Route path="stores" element={<StoresPage />} />
+          <Route path="content" element={<ContentPage />} />
+          <Route path="search" element={<SearchPage />} />
+          <Route path="reports" element={<ReportsPage />} />
+          <Route path="ai-visibility" element={<AiVisibilityPage />} />
+        </Route>
         <Route
           path="/sign-in"
           element={
@@ -81,7 +120,7 @@ export function App() {
                 ← Back
               </Link>
               <SignIn
-                fallbackRedirectUrl="/"
+                fallbackRedirectUrl="/app"
                 signUpUrl="/sign-up"
               />
             </div>
@@ -98,7 +137,7 @@ export function App() {
                 ← Back
               </Link>
               <SignUp
-                fallbackRedirectUrl="/"
+                fallbackRedirectUrl="/app"
                 signInUrl="/sign-in"
               />
             </div>

@@ -41,7 +41,7 @@ function OrgGateContent({ children }: OrgGateProps) {
           Create or select an organization to continue.
         </p>
         <CreateOrganization
-          afterCreateOrganizationUrl="/dashboard"
+          afterCreateOrganizationUrl="/app"
           skipInvitationScreen
           appearance={clerkAppearance}
         />

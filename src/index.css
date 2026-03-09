@@ -15,6 +15,16 @@
   --landing-accent: #111111;
 }
 
+/* Workspace theme - Linear-style light mode */
+.workspace {
+  --workspace-bg: #ffffff;
+  --workspace-sidebar-bg: #f9fafb;
+  --workspace-border: #e5e7eb;
+  --workspace-text: #111827;
+  --workspace-text-muted: #6b7280;
+  --workspace-accent: #2563eb;
+}
+
 /* Hero: plain white background */
 .hero-bg {
   background-color: #ffffff;

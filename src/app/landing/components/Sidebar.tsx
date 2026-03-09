@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
-import { Show, SignInButton, SignUpButton, UserButton } from "@clerk/react";
+import { SignInButton, SignUpButton } from "@clerk/react";
 const navLinks = [
-  { label: "Dashboard", href: "/dashboard", external: false },
+  { label: "Dashboard", href: "/app", external: false },
   { label: "Features", href: "#features", external: false },
   { label: "Docs", href: "#", external: true },
   { label: "Pricing", href: "#", external: true },
@@ -44,35 +44,22 @@ export function Sidebar() {
 
       <div className="border-t border-zinc-200 pt-6">
         <div className="flex flex-col gap-3">
-          <Show when="signed-out">
-            <SignUpButton mode="redirect" forceRedirectUrl="/">
-              <button
-                type="button"
-                className="font-mono w-full rounded-none border border-zinc-900 bg-zinc-900 px-4 py-3 text-sm font-medium uppercase text-white transition hover:bg-zinc-800"
-              >
-                GET STARTED FOR FREE
-              </button>
-            </SignUpButton>
-            <SignInButton mode="redirect" forceRedirectUrl="/">
-              <button
-                type="button"
-                className="font-mono block w-full rounded-none border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-medium uppercase text-zinc-900 transition hover:bg-zinc-100"
-              >
-                Sign in
-              </button>
-            </SignInButton>
-          </Show>
-          <Show when="signed-in">
-            <Link
-              to="/dashboard"
-              className="font-mono block w-full rounded-none border border-zinc-200 bg-zinc-50 px-4 py-3 text-center text-sm font-medium uppercase text-zinc-900 transition hover:bg-zinc-100"
+          <SignUpButton mode="redirect" forceRedirectUrl="/app">
+            <button
+              type="button"
+              className="font-mono w-full rounded-none border border-zinc-900 bg-zinc-900 px-4 py-3 text-sm font-medium uppercase text-white transition hover:bg-zinc-800"
             >
-              Dashboard
-            </Link>
-            <div className="flex justify-center">
-              <UserButton />
-            </div>
-          </Show>
+              GET STARTED FOR FREE
+            </button>
+          </SignUpButton>
+          <SignInButton mode="redirect" forceRedirectUrl="/app">
+            <button
+              type="button"
+              className="font-mono block w-full rounded-none border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-medium uppercase text-zinc-900 transition hover:bg-zinc-100"
+            >
+              Sign in
+            </button>
+          </SignInButton>
         </div>
       </div>
     </aside>
