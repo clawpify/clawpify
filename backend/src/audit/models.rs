@@ -4,9 +4,9 @@ use serde::{Deserialize, Serialize};
 pub struct ProductData {
   pub id: String,
   pub title: String,
-  pub description: Option<String>, 
+  pub description: Option<String>,
   pub price: Option<String>,
-  pub url: Option<String>, 
+  pub url: Option<String>,
   pub meta: ProductMeta,
   pub schema: Option<serde_json::Value>,
 }
@@ -30,4 +30,3 @@ pub struct StoreConfig {
   pub base_url: String,
   pub platform: String,
 }
-

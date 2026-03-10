@@ -1,6 +1,6 @@
 # Clawpify Backend
 
-Rust backend for the audit service (crawl, insight, stores, audits).
+Rust backend for the audit service (citation, insight, stores, audits).
 
 ## Setup
 
@@ -11,9 +11,8 @@ Rust backend for the audit service (crawl, insight, stores, audits).
    Edit `.env` and set:
    - `DATABASE_URL` – PostgreSQL connection string (required)
    - `OPENAI_API_KEY` – for ChatGPT citation (required)
-   - `OPENAI_PROMPT_MODEL` – optional, model for prompt generation (default: gpt-4o-mini)
-   - `OPENAI_CITATION_MODEL` – optional, model for citation search (default: gpt-4o)
-   - `FIRECRAWL_API_KEY` – optional, for better website scraping
+   - `OPENAI_PROMPT_MODEL` – optional, model for prompt generation 
+   - `OPENAI_CITATION_MODEL` – optional, model for citation search
 
 2. Run migrations (from project root):
    ```bash
@@ -29,19 +28,5 @@ Rust backend for the audit service (crawl, insight, stores, audits).
 
 ```bash
 SQLX_OFFLINE=true cargo test --lib audit::insight::tests
-SQLX_OFFLINE=true cargo test --lib audit::crawl::tests
+SQLX_OFFLINE=true cargo test --lib audit::citation::urls::tests
 ```
-
-**LLM citation integration tests** (require network, use real URLs):
-
-```bash
-cargo test --test llm_citation_test -- --ignored
-```
-
-Or with `DATABASE_URL` set for full build:
-
-```bash
-cargo test --test llm_citation_test -- --ignored
-```
-
-Test URLs: alhwyn.com, atcyrus.com, juniorscheesecake.com
