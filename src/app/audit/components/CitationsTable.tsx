@@ -1,3 +1,4 @@
+import { LinkIcon } from "../../../icons/audit-icons";
 import type { CitationData } from "../types";
 import { asStringArray } from "../types";
 
@@ -9,23 +10,6 @@ function domainFromUrl(url: string): string {
     return url;
   }
 }
-
-const LinkIcon = () => (
-  <svg
-    width="20"
-    height="20"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    className="text-zinc-600"
-  >
-    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
-    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
-  </svg>
-);
 
 type DomainStats = {
   domain: string;
@@ -69,15 +53,17 @@ function computeCitations(data: CitationData): DomainStats[] {
       avgCitations: promptCount > 0 ? totalCitations / promptCount : 0,
     }))
     .sort((a, b) => b.totalCitations - a.totalCitations)
-    .slice(0, 15);
+    .slice(0, 5);
 }
 
 type Props = {
-  data: CitationData;
+  data: CitationData | null;
+  isLoading?: boolean;
 };
 
-export function CitationsTable({ data }: Props) {
-  const citations = computeCitations(data);
+export function CitationsTable({ data, isLoading = false }: Props) {
+  const citations = data ? computeCitations(data) : [];
+  const showSkeleton = isLoading && citations.length === 0;
 
   return (
     <section className="flex flex-1 flex-col">
@@ -106,7 +92,27 @@ export function CitationsTable({ data }: Props) {
             </tr>
           </thead>
           <tbody>
-            {citations.length === 0 ? (
+            {showSkeleton ? (
+              Array.from({ length: 5 }, (_, i) => (
+                <tr
+                  key={`skeleton-${i}`}
+                  className="border-b border-zinc-100 last:border-0"
+                >
+                  <td className="px-4 py-3">
+                    <span className="inline-flex items-center gap-2">
+                      <div className="h-5 w-5 rounded bg-zinc-200 animate-pulse shrink-0" />
+                      <div className="h-4 w-24 rounded bg-zinc-200 animate-pulse" />
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="h-4 w-12 rounded bg-zinc-200 animate-pulse" />
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="h-4 w-10 rounded bg-zinc-200 animate-pulse" />
+                  </td>
+                </tr>
+              ))
+            ) : citations.length === 0 ? (
               <tr>
                 <td colSpan={3} className="px-4 py-8 text-center text-sm text-zinc-500">
                   No citations yet

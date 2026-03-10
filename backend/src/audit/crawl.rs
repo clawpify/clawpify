@@ -1,6 +1,29 @@
 use super::models::{ProductData, ProductMeta, StoreConfig};
+use once_cell::sync::Lazy;
 use regex::Regex;
 use std::time::Duration;
+
+static LOC_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"<loc>([^<]+)</loc>").unwrap());
+static TITLE_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"<title>([^<]*)</title>").unwrap());
+static META_DESC_RE: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r#"<meta\s+name="description"\s+content="([^"]*)""#).unwrap());
+static OG_DESC_RE: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r#"<meta\s+property="og:description"\s+content="([^"]*)""#).unwrap());
+static BODY_RE: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"(?is)<body[^>]*>([\s\S]*?)</body>").unwrap());
+static HTML_TAG_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"<[^>]+>").unwrap());
+static WHITESPACE_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"\s+").unwrap());
+static PRICE_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r#"\$[\d,]+(?:\.\d{2})?"#).unwrap());
+static OG_TITLE_RE: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r#"<meta property="og:title" content="([^"]*)""#).unwrap());
+static OG_IMAGE_RE: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r#"<meta property="og:image" content="([^"]*)""#).unwrap());
+static META_DESC_CONTENT_RE: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r#"<meta name="description" content="([^"]*)""#).unwrap());
+static OG_DESC_CONTENT_RE: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r#"<meta property="og:description" content="([^"]*)""#).unwrap());
+static JSON_LD_RE: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r#"<script type="application/ld\+json">([\s\S]*?)</script>"#).unwrap());
 
 const FIRECRAWL_SCRAPE_API: &str = "https://api.firecrawl.dev/v2/scrape";
 const FIRECRAWL_CRAWL_API: &str = "https://api.firecrawl.dev/v2/crawl";
@@ -9,55 +32,49 @@ const CRAWL_POLL_INTERVAL_MS: u64 = 2000;
 const CRAWL_MAX_POLLS: u32 = 60;
 const USER_AGENT: &str = "Clawpify-Audit/1.0";
 
-pub async fn discover_product_urls(config: &StoreConfig) -> Vec<String> {
-    if config.platform == "shopify" {
-        discover_shopify(config).await
-    } else {
-        discover_sitemap(config).await
+fn http_client() -> reqwest::Client {
+    reqwest::Client::builder()
+        .user_agent(USER_AGENT)
+        .timeout(Duration::from_secs(15))
+        .build()
+        .expect("HTTP client")
+}
+
+async fn firecrawl_scrape(url: &str, api_key: &str) -> Option<serde_json::Value> {
+    let res = http_client()
+        .post(FIRECRAWL_SCRAPE_API)
+        .header("Authorization", format!("Bearer {}", api_key))
+        .json(&serde_json::json!({
+            "url": url,
+            "formats": ["markdown", "metadata"]
+        }))
+        .send()
+        .await
+        .ok()?;
+
+    if !res.status().is_success() {
+        return None;
     }
+
+    let body: serde_json::Value = res.json().await.ok()?;
+    let success = body.get("success")?.as_bool()?;
+    if !success {
+        return None;
+    }
+
+    body.get("data").cloned()
 }
 
-async fn discover_shopify(config: &StoreConfig) -> Vec<String> {
+/// Discovers product page URLs from the store sitemap.
+pub async fn discover_product_urls(config: &StoreConfig) -> Vec<String> {
     let base = config.base_url.trim_end_matches('/');
-    let host = if base.contains("myshopify.com") {
-        base.to_string()
+    let url = if base.starts_with("http") {
+        format!("{}/sitemap.xml", base)
     } else {
-        format!("{}.myshopify.com", base)
-    };
-    let url = format!("https://{}/products.json?limit={}", host, MAX_PRODUCTS);
-
-    let client = reqwest::Client::builder()
-        .user_agent(USER_AGENT)
-        .build()
-        .unwrap();
-
-    let res = client.get(&url).send().await.ok();
-    let body = match res {
-        Some(r) if r.status().is_success() => r.json::<serde_json::Value>().await.ok(),
-        _ => None,
+        format!("https://{}/sitemap.xml", base)
     };
 
-    let products = body
-        .and_then(|b| b.get("products")?.as_array().cloned())
-        .unwrap_or_default();
-
-    products
-        .iter()
-        .filter_map(|p| p.get("handle")?.as_str())
-        .map(|handle| format!("https://{}/products/{}", host, handle))
-        .collect()
-}
-
-async fn discover_sitemap(config: &StoreConfig) -> Vec<String> {
-    let base = config.base_url.trim_end_matches('/');
-    let url = format!("{}/sitemap.xml", base);
-
-    let client = reqwest::Client::builder()
-        .user_agent(USER_AGENT)
-        .build()
-        .unwrap();
-
-    let res = client.get(&url).send().await.ok();
+    let res = http_client().get(&url).send().await.ok();
     let xml = match res {
         Some(r) if r.status().is_success() => r.text().await.ok(),
         _ => return vec![],
@@ -68,8 +85,7 @@ async fn discover_sitemap(config: &StoreConfig) -> Vec<String> {
         None => return vec![],
     };
 
-    let loc_re = Regex::new(r"<loc>([^<]+)</loc>").unwrap();
-    loc_re
+    LOC_RE
         .captures_iter(&xml)
         .filter_map(|c| c.get(1).map(|m| m.as_str().to_string()))
         .filter(|u| u.contains("/product") || u.contains("/p/"))
@@ -77,6 +93,8 @@ async fn discover_sitemap(config: &StoreConfig) -> Vec<String> {
         .collect()
 }
 
+/// Scrapes a product page and returns structured ProductData.
+/// Uses Firecrawl when api_key is set; otherwise falls back to HTTP fetch.
 pub async fn scrape_product_page(
     url: &str,
     firecrawl_api_key: Option<&str>,
@@ -101,43 +119,14 @@ pub async fn scrape_url_for_content(url: &str, api_key: Option<&str>) -> Option<
 }
 
 async fn scrape_with_firecrawl_markdown(url: &str, api_key: &str) -> Option<String> {
-    let client = reqwest::Client::new();
-
-    let res = client
-        .post(FIRECRAWL_SCRAPE_API)
-        .header("Authorization", format!("Bearer {}", api_key))
-        .json(&serde_json::json!({
-            "url": url,
-            "formats": ["markdown", "metadata"]
-        }))
-        .send()
-        .await
-        .ok()?;
-
-    if !res.status().is_success() {
-        return None;
-    }
-
-    let body: serde_json::Value = res.json().await.ok()?;
-    let success = body.get("success")?.as_bool()?;
-    if !success {
-        return None;
-    }
-
-    let data = body.get("data")?;
+    let data = firecrawl_scrape(url, api_key).await?;
     data.get("markdown")
         .and_then(|m| m.as_str())
         .map(String::from)
 }
 
 async fn fetch_html_for_content(url: &str) -> Option<String> {
-    let client = reqwest::Client::builder()
-        .user_agent(USER_AGENT)
-        .timeout(Duration::from_secs(15))
-        .build()
-        .ok()?;
-
-    let res = client.get(url).send().await.ok()?;
+    let res = http_client().get(url).send().await.ok()?;
     let html = res.text().await.ok()?;
     Some(extract_text_from_html(&html))
 }
@@ -145,10 +134,7 @@ async fn fetch_html_for_content(url: &str) -> Option<String> {
 fn extract_text_from_html(html: &str) -> String {
     let mut parts = Vec::new();
 
-    if let Some(title) = Regex::new(r"<title>([^<]*)</title>")
-        .ok()
-        .and_then(|re| re.captures(html))
-        .and_then(|c| c.get(1))
+    if let Some(title) = TITLE_RE.captures(html).and_then(|c| c.get(1))
     {
         let t = title.as_str().trim();
         if !t.is_empty() {
@@ -156,14 +142,9 @@ fn extract_text_from_html(html: &str) -> String {
         }
     }
 
-    if let Some(desc) = Regex::new(r#"<meta\s+name="description"\s+content="([^"]*)""#)
-        .ok()
-        .and_then(|re| re.captures(html))
-        .or_else(|| {
-            Regex::new(r#"<meta\s+property="og:description"\s+content="([^"]*)""#)
-                .ok()
-                .and_then(|re| re.captures(html))
-        })
+    if let Some(desc) = META_DESC_RE
+        .captures(html)
+        .or_else(|| OG_DESC_RE.captures(html))
         .and_then(|c| c.get(1))
     {
         let d = desc.as_str().trim();
@@ -172,10 +153,7 @@ fn extract_text_from_html(html: &str) -> String {
         }
     }
 
-    if let Some(body) = Regex::new(r"(?is)<body[^>]*>([\s\S]*?)</body>")
-        .ok()
-        .and_then(|re| re.captures(html))
-        .and_then(|c| c.get(1))
+    if let Some(body) = BODY_RE.captures(html).and_then(|c| c.get(1))
     {
         let text = strip_html_tags(body.as_str());
         if !text.trim().is_empty() {
@@ -192,40 +170,17 @@ fn extract_text_from_html(html: &str) -> String {
 }
 
 fn strip_html_tags(html: &str) -> String {
-    let re = Regex::new(r"<[^>]+>").unwrap();
-    let text = re.replace_all(html, " ");
-    let text = Regex::new(r"\s+").unwrap().replace_all(&text, " ");
+    let text = HTML_TAG_RE.replace_all(html, " ");
+    let text = WHITESPACE_RE.replace_all(&text, " ");
     text.trim().to_string()
 }
 
-async fn scrape_with_firecrawl(url: &str, api_key: &str) -> Option<ProductData> {
-    let client = reqwest::Client::new();
-
-    let res = client
-        .post(FIRECRAWL_SCRAPE_API)
-        .header("Authorization", format!("Bearer {}", api_key))
-        .json(&serde_json::json!({
-            "url": url,
-            "formats": ["markdown", "metadata"]
-        }))
-        .send()
-        .await
-        .ok()?;
-
-    if !res.status().is_success() {
-        return None;
-    }
-
-    let body: serde_json::Value = res.json().await.ok()?;
-    let success = body.get("success")?.as_bool()?;
-    if !success {
-        return None;
-    }
-
-    let data = body.get("data")?;
-    let meta = data.get("metadata").or(Some(&serde_json::Value::Null));
-    let meta = meta.as_ref().filter(|m| !m.is_null())?;
-
+fn product_from_firecrawl_metadata(
+    meta: &serde_json::Value,
+    markdown: Option<&str>,
+    id: &str,
+    source_url: &str,
+) -> ProductData {
     let title = meta
         .get("ogTitle")
         .or(meta.get("title"))
@@ -237,17 +192,10 @@ async fn scrape_with_firecrawl(url: &str, api_key: &str) -> Option<ProductData> 
         .and_then(|v| v.as_str())
         .map(String::from);
     let og_image = meta.get("ogImage").and_then(|v| v.as_str()).map(String::from);
-    let source_url = meta.get("sourceURL").and_then(|v| v.as_str()).unwrap_or(url);
+    let price = markdown.and_then(|s| PRICE_RE.find(s).map(|m| m.as_str().to_string()));
 
-    let price = data.get("markdown").and_then(|m| m.as_str()).and_then(|s| {
-        Regex::new(r"\$[\d,]+(?:\.\d{2})?")
-            .ok()?
-            .find(s)
-            .map(|m| m.as_str().to_string())
-    });
-
-    Some(ProductData {
-        id: url.to_string(),
+    ProductData {
+        id: id.to_string(),
         title: title.to_string(),
         description: description.clone(),
         price,
@@ -260,52 +208,50 @@ async fn scrape_with_firecrawl(url: &str, api_key: &str) -> Option<ProductData> 
             og_image,
         },
         schema: None,
-    })
+    }
+}
+
+async fn scrape_with_firecrawl(url: &str, api_key: &str) -> Option<ProductData> {
+    let data = firecrawl_scrape(url, api_key).await?;
+    let meta = data.get("metadata").or(Some(&serde_json::Value::Null));
+    let meta = meta.as_ref().filter(|m| !m.is_null())?;
+    let markdown = data.get("markdown").and_then(|m| m.as_str());
+    let source_url = meta.get("sourceURL").and_then(|v| v.as_str()).unwrap_or(url);
+
+    Some(product_from_firecrawl_metadata(meta, markdown, url, source_url))
 }
 
 async fn scrape_with_fetch(url: &str) -> Option<ProductData> {
-    let client = reqwest::Client::builder()
-        .user_agent(USER_AGENT)
-        .timeout(Duration::from_secs(15))
-        .build()
-        .unwrap();
-
-    let res = client.get(url).send().await.ok()?;
+    let res = http_client().get(url).send().await.ok()?;
     let html = res.text().await.ok()?;
     parse_html_to_product(&html, url)
 }
 
 fn parse_html_to_product(html: &str, url: &str) -> Option<ProductData> {
-    let title_re = Regex::new(r#"<meta property="og:title" content="([^"]*)""#).ok()?;
-    let title = title_re
+    let title = OG_TITLE_RE
         .captures(html)
         .and_then(|c| c.get(1).map(|m| m.as_str().to_string()))
         .or_else(|| {
-            let title_re = Regex::new(r"<title>([^<]*)</title>").ok()?;
-            title_re
+            TITLE_RE
                 .captures(html)
                 .and_then(|c| c.get(1).map(|m| m.as_str().trim().to_string()))
         })
         .unwrap_or_else(|| "Unknown".to_string());
 
-    let desc_og = Regex::new(r#"<meta property="og:description" content="([^"]*)""#).ok()?;
-    let desc_meta = Regex::new(r#"<meta name="description" content="([^"]*)""#).ok()?;
-    let description = desc_og
+    let description = OG_DESC_CONTENT_RE
         .captures(html)
         .and_then(|c| c.get(1).map(|m| m.as_str().to_string()))
         .or_else(|| {
-            desc_meta
+            META_DESC_CONTENT_RE
                 .captures(html)
                 .and_then(|c| c.get(1).map(|m| m.as_str().to_string()))
         });
 
-    let og_image_re = Regex::new(r#"<meta property="og:image" content="([^"]*)""#).ok()?;
-    let og_image = og_image_re
+    let og_image = OG_IMAGE_RE
         .captures(html)
         .and_then(|c| c.get(1).map(|m| m.as_str().to_string()));
 
-    let price_re = Regex::new(r#"\$[\d,]+(?:\.\d{2})?"#).ok()?;
-    let price = price_re.find(html).map(|m| m.as_str().to_string());
+    let price = PRICE_RE.find(html).map(|m| m.as_str().to_string());
 
     let schema = extract_json_ld_product(html);
 
@@ -327,8 +273,7 @@ fn parse_html_to_product(html: &str, url: &str) -> Option<ProductData> {
 }
 
 fn extract_json_ld_product(html: &str) -> Option<serde_json::Value> {
-    let re = Regex::new(r#"<script type="application/ld\+json">([\s\S]*?)</script>"#).ok()?;
-    for cap in re.captures_iter(html) {
+    for cap in JSON_LD_RE.captures_iter(html) {
         let json_str = cap.get(1)?.as_str();
         if let Ok(v) = serde_json::from_str::<serde_json::Value>(json_str) {
             let t = v.get("@type").and_then(|t| t.as_str());
@@ -352,6 +297,7 @@ fn extract_json_ld_product(html: &str) -> Option<serde_json::Value> {
     None
 }
 
+/// Crawls a store and returns product data for all discovered product pages.
 pub async fn crawl_store(
     config: &StoreConfig,
     firecrawl_api_key: Option<String>,
@@ -368,18 +314,11 @@ async fn crawl_with_firecrawl(config: &StoreConfig, api_key: &str) -> Option<Vec
     let base_url = config.base_url.trim_end_matches('/');
     let crawl_url = if base_url.starts_with("http") {
         base_url.to_string()
-    } else if config.platform == "shopify" {
-        let host = if base_url.contains("myshopify.com") {
-            base_url.to_string()
-        } else {
-            format!("{}.myshopify.com", base_url)
-        };
-        format!("https://{}/products", host)
     } else {
         format!("https://{}", base_url)
     };
 
-    let client = reqwest::Client::new();
+    let client = http_client();
     let payload = serde_json::json!({
         "url": crawl_url,
         "limit": MAX_PRODUCTS,
@@ -427,7 +366,7 @@ async fn crawl_with_firecrawl(config: &StoreConfig, api_key: &str) -> Option<Vec
             let data = status_body.get("data")?.as_array()?;
             let products: Vec<ProductData> = data
                 .iter()
-                .filter_map(|page| parse_firecrawl_page(page))
+                .filter_map(parse_firecrawl_page)
                 .collect();
             return Some(products);
         }
@@ -446,44 +385,14 @@ fn parse_firecrawl_page(page: &serde_json::Value) -> Option<ProductData> {
     let meta = meta.as_ref().filter(|m| !m.is_null())?;
 
     let source_url = meta.get("sourceURL").or(meta.get("url")).and_then(|v| v.as_str())?;
-    let title = meta
-        .get("ogTitle")
-        .or(meta.get("title"))
-        .and_then(|v| v.as_str())
-        .unwrap_or("Unknown");
-    let description = meta
-        .get("ogDescription")
-        .or(meta.get("description"))
-        .and_then(|v| v.as_str())
-        .map(String::from);
-    let og_image = meta.get("ogImage").and_then(|v| v.as_str()).map(String::from);
+    let markdown = data.get("markdown").and_then(|m| m.as_str());
 
-    let price = data.get("markdown").and_then(|m| m.as_str()).and_then(|s| {
-        Regex::new(r"\$[\d,]+(?:\.\d{2})?")
-            .ok()?
-            .find(s)
-            .map(|m| m.as_str().to_string())
-    });
-
-    Some(ProductData {
-        id: source_url.to_string(),
-        title: title.to_string(),
-        description,
-        price,
-        url: Some(source_url.to_string()),
-        meta: ProductMeta {
-            title: meta.get("title").and_then(|v| v.as_str()).map(String::from),
-            description: meta.get("description").and_then(|v| v.as_str()).map(String::from),
-            og_title: Some(title.to_string()),
-            og_description: meta
-                .get("ogDescription")
-                .or(meta.get("description"))
-                .and_then(|v| v.as_str())
-                .map(String::from),
-            og_image,
-        },
-        schema: None,
-    })
+    Some(product_from_firecrawl_metadata(
+        meta,
+        markdown,
+        source_url,
+        source_url,
+    ))
 }
 
 async fn crawl_with_scrape(

@@ -10,28 +10,13 @@ import {
   type ChartOptions,
 } from "chart.js";
 import { Line } from "react-chartjs-2";
+import { ChartBarIcon } from "../../../icons/audit-icons";
 
 export type ChartDataPoint = {
   date: string;
   desktop: number;
   mobile: number;
 };
-
-export const SAMPLE_CHART_DATA: ChartDataPoint[] = [
-  { date: "2024-04-01", desktop: 222, mobile: 150 },
-  { date: "2024-04-08", desktop: 409, mobile: 320 },
-  { date: "2024-04-16", desktop: 446, mobile: 360 },
-  { date: "2024-04-24", desktop: 387, mobile: 290 },
-  { date: "2024-05-01", desktop: 165, mobile: 220 },
-  { date: "2024-05-08", desktop: 149, mobile: 210 },
-  { date: "2024-05-15", desktop: 473, mobile: 380 },
-  { date: "2024-05-22", desktop: 81, mobile: 120 },
-  { date: "2024-05-30", desktop: 340, mobile: 280 },
-  { date: "2024-06-01", desktop: 178, mobile: 200 },
-  { date: "2024-06-10", desktop: 155, mobile: 200 },
-  { date: "2024-06-20", desktop: 408, mobile: 450 },
-  { date: "2024-06-30", desktop: 446, mobile: 400 },
-];
 
 type Props = {
   data: ChartDataPoint[];
@@ -192,22 +177,9 @@ export function ChartAreaInteractive({
 
       <div className="px-2 py-4 sm:px-6 sm:py-6">
         {isEmpty ? (
-          <div className="flex min-h-[250px] flex-col items-center justify-center rounded-lg border border-dashed border-zinc-200 bg-zinc-50/50">
-            <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-zinc-200/80">
-              <svg
-                width="32"
-                height="32"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="#9ca3af"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <rect x="3" y="12" width="4" height="6" rx="1" />
-                <rect x="10" y="8" width="4" height="10" rx="1" />
-                <rect x="17" y="4" width="4" height="14" rx="1" />
-              </svg>
+          <div className="flex min-h-[250px] flex-col items-center justify-center rounded-lg border border-zinc-200 bg-zinc-50/50">
+            <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-zinc-50/50 text-zinc-500">
+              <ChartBarIcon size={32} />
             </div>
             <p className="mt-3 text-sm font-medium text-zinc-900">
               {emptyMessage}

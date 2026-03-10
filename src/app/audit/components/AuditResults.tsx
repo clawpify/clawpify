@@ -6,6 +6,13 @@ import { CitationsTable } from "./CitationsTable";
 import { ChatDetailView } from "./ChatDetailView";
 import { TopSourcesPreview } from "./TopSourcesPreview";
 
+const CellSkeleton = ({ className = "" }: { className?: string }) => (
+  <div
+    className={`h-4 rounded bg-zinc-200 animate-pulse ${className}`}
+    aria-hidden
+  />
+);
+
 const OpenAIIcon = () => (
   <svg
     width="20"
@@ -34,26 +41,24 @@ function formatDate(iso: string): string {
 }
 
 export function AuditResults() {
-  const { data, error, generatedCompetitors } = useAudit();
+  const { data, step, error, generatedCompetitors, generatedPrompts, runChatGPTSearch } =
+    useAudit();
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
-  if (!data) return null;
-
-  const searchSkipped = data.results.length === 0 && data.status === "completed";
-  const yourMentions = data.results.filter(
-    (r) => r.your_product_mentioned === true
-  ).length;
-  const totalPrompts = data.results.length;
-  const allBrands = new Set<string>();
-  for (const r of data.results) {
-    for (const b of asStringArray(r.mentioned_brands)) {
-      if (b.trim()) allBrands.add(b.trim());
-    }
-  }
-  const competitorCount = allBrands.size;
+  const isLoading = step === "loading";
+  const searchSkipped =
+    data?.results.length === 0 && data?.status === "completed";
 
   const showError =
     error && !error.includes("OPENAI_API_KEY not configured");
+
+  const prompts =
+    generatedPrompts.length > 0
+      ? generatedPrompts
+      : data?.results.map((r) => r.query) ?? [];
+  const hasPrompts = prompts.length > 0;
+  const rows =
+    hasPrompts ? prompts : data?.results ?? [];
 
   return (
     <div className="space-y-6">
@@ -64,37 +69,20 @@ export function AuditResults() {
       )}
       {searchSkipped && (
         <p className="rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-600">
-          ChatGPT search was skipped. Prompts and competitors are available in
-          the form for manual analysis.
+          {runChatGPTSearch
+            ? "No citation results were returned. Please try again."
+            : "ChatGPT search was skipped. Enable \"Run ChatGPT search\" and analyze again to get citation data."}
         </p>
       )}
-      {!searchSkipped && (
-        <>
+      <>
           <VisibilityChart
             data={data}
-            companyName={data.company_name}
+            companyName={data?.company_name ?? ""}
             competitors={generatedCompetitors}
+            isLoading={isLoading && !data?.results.length}
           />
 
-          <div className="grid gap-4 sm:grid-cols-3">
-            <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-4">
-              <p className="text-2xl font-semibold text-zinc-900">{yourMentions}</p>
-              <p className="text-sm text-zinc-600">Your mentions</p>
-            </div>
-            <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-4">
-              <p className="text-2xl font-semibold text-zinc-900">
-                {competitorCount}
-              </p>
-              <p className="text-sm text-zinc-600">Competitors</p>
-            </div>
-            <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-4">
-              <p className="text-2xl font-semibold text-zinc-900">
-                {yourMentions}/{totalPrompts}
-              </p>
-              <p className="text-sm text-zinc-600">Prompts good for your website</p>
-            </div>
-          </div>
-
+          {!searchSkipped && (
           <div className="flex flex-col gap-6 lg:flex-row lg:items-stretch">
             <section className="flex min-w-0 flex-1 flex-col">
               <div className="mb-4 shrink-0">
@@ -124,39 +112,82 @@ export function AuditResults() {
                     </tr>
                   </thead>
                   <tbody>
-                    {data.results.map((r) => {
-                      const isExpanded = expandedId === r.id;
-                      const dateStr = formatDate(r.created_at);
+                    {rows.map((promptOrResult, idx) => {
+                      const query =
+                        typeof promptOrResult === "string"
+                          ? promptOrResult
+                          : typeof promptOrResult === "object" &&
+                              promptOrResult &&
+                              "query" in promptOrResult
+                            ? (promptOrResult as { query: string }).query
+                            : "";
+                      const matchingResult = data?.results.find(
+                        (r) => r.query === query
+                      );
+                      const isLoadingRow = !matchingResult;
+                      const isExpanded = expandedId === matchingResult?.id;
 
                       return (
                         <tr
-                          key={r.id}
-                          role="button"
-                          tabIndex={0}
-                          onClick={() => setExpandedId(isExpanded ? null : r.id)}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" || e.key === " ") {
-                              e.preventDefault();
-                              setExpandedId(isExpanded ? null : r.id);
+                          key={matchingResult?.id ?? `prompt-${idx}`}
+                            role="button"
+                            tabIndex={0}
+                            onClick={() =>
+                              matchingResult &&
+                              setExpandedId(isExpanded ? null : matchingResult.id)
                             }
-                          }}
-                          className="cursor-pointer border-b border-zinc-100 last:border-0 hover:bg-zinc-50 transition"
-                          aria-expanded={isExpanded}
-                        >
-                          <td className="px-4 py-3 text-zinc-400">
-                            <OpenAIIcon />
-                          </td>
-                          <td className="px-4 py-3 text-sm text-zinc-900">
-                            {dateStr}
-                          </td>
-                          <td className="px-4 py-3 text-sm text-zinc-900">
-                            {r.query}
-                          </td>
-                          <td className="px-4 py-3">
-                            <TopSourcesPreview urls={asStringArray(r.citation_urls)} />
-                          </td>
-                        </tr>
-                      );
+                            onKeyDown={(e) => {
+                              if (
+                                (e.key === "Enter" || e.key === " ") &&
+                                matchingResult
+                              ) {
+                                e.preventDefault();
+                                setExpandedId(
+                                  isExpanded ? null : matchingResult.id
+                                );
+                              }
+                            }}
+                            className={`border-b border-zinc-100 last:border-0 transition ${
+                              matchingResult
+                                ? "cursor-pointer hover:bg-zinc-50"
+                                : ""
+                            } ${isExpanded ? "bg-zinc-50" : ""}`}
+                            aria-expanded={isExpanded}
+                          >
+                            <td className="px-4 py-3 text-zinc-400">
+                              {isLoadingRow ? (
+                                <CellSkeleton className="h-5 w-5" />
+                              ) : (
+                                <OpenAIIcon />
+                              )}
+                            </td>
+                            <td className="px-4 py-3 text-sm text-zinc-900">
+                              {isLoadingRow ? (
+                                <CellSkeleton className="w-20" />
+                              ) : (
+                                formatDate(matchingResult!.created_at)
+                              )}
+                            </td>
+                            <td className="px-4 py-3 text-sm text-zinc-900">
+                              {isLoadingRow ? (
+                                <CellSkeleton className="w-48 max-w-full" />
+                              ) : (
+                                matchingResult!.query
+                              )}
+                            </td>
+                            <td className="px-4 py-3">
+                              {isLoadingRow ? (
+                                <CellSkeleton className="w-16" />
+                              ) : (
+                                <TopSourcesPreview
+                                  urls={asStringArray(
+                                    matchingResult!.citation_urls
+                                  )}
+                                />
+                              )}
+                            </td>
+                          </tr>
+                        );
                     })}
                   </tbody>
                 </table>
@@ -164,13 +195,16 @@ export function AuditResults() {
             </section>
 
             <section className="flex min-w-0 flex-1 flex-col">
-              <CitationsTable data={data} />
+              <CitationsTable
+                data={data}
+                isLoading={isLoading && !data?.results.length}
+              />
             </section>
           </div>
-        </>
-      )}
+          )}
+      </>
 
-      {!searchSkipped && expandedId && (() => {
+      {expandedId && data && (() => {
         const result = data.results.find((r) => r.id === expandedId);
         return result ? (
           <ChatDetailView

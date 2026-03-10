@@ -11,6 +11,8 @@ Rust backend for the audit service (crawl, insight, stores, audits).
    Edit `.env` and set:
    - `DATABASE_URL` – PostgreSQL connection string (required)
    - `OPENAI_API_KEY` – for ChatGPT citation (required)
+   - `OPENAI_PROMPT_MODEL` – optional, model for prompt generation (default: gpt-4o-mini)
+   - `OPENAI_CITATION_MODEL` – optional, model for citation search (default: gpt-4o)
    - `FIRECRAWL_API_KEY` – optional, for better website scraping
 
 2. Run migrations (from project root):

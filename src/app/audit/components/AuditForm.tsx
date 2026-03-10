@@ -1,124 +1,46 @@
 import { useAudit } from "../context";
+import {
+  BuildingIcon,
+  ChevronDownIcon,
+  GlobeIcon,
+  ListIcon,
+  MetricIcon,
+} from "../../../icons/audit-icons";
 import { BrandFavicon } from "./BrandFavicon";
-
-const GlobeIcon = () => (
-  <svg
-    width="20"
-    height="20"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    className="shrink-0 text-zinc-500"
-  >
-    <circle cx="12" cy="12" r="10" />
-    <path d="M2 12h20" />
-    <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-  </svg>
-);
-
-const DocumentIcon = () => (
-  <svg
-    width="20"
-    height="20"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    className="shrink-0 text-zinc-500"
-  >
-    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-    <path d="M14 2v6h6" />
-    <path d="M16 13H8" />
-    <path d="M16 17H8" />
-    <path d="M10 9H8" />
-  </svg>
-);
-
-const ListIcon = () => (
-  <svg
-    width="20"
-    height="20"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    className="shrink-0 text-zinc-500"
-  >
-    <path d="M8 6h13" />
-    <path d="M8 12h13" />
-    <path d="M8 18h13" />
-    <path d="M3 6h.01" />
-    <path d="M3 12h.01" />
-    <path d="M3 18h.01" />
-  </svg>
-);
-
-const ChevronDownIcon = () => (
-  <svg
-    width="16"
-    height="16"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    className="shrink-0 text-zinc-400"
-  >
-    <path d="m6 9 6 6 6-6" />
-  </svg>
-);
-
-const MetricIcon = () => (
-  <svg
-    width="20"
-    height="20"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    className="shrink-0 text-zinc-500"
-  >
-    <path d="M12 20V10" />
-    <path d="M18 20V4" />
-    <path d="M6 20v-4" />
-  </svg>
-);
 
 function InputField({
   icon: Icon,
+  label,
   value,
   onChange,
   placeholder,
   disabled,
 }: {
   icon: React.ComponentType;
+  label?: string;
   value: string;
   onChange: (v: string) => void;
   placeholder: string;
   disabled?: boolean;
 }) {
   return (
-    <div className="flex items-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 py-2.5">
-      <Icon />
-      <input
-        type="text"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        disabled={disabled}
-        className="min-w-0 flex-1 bg-transparent text-sm text-zinc-900 placeholder-zinc-400 focus:outline-none"
-      />
-      <ChevronDownIcon />
+    <div className="space-y-1.5">
+      {label && (
+        <label className="block text-xs font-medium text-zinc-600">
+          {label}
+        </label>
+      )}
+      <div className="flex items-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 py-2.5">
+        <Icon />
+        <input
+          type="text"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          disabled={disabled}
+          className="min-w-0 flex-1 bg-transparent text-sm text-zinc-900 placeholder-zinc-400 focus:outline-none"
+        />
+      </div>
     </div>
   );
 }
@@ -205,9 +127,12 @@ export function AuditForm() {
 
       {isLoadingPrompts && (
         <section className="space-y-4">
-          <label className="block text-sm font-normal text-zinc-600">
-            Prompts
-          </label>
+          <div>
+            <h3 className="text-sm font-medium text-zinc-900">Prompts</h3>
+            <p className="text-xs text-zinc-500">
+              Generating search prompts from your data...
+            </p>
+          </div>
           <div className="space-y-3">
             <div className="flex items-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 py-2.5">
               <div className="h-5 w-5 shrink-0 animate-pulse rounded bg-zinc-200" />
@@ -235,22 +160,27 @@ export function AuditForm() {
       {!isLoadingPrompts && formStep === 1 && (
         <>
           <section className="space-y-4">
-            <label className="block text-sm font-normal text-zinc-600">
-              Data source
-            </label>
+            <div>
+              <h3 className="text-sm font-medium text-zinc-900">Data source</h3>
+              <p className="text-xs text-zinc-500">
+                Enter your company and website to generate prompts
+              </p>
+            </div>
             <div className="space-y-3">
               <InputField
-                icon={GlobeIcon}
-                value={form.website_url}
-                onChange={(v) => setForm((f) => ({ ...f, website_url: v }))}
-                placeholder="example.com or https://example.com"
-                disabled={isGenerating}
-              />
-              <InputField
-                icon={DocumentIcon}
+                icon={BuildingIcon}
+                label="Company name"
                 value={form.company_name}
                 onChange={(v) => setForm((f) => ({ ...f, company_name: v }))}
                 placeholder="Acme Inc"
+                disabled={isGenerating}
+              />
+              <InputField
+                icon={GlobeIcon}
+                label="Website URL"
+                value={form.website_url}
+                onChange={(v) => setForm((f) => ({ ...f, website_url: v }))}
+                placeholder="example.com or https://example.com"
                 disabled={isGenerating}
               />
             </div>
@@ -270,9 +200,12 @@ export function AuditForm() {
       {!isLoadingPrompts && formStep === 2 && (
         <>
           <section className="space-y-4">
-            <label className="block text-sm font-normal text-zinc-600">
-              Prompts
-            </label>
+            <div>
+              <h3 className="text-sm font-medium text-zinc-900">Prompts</h3>
+              <p className="text-xs text-zinc-500">
+                Review and edit the generated search prompts
+              </p>
+            </div>
             <div className="space-y-3">
               <div className="flex items-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 py-2.5">
                 <MetricIcon />
@@ -345,9 +278,14 @@ export function AuditForm() {
       {!isLoadingPrompts && formStep === 3 && (
         <>
           <section className="space-y-4">
-            <label className="block text-sm font-normal text-zinc-600">
-              Competitors & Analyze
-            </label>
+            <div>
+              <h3 className="text-sm font-medium text-zinc-900">
+                Competitors & Analyze
+              </h3>
+              <p className="text-xs text-zinc-500">
+                Add competitor brands to compare visibility
+              </p>
+            </div>
             <div className="space-y-3">
               <div className="flex items-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 py-2.5">
                 <MetricIcon />

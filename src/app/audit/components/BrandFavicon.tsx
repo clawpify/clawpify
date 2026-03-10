@@ -6,10 +6,10 @@ function brandToDomain(brand: string): string {
   return slug ? `${slug}.com` : s;
 }
 
-export function getFaviconUrl(brand: string): string {
+export function getFaviconUrl(brand: string, size = 32): string {
   const domain = brandToDomain(brand);
   return domain
-    ? `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=32`
+    ? `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=${size}`
     : "";
 }
 

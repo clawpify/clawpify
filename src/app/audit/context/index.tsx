@@ -134,7 +134,10 @@ export function AuditProvider({ children }: { children: ReactNode }) {
           setFormStep(1);
           return;
         }
-        setTimeout(poll, 2000);
+        if (d.results && d.results.length > 0) {
+          setData(d);
+        }
+        setTimeout(poll, 1500);
       };
 
       await poll();

@@ -8,6 +8,9 @@ use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use uuid::Uuid;
 
+use crate::auth;
+use crate::error::{self, ApiError};
+
 #[derive(Deserialize)]
 pub struct CreateAuditRequest {
     pub store_id: String,
@@ -35,32 +38,15 @@ pub struct AuditResult {
     pub created_at: chrono::DateTime<chrono::Utc>,
 }
 
-fn get_org_id_from_header(
-    headers: &axum::http::HeaderMap,
-) -> Result<String, (axum::http::StatusCode, Json<serde_json::Value>)> {
-    headers
-        .get("X-Internal-Org-Id")
-        .and_then(|v| v.to_str().ok())
-        .map(String::from)
-        .ok_or((
-            axum::http::StatusCode::BAD_REQUEST,
-            Json(serde_json::json!({ "error": "Org required" })),
-        ))
-}
-
 pub async fn create_audit(
     Extension(pool): Extension<PgPool>,
     headers: axum::http::HeaderMap,
     Json(body): Json<CreateAuditRequest>,
-) -> Result<Json<Audit>, (axum::http::StatusCode, Json<serde_json::Value>)> {
-    let org_id = get_org_id_from_header(&headers)?;
+) -> Result<Json<Audit>, ApiError> {
+    let org_id = auth::get_org_id(&headers)?;
 
-    let store_id = Uuid::parse_str(&body.store_id).map_err(|_| {
-        (
-            axum::http::StatusCode::BAD_REQUEST,
-            Json(serde_json::json!({ "error": "Invalid store_id" })),
-        )
-    })?;
+    let store_id = Uuid::parse_str(&body.store_id)
+        .map_err(|_| error::bad_request("Invalid store_id"))?;
 
     let store = sqlx::query!(
         "SELECT id, config, platform FROM stores WHERE id = $1 AND org_id = $2",
@@ -69,16 +55,8 @@ pub async fn create_audit(
     )
     .fetch_optional(&pool)
     .await
-    .map_err(|e| {
-        (
-            axum::http::StatusCode::INTERNAL_SERVER_ERROR,
-            Json(serde_json::json!({ "error": e.to_string() })),
-        )
-    })?
-    .ok_or((
-        axum::http::StatusCode::NOT_FOUND,
-        Json(serde_json::json!({ "error": "Store not found" })),
-    ))?;
+    .map_err(error::db_error)?
+    .ok_or_else(|| error::not_found("Store not found"))?;
 
     let audit_id = Uuid::new_v4();
     sqlx::query!(
@@ -88,12 +66,7 @@ pub async fn create_audit(
     )
     .execute(&pool)
     .await
-    .map_err(|e| {
-        (
-            axum::http::StatusCode::INTERNAL_SERVER_ERROR,
-            Json(serde_json::json!({ "error": e.to_string() })),
-        )
-    })?;
+    .map_err(error::db_error)?;
 
     let pool_clone = pool.clone();
     let config = store.config.clone();
@@ -110,12 +83,7 @@ pub async fn create_audit(
     )
     .fetch_one(&pool)
     .await
-    .map_err(|e| {
-        (
-            axum::http::StatusCode::INTERNAL_SERVER_ERROR,
-            Json(serde_json::json!({ "error": e.to_string() })),
-        )
-    })?;
+    .map_err(error::db_error)?;
 
     Ok(Json(audit))
 }
@@ -124,8 +92,8 @@ pub async fn get_audit(
     Extension(pool): Extension<PgPool>,
     Path(id): Path<Uuid>,
     headers: axum::http::HeaderMap,
-) -> Result<Json<serde_json::Value>, (axum::http::StatusCode, Json<serde_json::Value>)> {
-    let org_id = get_org_id_from_header(&headers)?;
+) -> Result<Json<serde_json::Value>, ApiError> {
+    let org_id = auth::get_org_id(&headers)?;
 
     let audit = sqlx::query!(
         r#"SELECT a.id, a.store_id, a.status, a.started_at, a.completed_at, a.created_at, s.config as "store_config"
@@ -136,16 +104,8 @@ pub async fn get_audit(
     )
     .fetch_optional(&pool)
     .await
-    .map_err(|e| {
-        (
-            axum::http::StatusCode::INTERNAL_SERVER_ERROR,
-            Json(serde_json::json!({ "error": e.to_string() })),
-        )
-    })?
-    .ok_or((
-        axum::http::StatusCode::NOT_FOUND,
-        Json(serde_json::json!({ "error": "Audit not found" })),
-    ))?;
+    .map_err(error::db_error)?
+    .ok_or_else(|| error::not_found("Audit not found"))?;
 
     let results = sqlx::query_as!(
         AuditResult,
@@ -154,12 +114,7 @@ pub async fn get_audit(
     )
     .fetch_all(&pool)
     .await
-    .map_err(|e| {
-        (
-            axum::http::StatusCode::INTERNAL_SERVER_ERROR,
-            Json(serde_json::json!({ "error": e.to_string() })),
-        )
-    })?;
+    .map_err(error::db_error)?;
 
     Ok(Json(serde_json::json!({
         "id": audit.id,

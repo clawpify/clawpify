@@ -14,6 +14,11 @@ import {
 import { Line } from "react-chartjs-2";
 import type { CitationData, CitationResult } from "../types";
 import { asStringArray } from "../types";
+import {
+  ChartBarIcon,
+  ChartLineIcon,
+  ExportIcon,
+} from "../../../icons/audit-icons";
 import { BrandFavicon } from "./BrandFavicon";
 
 ChartJS.register(
@@ -33,7 +38,11 @@ const YOUR_BRAND_COLOR = "#2563eb";
 const COMPETITOR_COLOR = "#71717a";
 
 function isYourBrand(brand: string, companyName: string): boolean {
-  return brand.trim().toLowerCase() === companyName.trim().toLowerCase();
+  return normalizeBrand(brand) === normalizeBrand(companyName);
+}
+
+function normalizeBrand(s: string): string {
+  return s.trim().toLowerCase().replace(/\s+/g, "");
 }
 
 function resultMentionsBrand(
@@ -42,11 +51,15 @@ function resultMentionsBrand(
   companyName: string
 ): boolean {
   const brandLower = brand.trim().toLowerCase();
-  const companyLower = companyName.trim().toLowerCase();
+  const companyNorm = normalizeBrand(companyName);
   const text = (result.response_text ?? "").toLowerCase();
 
-  if (brandLower === companyLower) {
-    return result.your_product_mentioned === true || text.includes(brandLower);
+  if (brandLower === companyName.trim().toLowerCase()) {
+    if (result.your_product_mentioned === true) return true;
+    if (text.replace(/\s+/g, "").includes(companyNorm)) return true;
+    const mentioned = asStringArray(result.mentioned_brands);
+    if (mentioned.some((m) => normalizeBrand(m) === companyNorm)) return true;
+    return false;
   }
   return text.includes(brandLower);
 }
@@ -226,68 +239,36 @@ function aggregateVisibilitySnapshot(
   return useEntitySet ? entries : entries.slice(0, 8);
 }
 
-const LineChartIcon = () => (
-  <svg
-    width="18"
-    height="18"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <polyline points="22 12 18 22 12 18 2 22" />
-    <polyline points="22 2 12 12 2 8" />
-  </svg>
-);
-
-const BarChartIcon = () => (
-  <svg
-    width="18"
-    height="18"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <line x1="12" y1="20" x2="12" y2="10" />
-    <line x1="18" y1="20" x2="18" y2="4" />
-    <line x1="6" y1="20" x2="6" y2="16" />
-  </svg>
-);
-
-const ExportIcon = () => (
-  <svg
-    width="18"
-    height="18"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-    <polyline points="7 10 12 15 17 10" />
-    <line x1="12" y1="15" x2="12" y2="3" />
-  </svg>
-);
-
 type Props = {
-  data: CitationData;
+  data: CitationData | null;
   companyName: string;
   competitors?: string[];
+  isLoading?: boolean;
 };
 
-export function VisibilityChart({ data, companyName, competitors }: Props) {
+export function VisibilityChart({
+  data,
+  companyName,
+  competitors,
+  isLoading = false,
+}: Props) {
   const [chartType, setChartType] = useState<"line" | "bar">("line");
 
+  const showSkeleton =
+    isLoading || !data?.results.length;
+  const skeletonBrands = useMemo(() => {
+    const entities: string[] = [];
+    if (companyName.trim()) entities.push(companyName.trim());
+    for (const c of competitors ?? []) {
+      if (c?.trim()) entities.push(c.trim());
+    }
+    while (entities.length < 5) entities.push(`Loading ${entities.length + 1}`);
+    return entities.slice(0, 7);
+  }, [companyName, competitors]);
+
   const filteredResults = useMemo(
-    () => filterByTimeRange(data.results, "W"),
-    [data.results]
+    () => filterByTimeRange(data?.results ?? [], "W"),
+    [data?.results]
   );
 
   const lineData = useMemo(
@@ -405,7 +386,7 @@ export function VisibilityChart({ data, companyName, competitors }: Props) {
                   : "text-zinc-500 hover:text-zinc-700"
               }`}
             >
-              <LineChartIcon />
+              <ChartLineIcon />
             </button>
             <button
               type="button"
@@ -417,7 +398,7 @@ export function VisibilityChart({ data, companyName, competitors }: Props) {
                   : "text-zinc-500 hover:text-zinc-700"
               }`}
             >
-              <BarChartIcon />
+              <ChartBarIcon />
             </button>
           </div>
           <button
@@ -429,54 +410,87 @@ export function VisibilityChart({ data, companyName, competitors }: Props) {
           </button>
         </div>
       </div>
-      <div className="h-96 w-full min-h-[320px]">
-        {effectiveChartType === "line" && lineData.dates.length > 0 ? (
-          <Line data={lineChartData} options={lineOptions} />
-        ) : (
-          <div className="flex flex-col justify-center gap-3 py-4">
-            {barData.map((r) => (
+      <div
+        className={`w-full ${
+          effectiveChartType === "line"
+            ? "h-96 min-h-[320px]"
+            : "min-h-0"
+        }`}
+      >
+        {showSkeleton ? (
+          <div className="flex flex-col divide-y divide-zinc-200 rounded-lg border border-zinc-200 overflow-hidden">
+            {skeletonBrands.map((brand, i) => (
               <div
-                key={r.brand}
-                className="relative flex items-center gap-3"
+                key={brand}
+                className="flex items-center gap-4 px-4 py-3"
               >
                 <div className="flex w-44 shrink-0 items-center gap-2">
-                  <BrandFavicon brand={r.brand} />
-                  <span className="truncate text-sm font-medium text-zinc-900">
-                    {isYourBrand(r.brand, companyName)
-                      ? `${r.brand} (You)`
-                      : r.brand}
-                  </span>
+                  <div className="h-5 w-5 rounded bg-zinc-200 animate-pulse" />
+                  <div className="h-4 w-32 rounded bg-zinc-200 animate-pulse" />
                 </div>
-                <div className="group/bar relative flex-1 min-w-0">
-                  <div className="relative h-7 rounded bg-zinc-100 overflow-hidden">
+                <div className="flex-1 min-w-0">
+                  <div className="h-7 rounded bg-zinc-100 overflow-hidden">
                     <div
-                      className="absolute inset-y-0 left-0 rounded transition-all"
+                      className="h-full rounded bg-zinc-200 animate-pulse"
                       style={{
-                        width: `${r.visibility}%`,
-                        backgroundColor: isYourBrand(r.brand, companyName)
-                          ? YOUR_BRAND_COLOR
-                          : COMPETITOR_COLOR,
+                        width: `${[40, 65, 30, 55, 25][i % 5]}%`,
                       }}
                     />
                   </div>
-                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 hidden group-hover/bar:flex flex-col items-center z-10">
-                    <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white border border-zinc-200 shadow-lg whitespace-nowrap">
-                      <BrandFavicon brand={r.brand} />
-                      <span className="text-sm font-semibold text-zinc-900">
-                        {r.visibility}%
-                      </span>
-                    </div>
-                    <div
-                      className="w-0 h-0 border-l-[6px] border-r-[6px] border-t-[6px] border-l-transparent border-r-transparent border-t-white -mt-px"
-                      aria-hidden
-                    />
-                  </div>
                 </div>
-                <span className="w-10 shrink-0 text-right text-sm text-zinc-600">
-                  {r.visibility}%
-                </span>
+                <div className="w-10 h-4 rounded bg-zinc-200 animate-pulse shrink-0" />
               </div>
             ))}
+          </div>
+        ) : effectiveChartType === "line" && lineData.dates.length > 0 ? (
+          <Line data={lineChartData} options={lineOptions} />
+        ) : (
+          <div className="flex flex-col divide-y divide-zinc-200 rounded-lg border border-zinc-200 overflow-hidden">
+            {barData.map((r) => {
+              const isYours = isYourBrand(r.brand, companyName);
+              const color = isYours ? YOUR_BRAND_COLOR : COMPETITOR_COLOR;
+              return (
+                <div
+                  key={r.brand}
+                  className={`flex items-center gap-4 px-4 py-3 transition hover:bg-zinc-50 ${
+                    isYours ? "border-l-4 border-l-[#2563eb]" : ""
+                  }`}
+                >
+                  <div className="flex w-44 shrink-0 items-center gap-2">
+                    <BrandFavicon brand={r.brand} />
+                    <span className="truncate text-sm font-medium text-zinc-900">
+                      {isYours ? `${r.brand} (You)` : r.brand}
+                    </span>
+                  </div>
+                  <div className="group/bar relative flex-1 min-w-0">
+                    <div className="relative h-7 rounded bg-zinc-100 overflow-hidden">
+                      <div
+                        className="absolute inset-y-0 left-0 rounded transition-all"
+                        style={{
+                          width: `${r.visibility}%`,
+                          backgroundColor: color,
+                        }}
+                      />
+                    </div>
+                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 hidden group-hover/bar:flex flex-col items-center z-10">
+                      <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white border border-zinc-200 shadow-lg whitespace-nowrap">
+                        <BrandFavicon brand={r.brand} />
+                        <span className="text-sm font-semibold text-zinc-900">
+                          {r.visibility}%
+                        </span>
+                      </div>
+                      <div
+                        className="w-0 h-0 border-l-[6px] border-r-[6px] border-t-[6px] border-l-transparent border-r-transparent border-t-white -mt-px"
+                        aria-hidden
+                      />
+                    </div>
+                  </div>
+                  <span className="w-10 shrink-0 text-right text-sm font-medium text-zinc-600 tabular-nums">
+                    {r.visibility}%
+                  </span>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>

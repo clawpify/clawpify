@@ -3,16 +3,8 @@ use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use uuid::Uuid;
 
-fn get_org_id(headers: &axum::http::HeaderMap) -> Result<String, (axum::http::StatusCode, axum::Json<serde_json::Value>)> {
-    headers
-        .get("X-Internal-Org-Id")
-        .and_then(|v| v.to_str().ok())
-        .map(String::from)
-        .ok_or((
-            axum::http::StatusCode::BAD_REQUEST,
-            axum::Json(serde_json::json!({ "error": "Org required" })),
-        ))
-}
+use crate::auth;
+use crate::error::{self, ApiError};
 
 #[derive(Serialize, sqlx::FromRow)]
 pub struct Store {
@@ -33,8 +25,8 @@ pub struct CreateStoreRequest {
 pub async fn list_stores(
     Extension(pool): Extension<PgPool>,
     headers: axum::http::HeaderMap,
-) -> Result<axum::Json<Vec<Store>>, (axum::http::StatusCode, axum::Json<serde_json::Value>)> {
-    let org_id = get_org_id(&headers)?;
+) -> Result<axum::Json<Vec<Store>>, ApiError> {
+    let org_id = auth::get_org_id(&headers)?;
     let rows = sqlx::query_as!(
         Store,
         r#"SELECT id, org_id, platform, config, created_at FROM stores WHERE org_id = $1"#,
@@ -42,12 +34,7 @@ pub async fn list_stores(
     )
     .fetch_all(&pool)
     .await
-    .map_err(|e| {
-        (
-            axum::http::StatusCode::INTERNAL_SERVER_ERROR,
-            axum::Json(serde_json::json!({ "error": e.to_string() })),
-        )
-    })?;
+    .map_err(error::db_error)?;
     Ok(axum::Json(rows))
 }
 
@@ -55,8 +42,8 @@ pub async fn create_store(
     Extension(pool): Extension<PgPool>,
     headers: axum::http::HeaderMap,
     axum::Json(body): axum::Json<CreateStoreRequest>,
-) -> Result<axum::Json<Store>, (axum::http::StatusCode, axum::Json<serde_json::Value>)> {
-    let org_id = get_org_id(&headers)?;
+) -> Result<axum::Json<Store>, ApiError> {
+    let org_id = auth::get_org_id(&headers)?;
     let base_url = body.base_url.trim_end_matches('/').to_string();
     let platform = if body.platform.is_empty() {
         "url"
@@ -71,12 +58,7 @@ pub async fn create_store(
     )
     .execute(&pool)
     .await
-    .map_err(|e| {
-        (
-            axum::http::StatusCode::INTERNAL_SERVER_ERROR,
-            axum::Json(serde_json::json!({ "error": e.to_string() })),
-        )
-    })?;
+    .map_err(error::db_error)?;
 
     let row = sqlx::query_as!(
         Store,
@@ -88,11 +70,6 @@ pub async fn create_store(
     )
     .fetch_one(&pool)
     .await
-    .map_err(|e| {
-        (
-            axum::http::StatusCode::INTERNAL_SERVER_ERROR,
-            axum::Json(serde_json::json!({ "error": e.to_string() })),
-        )
-    })?;
+    .map_err(error::db_error)?;
     Ok(axum::Json(row))
 }

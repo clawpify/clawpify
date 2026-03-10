@@ -1,5 +1,6 @@
 use axum::{
     extract::Request,
+    http::HeaderValue,
     middleware::{self, Next},
     response::{IntoResponse, Response},
     routing::{get, post, put},
@@ -7,7 +8,7 @@ use axum::{
 };
 use serde::Serialize;
 use std::net::SocketAddr;
-use tower_http::cors::{Any, CorsLayer};
+use tower_http::cors::{AllowOrigin, Any, CorsLayer};
 
 use backend::{audit, db, stores};
 
@@ -49,8 +50,25 @@ async fn main() {
         .await
         .expect("Failed to create DB pool");
 
+    let allowed = std::env::var("CORS_ALLOWED_ORIGINS")
+        .unwrap_or_else(|_| "http://localhost:3001,http://127.0.0.1:3001".to_string());
+    let origins: Vec<HeaderValue> = allowed
+        .split(',')
+        .map(|s| s.trim())
+        .filter(|s| !s.is_empty())
+        .map(|s| HeaderValue::from_str(s).expect("Invalid CORS_ALLOWED_ORIGINS"))
+        .collect();
+    let origins = if origins.is_empty() {
+        vec![
+            HeaderValue::from_static("http://localhost:3001"),
+            HeaderValue::from_static("http://127.0.0.1:3001"),
+        ]
+    } else {
+        origins
+    };
+
     let cors = CorsLayer::new()
-        .allow_origin(Any)
+        .allow_origin(AllowOrigin::list(origins))
         .allow_methods(Any)
         .allow_headers(Any);
 

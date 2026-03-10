@@ -1,7 +1,7 @@
 {
-  "name": "bun-react-template",
+  "name": "clawpify",
   "version": "0.1.0",
-  "private": true,
+  "private": false,
   "type": "module",
   "scripts": {
     "dev": "bun --hot src/index.ts",
