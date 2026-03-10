@@ -15,7 +15,7 @@ AI is increasingly driving purchasing decisions and recommendations for people, 
 ## Tech Stack
 
 - **Frontend:** Bun, React, Tailwind CSS
-- **Backend:** Rust (Actix)
+- **Backend:** Rust 
 - **Auth:** [Clerk](https://clerk.com) (organizations, sign-in, sign-up)
 - **Database:** PostgreSQL
 
