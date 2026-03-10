@@ -64,6 +64,7 @@ Clawpify uses [Clerk](https://clerk.com) for authentication. Each person who run
 | `BUN_PUBLIC_CLERK_PUBLISHABLE_KEY` | Yes | Clerk publishable key for the frontend |
 | `RUST_API_URL` | No | Backend API URL (default: `http://127.0.0.1:3000`) |
 | `PORT` | No | Server port (default: `3001`) |
+| `FIRECRAWL_API_KEY` | No | Firecrawl API key for better website scraping in citation generate (optional) |
 
 **Backend (`backend/`)**
 
@@ -75,7 +76,6 @@ If using the Rust backend, copy `backend/.env.example` to `backend/.env`:
 | `OPENAI_API_KEY` | Yes | OpenAI API key for citation features |
 | `OPENAI_PROMPT_MODEL` | No | Model for prompt/competitor generation (default: `gpt-4o-mini`) |
 | `OPENAI_CITATION_MODEL` | No | Model for citation search with web search (default: `gpt-4o`) |
-| `FIRECRAWL_API_KEY` | No | Firecrawl API key for better website scraping (optional) |
 
 #### 3. Start development
 

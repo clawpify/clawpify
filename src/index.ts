@@ -2,6 +2,7 @@ import { serve } from "bun";
 import index from "./index.html";
 import { requireAuth, AuthError } from "./lib/auth";
 import { createProxyHandler, proxyToRustPublic } from "./utils/networkFns";
+import { scrapeUrlForContent } from "./utils/scrape";
 
 const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 3001;
 
@@ -42,21 +43,33 @@ const server = serve({
       async POST(req) { return proxy("/api/stores")(req); },
     },
 
-    "/api/audits": {
-      async POST(req) { return proxy("/api/audits")(req); },
-    },
-
-    "/api/audits/:id": {
-      async GET(req) {
-        const path = new URL(req.url).pathname;
-        return proxy(path)(req);
-      },
-    },
-
     "/api/chatgpt-citation/generate": {
       async POST(req) {
         const path = new URL(req.url).pathname;
-        return proxyToRustPublic(req, path);
+        const body = (await req.json()) as {
+          company_name?: string;
+          website_url?: string;
+          website_content?: string;
+        };
+        let bodyToForward: typeof body = body;
+        if (body.website_url?.trim()) {
+          const websiteContent = await scrapeUrlForContent(body.website_url);
+          if (websiteContent) {
+            bodyToForward = { ...body, website_content: websiteContent };
+          }
+        }
+        const RUST_API_URL = process.env.RUST_API_URL ?? "http://127.0.0.1:3000";
+        const backendUrl = `${RUST_API_URL}${path}`;
+        const res = await fetch(backendUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(bodyToForward),
+        });
+        return new Response(res.body, {
+          status: res.status,
+          statusText: res.statusText,
+          headers: res.headers,
+        });
       },
     },
 
