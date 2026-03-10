@@ -1,5 +1,7 @@
 # Clawpify
 
+[![CI](https://github.com/clawpify/clawpify/actions/workflows/ci.yml/badge.svg)](https://github.com/clawpify/clawpify/actions/workflows/ci.yml)
+
 **Open-source SEO and AEO tool for commerce.**
 
 AI is increasingly driving purchasing decisions and recommendations for people, as well as Agent-to-Agent commerce. Clawpify helps merchants prepare for this shift by auditing AI citations, tracking visibility across AI assistants, and improving how your products appear in AI-powered search and recommendations.
