@@ -5,6 +5,7 @@ import { AuditForm } from "./components/AuditForm";
 import { AuditLoading } from "./components/AuditLoading";
 import { AuditResults } from "./components/AuditResults";
 import { AuditEmptyState } from "./components/AuditEmptyState";
+import { PromptContainer } from "../landing/components/PromptContainer";
 
 function AuditContent() {
   const { step, data } = useAudit();
@@ -67,8 +68,13 @@ function AuditContent() {
         </div>
       </div>
 
-      <aside className="sticky top-0 h-screen w-80 shrink-0 overflow-y-auto bg-[#f2f3f1] p-8">
-        <AuditForm />
+      <aside className="sticky top-0 flex h-screen w-80 shrink-0 flex-col overflow-hidden bg-[#f2f3f1] p-8">
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          <AuditForm />
+        </div>
+        <div className="mt-6 shrink-0 border-t border-zinc-200 pt-6">
+          <PromptContainer />
+        </div>
       </aside>
       </div>
     </div>

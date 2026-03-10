@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { SignInButton, SignUpButton } from "@clerk/react";
+import { PromptContainer } from "./PromptContainer";
 
 const productItems = [
   { label: "Open Claw for Shopify", href: "https://clawpify.com", external: true },
@@ -121,6 +122,9 @@ export function Sidebar() {
 
       {isOpen && (
       <div className="border-t border-zinc-200 pt-6">
+        <div className="mb-4">
+          <PromptContainer />
+        </div>
         <div className="flex flex-col gap-3">
           <SignUpButton mode="redirect" forceRedirectUrl="/app">
             <button
