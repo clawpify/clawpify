@@ -51,25 +51,18 @@ const server = serve({
           website_url?: string;
           website_content?: string;
         };
-        let bodyToForward: typeof body = body;
-        if (body.website_url?.trim()) {
-          const websiteContent = await scrapeUrlForContent(body.website_url);
-          if (websiteContent) {
-            bodyToForward = { ...body, website_content: websiteContent };
-          }
+        let bodyToForward = body;
+        if (body.website_url?.trim() && !body.website_content?.trim()) {
+          const content = await scrapeUrlForContent(body.website_url);
+          if (content) bodyToForward = { ...body, website_content: content };
         }
-        const RUST_API_URL = process.env.RUST_API_URL ?? "http://127.0.0.1:3000";
-        const backendUrl = `${RUST_API_URL}${path}`;
-        const res = await fetch(backendUrl, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(bodyToForward),
-        });
-        return new Response(res.body, {
-          status: res.status,
-          statusText: res.statusText,
-          headers: res.headers,
-        });
+        const bodyStr = JSON.stringify(bodyToForward);
+        const headers = new Headers(req.headers);
+        headers.set("Content-Type", "application/json");
+        return proxyToRustPublic(
+          new Request(req.url, { method: "POST", headers, body: bodyStr }),
+          path
+        );
       },
     },
 
