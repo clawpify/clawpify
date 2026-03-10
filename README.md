@@ -1,6 +1,14 @@
 # Clawpify
 
-Clawpify is an open source Shopify AI visibility and audit tool. Audit your store's AI citations, track visibility across AI assistants, and improve how your products appear in AI-powered search and recommendations.
+**Open-source SEO and AEO tool for commerce.**
+
+AI is increasingly driving purchasing decisions and recommendations for people, as well as Agent-to-Agent commerce. Clawpify helps merchants prepare for this shift by auditing AI citations, tracking visibility across AI assistants, and improving how your products appear in AI-powered search and recommendations.
+
+## What Clawpify Does
+
+- **Audit AI citations** – Check how your Shopify store is cited by AI assistants
+- **Track visibility** – Monitor your presence across AI assistants (e.g., ChatGPT)
+- **Improve discoverability** – Optimize how products appear in AI-powered search and recommendations
 
 ## Tech Stack
 
@@ -9,15 +17,26 @@ Clawpify is an open source Shopify AI visibility and audit tool. Audit your stor
 - **Auth:** [Clerk](https://clerk.com) (organizations, sign-in, sign-up)
 - **Database:** PostgreSQL
 
-## Setup
+## Getting Started
 
-### 1. Install dependencies
+### Quick start
+
+```bash
+bun install
+cp .env.example .env
+# Add your Clerk keys to .env (see below)
+bun dev
+```
+
+### Setup
+
+#### 1. Install dependencies
 
 ```bash
 bun install
 ```
 
-### 2. Environment variables
+#### 2. Environment variables
 
 Copy `.env.example` to `.env` and fill in your values:
 
@@ -25,7 +44,7 @@ Copy `.env.example` to `.env` and fill in your values:
 cp .env.example .env
 ```
 
-#### Clerk (required)
+**Clerk (required)**
 
 Clawpify uses [Clerk](https://clerk.com) for authentication. Each person who runs the app needs their own Clerk application – there are no shared keys. Clerk's free tier includes 50,000 monthly users per app.
 
@@ -44,7 +63,7 @@ Clawpify uses [Clerk](https://clerk.com) for authentication. Each person who run
 | `RUST_API_URL` | No | Backend API URL (default: `http://127.0.0.1:3000`) |
 | `PORT` | No | Server port (default: `3001`) |
 
-#### Backend (`backend/`)
+**Backend (`backend/`)**
 
 If using the Rust backend, copy `backend/.env.example` to `backend/.env`:
 
@@ -56,21 +75,30 @@ If using the Rust backend, copy `backend/.env.example` to `backend/.env`:
 | `OPENAI_CITATION_MODEL` | No | Model for citation search with web search (default: `gpt-4o`) |
 | `FIRECRAWL_API_KEY` | No | Firecrawl API key for better website scraping (optional) |
 
-### 3. Start development
+#### 3. Start development
 
 ```bash
 bun dev
 ```
 
-### 4. Production
+#### 4. Production
 
 ```bash
 bun start
 ```
 
+## Contact
+
+Questions, feedback, or want to contribute? Reach out:
+
+- **Email:** [alhwyn@alhwyn.com]
+- **Twitter:** [@alhwyn](https://twitter.com/alhwynn)
+
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for how to contribute.
+We'd love your help. Whether it's code, docs, or ideas—every contribution matters.
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for how to contribute. Open an issue or PR anytime.
 
 ## License
 
