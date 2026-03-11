@@ -11,6 +11,7 @@ type Store = {
 };
 
 export function StoresTable({
+
   showConnectModal,
   onOpenConnectModal,
   onCloseConnectModal,
@@ -20,17 +21,18 @@ export function StoresTable({
   onCloseConnectModal: () => void;
 }) {
   const fetchAuth = useAuthenticatedFetch();
-  const [stores, setStores] = useState<Store[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [stores, setStores]           = useState<Store[]>([]);
+  const [loading, setLoading]         = useState(true);
+  const [error, setError]             = useState<string | null>(null);
   const [connectForm, setConnectForm] = useState({ base_url: "", platform: "url" });
-  const [connecting, setConnecting] = useState(false);
+  const [connecting, setConnecting]   = useState(false);
 
   const loadStores = async () => {
     setLoading(true);
     setError(null);
     try {
       const res = await fetchAuth("/api/stores");
+      
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         throw new Error(data.error || `Failed to load stores: ${res.status}`);

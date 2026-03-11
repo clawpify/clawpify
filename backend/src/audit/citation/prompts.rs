@@ -43,9 +43,9 @@ pub fn build_queries(product_description: &str, custom_prompts: Option<&[String]
 
 pub fn build_gist_prompt(truncated_content: &str) -> String {
   format!(
-        "Summarize in 2–3 sentences what this company/product does based on this website content:\n\n{}",
-        truncated_content
-    )
+    "Summarize in 2–3 sentences what this company/product does based on this website content:\n\n{}",
+    truncated_content
+  )
 }
 
 pub fn build_prompts_prompt(company_name: &str, domain: &str, gist: Option<&str>) -> String {
