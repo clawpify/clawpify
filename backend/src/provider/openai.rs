@@ -1,11 +1,7 @@
-use super::{CompleteOptions, CompleteResult};
+use super::{CompleteOptions, CompleteResult, AiProvider};
 use crate::llm::config::ProviderConfig;
-use crate::llm::providers::AiProvider;
 use std::future::Future;
 use std::pin::Pin;
-
-const OPENAI_RESPONSES_URL: &str = "https://api.openai.com/v1/responses";
-const OPENAI_CHAT_URL: &str = "https://api.openai.com/v1/chat/completions";
 
 pub struct OpenAiProvider {
   api_key: String,
@@ -17,7 +13,7 @@ impl OpenAiProvider {
     let model = cfg
       .model
       .or_else(|| std::env::var("OPENAI_CITATION_MODEL").ok())
-      .unwrap_or_else(|| "gpt-4o".to_string());
+      .unwrap_or_else(|| "gpt-5.1".to_string());
 
     Self {
       api_key: cfg.api_key,
@@ -36,7 +32,7 @@ impl AiProvider for OpenAiProvider {
     &self,
     prompt: &str,
     opts: &CompleteOptions,
-  ) -> Pin<Box<dyn Future<Output = Result<CompleteResult, String>> + Send>>> {
+  ) -> Pin<Box<dyn Future<Output = Result<CompleteResult, String>> + Send>> {
 
     let prompt = prompt.to_string();
     let opts = opts.clone();
@@ -48,7 +44,7 @@ impl AiProvider for OpenAiProvider {
       if opts.web_search {
         let client = reqwest::Client::new();
 
-        let body   = crate::audit::citation::openai::call_responses:api(
+        let body = crate::audit::citation::call_responses_api(
           &client, &api_key, &model, &prompt,
         )
         .await?;
@@ -61,7 +57,7 @@ impl AiProvider for OpenAiProvider {
         })
       } else {
 
-        let text = crate::audit::citation::openai::call_chat(
+        let text = crate::audit::citation::call_chat(
           &api_key, &model, &prompt, opts.json_mode,
         )
         .await?;

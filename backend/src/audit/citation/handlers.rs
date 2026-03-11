@@ -4,8 +4,8 @@ use sqlx::{FromRow, PgPool};
 use uuid::Uuid;
 
 use crate::error::{self, ApiError};
+use crate::llm;
 
-use super::openai;
 use super::parsing;
 use super::prompts;
 use super::urls;
@@ -91,33 +91,37 @@ pub async fn generate_prompts_and_competitors(
 
   urls::validate_url(website_url).map_err(|e| error::bad_request(&e))?;
 
-  let api_key = std::env::var("OPENAI_API_KEY")
-    .ok()
-    .filter(|k| !k.is_empty())
-    .ok_or_else(|| error::service_unavailable("OPENAI_API_KEY not configured"))?;
+  let provider = llm::citation_provider()
+    .ok_or_else(|| error::service_unavailable("No LLM provider configured"))?;
 
   let md = body.website_content.clone();
 
   let gist: Option<String> = if let Some(md) = md {
-      let truncated = if md.len() > prompts::markdown_truncate_chars() {
-        format!("{}...", &md[..prompts::markdown_truncate_chars()])
-      } else {
-        md
-      };
-      let gist_prompt = prompts::build_gist_prompt(&truncated);
-      openai::call_chat(&api_key, &prompts::prompt_model(), &gist_prompt, false)
-        .await
-        .ok()
+    let truncated = if md.len() > prompts::markdown_truncate_chars() {
+      format!("{}...", &md[..prompts::markdown_truncate_chars()])
     } else {
-      None
+      md
     };
+    let gist_prompt = prompts::build_gist_prompt(&truncated);
+    let opts = llm::CompleteOptions::default().with_web_search(false);
+    llm::run_single_provider(&provider, &gist_prompt, &opts)
+      .await
+      .ok()
+      .map(|r| r.text)
+  } else {
+    None
+  };
 
   let domain = urls::normalize_domain(website_url);
   let prompts_prompt = prompts::build_prompts_prompt(company_name, &domain, gist.as_deref());
 
-  let content = openai::call_chat(&api_key, &prompts::prompt_model(), &prompts_prompt, true)
+  let opts = llm::CompleteOptions::default()
+    .with_json_mode(true)
+    .with_web_search(false);
+  let result = llm::run_single_provider(&provider, &prompts_prompt, &opts)
     .await
     .map_err(error::bad_gateway)?;
+  let content = result.text;
 
   let parsed: serde_json::Value = serde_json::from_str(&content)
     .map_err(|e| error::bad_gateway(format!("Failed to parse AI response: {}", e)))?;
@@ -270,9 +274,9 @@ async fn run_citation_check(
   product_description: &str,
   custom_prompts: Option<&[String]>,
 ) {
-  let api_key = match std::env::var("OPENAI_API_KEY") {
-    Ok(k) if !k.is_empty() => k,
-    _ => {
+  let provider = match llm::citation_provider() {
+    Some(p) => p,
+    None => {
       let _ = sqlx::query(
         "UPDATE chatgpt_citations SET status = 'failed', completed_at = NOW() WHERE id = $1",
       )
@@ -285,50 +289,50 @@ async fn run_citation_check(
 
   let domain = urls::normalize_domain(website_url);
   let queries = prompts::build_queries(product_description, custom_prompts);
-
-  let client = reqwest::Client::new();
-  let citation_model = prompts::citation_model();
+  let opts = llm::CompleteOptions::default().with_web_search(true);
 
   let mut handles = Vec::with_capacity(queries.len());
   for query in queries.iter() {
     let pool = pool.clone();
     let citation_id = citation_id;
-    let api_key = api_key.clone();
+    let provider = std::sync::Arc::clone(&provider);
     let domain = domain.clone();
     let company_name = company_name.to_string();
     let query = query.clone();
-    let client = client.clone();
-    let citation_model = citation_model.clone();
+    let opts = opts.clone();
 
     handles.push(tokio::spawn(async move {
-            let body = match openai::call_responses_api(&client, &api_key, &citation_model, &query)
-                .await
-            {
-                Ok(b) => b,
-                Err(_) => return,
-            };
+      let result = match llm::run_single_provider(&provider, &query, &opts).await {
+        Ok(r) => r,
+        Err(_) => return,
+      };
 
-            let (response_text, citation_urls, mentioned_brands, your_product_mentioned) =
-                parsing::parse_openai_response(&body, &domain, &company_name);
+      let (response_text, citation_urls, mentioned_brands, your_product_mentioned) =
+        if let Some(ref raw) = result.raw {
+          parsing::parse_openai_response(raw, &domain, &company_name)
+        } else {
+          let brands = parsing::extract_brands_from_text(&result.text);
+          (Some(result.text), vec![], brands, false)
+        };
 
-            let citation_urls_json =
-                serde_json::to_value(citation_urls).unwrap_or(serde_json::Value::Array(vec![]));
-            let mentioned_brands_json =
-                serde_json::to_value(mentioned_brands).unwrap_or(serde_json::Value::Array(vec![]));
+      let citation_urls_json =
+        serde_json::to_value(citation_urls).unwrap_or(serde_json::Value::Array(vec![]));
+      let mentioned_brands_json =
+        serde_json::to_value(mentioned_brands).unwrap_or(serde_json::Value::Array(vec![]));
 
-            let _ = sqlx::query(
-                r#"INSERT INTO chatgpt_citation_results (citation_id, query, response_text, citation_urls, mentioned_brands, your_product_mentioned)
-                   VALUES ($1, $2, $3, $4, $5, $6)"#,
-            )
-            .bind(citation_id)
-            .bind(&query)
-            .bind(response_text.as_deref())
-            .bind(&citation_urls_json)
-            .bind(&mentioned_brands_json)
-            .bind(your_product_mentioned)
-            .execute(&pool)
-            .await;
-        }));
+      let _ = sqlx::query(
+        r#"INSERT INTO chatgpt_citation_results (citation_id, query, response_text, citation_urls, mentioned_brands, your_product_mentioned)
+           VALUES ($1, $2, $3, $4, $5, $6)"#,
+      )
+      .bind(citation_id)
+      .bind(&query)
+      .bind(response_text.as_deref())
+      .bind(&citation_urls_json)
+      .bind(&mentioned_brands_json)
+      .bind(your_product_mentioned)
+      .execute(&pool)
+      .await;
+    }));
   }
 
   for h in handles {

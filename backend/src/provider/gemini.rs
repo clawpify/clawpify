@@ -3,18 +3,16 @@ use crate::llm::config::ProviderConfig;
 use std::future::Future;
 use std::pin::Pin;
 
-const PERPLEXITY_URL: &str = "https://api.perplexity.ai/chat/completions";
-
-pub struct PerplexityProvider { 
+pub struct GeminiProvider {
   api_key: String,
   model: String,
 }
 
-impl PerplexityProvider {
+impl GeminiProvider {
   pub fn new(cfg: ProviderConfig) -> Self {
-    let model = cfg.model.unwrap_or_else(|| {
-      "llama-3.1-sonar-large-128k-online".to_string()
-    });
+    let model = cfg
+      .model.unwrap_or_else(|| "gemini-2.0-flash".to_string()); 
+    
     Self {
       api_key: cfg.api_key,
       model,
@@ -22,40 +20,40 @@ impl PerplexityProvider {
   }
 }
 
-impl AiProvider for PerplexityProvider {
-
+impl AiProvider for GeminiProvider {
   fn name(&self) -> &'static str {
-    "perplexity"
+    "gemini"
   }
 
   fn complete(
-    &self, 
+    &self,
     prompt: &str,
     opts: &CompleteOptions,
   ) -> Pin<Box<dyn Future<Output = Result<CompleteResult, String>> + Send>> {
 
-    if !opts.web_search {
-      return Box::pin(async move {
-        Err("Perplexity does not support non-web search".to_string())
-      });
-    }
-
     let prompt = prompt.to_string();
-    let api_key = self.api_key.clone(); 
-    let model = self.model.clone(); 
+    let opts = opts.clone();
+    let api_key = self.api_key.clone();
+    let model = self.model.clone();
 
     Box::pin(async move {
+      let url = format!(
+        "https://generativelanguage.googleapis.com/v1beta/models/{}:generateContent?key={}",
+        model, api_key
+      );
 
-      let payload = serde_json::json!({
-        "model": model,
-        "messages": [{ "role": "user", "content": prompt}]
+      let mut contents = serde_json::json!({
+        "contents": [{ "parts": [{ "text": prompt }] }]
       });
 
+      if opts.web_search {
+        contents["tools"] = serde_json::json!([{ "google_search": {}}]);
+      }
+
       let res = reqwest::Client::new()
-        .post(PERPLEXITY_URL)
-        .header("Authorization", format!("Bearer {}", api_key))
+        .post(&url)
         .header("Content-Type", "application/json")
-        .json(&payload)
+        .json(&contents)
         .send()
         .await
         .map_err(|e| e.to_string())?;
@@ -68,19 +66,22 @@ impl AiProvider for PerplexityProvider {
           .get("error")
           .and_then(|e| e.get("message"))
           .and_then(|m| m.as_str())
-          .unwrap_or("Perplexity API error");
+          .unwrap_or("Gemini API error");
         return Err(msg.to_string());
       }
 
-      let text = body 
-        .get("choices")
+      let text = body
+        .get("candidates")
         .and_then(|c| c.as_array())
         .and_then(|a| a.first())
-        .and_then(|c| c.get("message"))
-        .and_then(|m| m.get("content")) 
-        .and_then(|c| c.as_str())
+        .and_then(|c| c.get("content"))
+        .and_then(|c| c.get("parts"))
+        .and_then(|p| p.as_array())
+        .and_then(|a| a.first())
+        .and_then(|p| p.get("text"))
+        .and_then(|t| t.as_str())
         .map(String::from)
-        .ok_or_else(|| "Invalid Perplexity response".to_string())?;
+        .ok_or_else(|| "Invalid Gemini response".to_string())?;
 
       Ok(CompleteResult { text, raw: None })
     })

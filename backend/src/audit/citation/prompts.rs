@@ -1,5 +1,5 @@
-const DEFAULT_PROMPT_MODEL: &str = "gpt-4o-mini";
-const DEFAULT_CITATION_MODEL: &str = "gpt-4o";
+const DEFAULT_PROMPT_MODEL: &str = "gpt-5-mini";
+const DEFAULT_CITATION_MODEL: &str = "gpt-5.1";
 const MARKDOWN_TRUNCATE_CHARS: usize = 4000;
 
 pub fn prompt_model() -> String {

@@ -1,4 +1,4 @@
-@[derive(Clone, Debug)]
+#[derive(Clone, Debug)]
 pub struct ProviderConfig {
   pub api_key: String,
   pub model: Option<String>,
@@ -13,7 +13,7 @@ pub fn openai_config() -> Option<ProviderConfig> {
 
   let model = get_opt("OPENAI_PROMPT_MODEL")
     .or_else(|| get_opt("OPENAI_CITATION_MODEL"))
-    .or(Some("gpt-4o".to_string()));
+    .or(Some("gpt-5.1".to_string()));
   Some(ProviderConfig { api_key, model })
 }
 
