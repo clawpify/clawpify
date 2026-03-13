@@ -1,6 +1,6 @@
 import { serve } from "bun";
 import index from "./index.html";
-import { requireAuth, AuthError } from "./lib/auth";
+import { getAuthOptional, requireAuth, AuthError } from "./lib/auth";
 import { createProxyHandler, proxyToRustPublic } from "./utils/networkFns";
 import { scrapeUrlForContent } from "./utils/scrape";
 
@@ -9,9 +9,36 @@ const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 3001;
 const proxy = (path: string | ((req: Request) => string)) =>
   createProxyHandler(path, AuthError, requireAuth);
 
+let serverRef: { requestIP: (r: Request) => { address: string } | null } | null = null;
+
+async function proxyCitation(req: Request, path: string, body?: string): Promise<Response> {
+  const clientIP = serverRef?.requestIP(req)?.address ?? "unknown";
+  const auth = await getAuthOptional(req);
+  const reqToForward = body
+    ? new Request(req.url, {
+        method: req.method,
+        headers: new Headers(req.headers),
+        body,
+      })
+    : req;
+  return proxyToRustPublic(reqToForward, path, { clientIP, auth });
+}
+
 const server = serve({
   port,
   routes: {
+    "/image/*": async (req) => {
+      const pathname = new URL(req.url).pathname;
+      const filePath = `public${pathname}`;
+      const file = Bun.file(filePath);
+      if (await file.exists()) {
+        return new Response(file, {
+          headers: { "Content-Type": "image/png" },
+        });
+      }
+      return new Response("Not found", { status: 404 });
+    },
+
     "/*": index,
 
     "/api/hello": {
@@ -42,6 +69,13 @@ const server = serve({
       async GET(req) { return proxy("/api/stores")(req); },
       async POST(req) { return proxy("/api/stores")(req); },
     },
+    "/api/ai-visibility/products": {
+      async GET(req) { return proxy("/api/ai-visibility/products")(req); },
+    },
+    "/api/agent-activity": {
+      async GET(req) { return proxy("/api/agent-activity")(req); },
+      async POST(req) { return proxy("/api/agent-activity")(req); },
+    },
 
     "/api/chatgpt-citation/generate": {
       async POST(req) {
@@ -57,26 +91,31 @@ const server = serve({
           if (content) bodyToForward = { ...body, website_content: content };
         }
         const bodyStr = JSON.stringify(bodyToForward);
-        const headers = new Headers(req.headers);
-        headers.set("Content-Type", "application/json");
-        return proxyToRustPublic(
-          new Request(req.url, { method: "POST", headers, body: bodyStr }),
-          path
-        );
+        return proxyCitation(req, path, bodyStr);
       },
     },
 
     "/api/chatgpt-citation": {
       async POST(req) {
         const path = new URL(req.url).pathname;
-        return proxyToRustPublic(req, path);
+        const body = await req.text();
+        return proxyCitation(req, path, body || undefined);
       },
     },
 
     "/api/chatgpt-citation/:id": {
       async GET(req) {
         const path = new URL(req.url).pathname;
-        return proxyToRustPublic(req, path);
+        return proxyCitation(req, path);
+      },
+    },
+
+    "/api/waitlist": {
+      async POST(req) {
+        const path = new URL(req.url).pathname;
+        const clientIP = serverRef?.requestIP(req)?.address ?? "unknown";
+        const auth = await getAuthOptional(req);
+        return proxyToRustPublic(req, path, { clientIP, auth });
       },
     },
 
@@ -124,4 +163,5 @@ const server = serve({
   },
 });
 
+serverRef = server;
 console.log(`🚀 Server running at ${server.url}`);

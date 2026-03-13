@@ -1,20 +1,4 @@
-const DEFAULT_PROMPT_MODEL: &str = "gpt-5-mini";
-const DEFAULT_CITATION_MODEL: &str = "gpt-5.1";
 const MARKDOWN_TRUNCATE_CHARS: usize = 4000;
-
-pub fn prompt_model() -> String {
-  std::env::var("OPENAI_PROMPT_MODEL")
-    .ok()
-    .filter(|s| !s.trim().is_empty())
-    .unwrap_or_else(|| DEFAULT_PROMPT_MODEL.to_string())
-}
-
-pub fn citation_model() -> String {
-  std::env::var("OPENAI_CITATION_MODEL")
-    .ok()
-    .filter(|s| !s.trim().is_empty())
-    .unwrap_or_else(|| DEFAULT_CITATION_MODEL.to_string())
-}
 
 pub fn markdown_truncate_chars() -> usize {
   MARKDOWN_TRUNCATE_CHARS

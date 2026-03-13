@@ -33,14 +33,24 @@ export async function proxyToRust(
 
 export async function proxyToRustPublic(
   req: Request,
-  path: string
+  path: string,
+  opts?: { clientIP?: string; auth?: AuthPayload }
 ): Promise<Response> {
   const url = new URL(req.url);
   const backendUrl = `${RUST_API_URL}${path}${url.search}`;
+  const headers = new Headers(req.headers);
+  if (opts?.clientIP) {
+    headers.set("X-Client-IP", opts.clientIP);
+  }
+  if (opts?.auth) {
+    headers.set("X-Internal-User-Id", opts.auth.userId);
+    if (opts.auth.orgId) headers.set("X-Internal-Org-Id", opts.auth.orgId);
+    if (opts.auth.orgRole) headers.set("X-Internal-Org-Role", opts.auth.orgRole);
+  }
 
   const res = await fetch(backendUrl, {
     method: req.method,
-    headers: req.headers,
+    headers,
     body: req.method !== "GET" && req.method !== "HEAD" ? req.body : undefined,
   });
 

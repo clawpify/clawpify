@@ -7,13 +7,22 @@ export type GenerateResponse = {
   competitors: string[];
 };
 
+function authHeaders(token: string | null): Record<string, string> {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+  return headers;
+}
+
 export async function generatePromptsAndCompetitors(
   websiteUrl: string,
-  companyName: string
+  companyName: string,
+  token?: string | null
 ): Promise<GenerateResponse> {
   const res = await fetch(`${API_BASE}/api/chatgpt-citation/generate`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: authHeaders(token ?? null),
     body: JSON.stringify({ website_url: websiteUrl, company_name: companyName }),
   });
 
@@ -28,7 +37,8 @@ export async function generatePromptsAndCompetitors(
 export async function createCitation(
   form: CitationForm,
   customPrompts?: string[],
-  runSearch: boolean = true
+  runSearch: boolean = true,
+  token?: string | null
 ): Promise<{ id: string }> {
   const requestBody =
     customPrompts && customPrompts.length > 0
@@ -36,7 +46,7 @@ export async function createCitation(
       : { ...form, run_search: runSearch };
   const res = await fetch(`${API_BASE}/api/chatgpt-citation`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: authHeaders(token ?? null),
     body: JSON.stringify(requestBody),
   });
 
@@ -47,6 +57,30 @@ export async function createCitation(
 
   const data = (await res.json()) as { id: string };
   return data;
+}
+
+export type JoinWaitlistRequest = {
+  email: string;
+};
+
+export type JoinWaitlistResponse = {
+  id: string;
+  already_on_list: boolean;
+};
+
+export async function joinWaitlist(
+  body: JoinWaitlistRequest
+): Promise<JoinWaitlistResponse> {
+  const res = await fetch(`${API_BASE}/api/waitlist`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { error?: string }).error || `Request failed: ${res.status}`);
+  }
+  return res.json() as Promise<JoinWaitlistResponse>;
 }
 
 export async function pollCitation(id: string): Promise<CitationData> {

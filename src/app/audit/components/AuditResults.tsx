@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAudit } from "../context";
 import { asStringArray } from "../types";
 import { VisibilityChart } from "./VisibilityChart";
@@ -11,6 +11,17 @@ const CellSkeleton = ({ className = "" }: { className?: string }) => (
     className={`h-4 rounded bg-zinc-200 animate-pulse ${className}`}
     aria-hidden
   />
+);
+
+const RowSearchingState = ({ className = "" }: { className?: string }) => (
+  <div
+    className={`flex items-center gap-2 text-xs text-zinc-500 ${className}`}
+    aria-live="polite"
+    aria-busy="true"
+  >
+    <div className="h-3.5 w-3.5 shrink-0 animate-spin rounded-full border-2 border-zinc-200 border-t-zinc-500" />
+    <span>Searching...</span>
+  </div>
 );
 
 const OpenAIIcon = () => (
@@ -26,24 +37,29 @@ const OpenAIIcon = () => (
   </svg>
 );
 
-function formatDate(iso: string): string {
-  try {
-    const d = new Date(iso);
-    return d.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-    });
-  } catch {
-    return "—";
-  }
+const WEB_SEARCH_THINKING_MESSAGES = [
+  "Querying ChatGPT web search...",
+  "Searching for citations...",
+  "Generating web search results...",
+];
+
+function useRotatingMessage(messages: readonly string[], intervalMs = 2500) {
+  const [idx, setIdx] = useState(0);
+  useEffect(() => {
+    const id = setInterval(
+      () => setIdx((i) => (i + 1) % messages.length),
+      intervalMs
+    );
+    return () => clearInterval(id);
+  }, [messages, intervalMs]);
+  return messages[idx];
 }
 
 export function AuditResults() {
   const { data, step, error, generatedCompetitors, generatedPrompts, runChatGPTSearch } =
     useAudit();
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const thinkingMessage = useRotatingMessage(WEB_SEARCH_THINKING_MESSAGES);
 
   const isLoading = step === "loading";
   const searchSkipped =
@@ -57,11 +73,23 @@ export function AuditResults() {
       ? generatedPrompts
       : data?.results.map((r) => r.query) ?? [];
   const hasPrompts = prompts.length > 0;
-  const rows =
-    hasPrompts ? prompts : data?.results ?? [];
+  const rows = hasPrompts ? prompts : data?.results ?? [];
+  const totalQueries = prompts.length > 0 ? prompts.length : 5;
+  const completedCount = data?.results.length ?? 0;
 
   return (
     <div className="space-y-6">
+      {isLoading && runChatGPTSearch && (
+        <div className="flex items-center gap-3 rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-3">
+          <div className="h-5 w-5 shrink-0 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-900" />
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium text-zinc-900">
+              Query {completedCount} of {totalQueries}
+            </p>
+            <p className="text-xs text-zinc-500">{thinkingMessage}</p>
+          </div>
+        </div>
+      )}
       {showError && (
         <p className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
           {error}
@@ -99,9 +127,6 @@ export function AuditResults() {
                     <tr className="border-b border-zinc-200 bg-zinc-50">
                       <th className="w-10 px-4 py-3" aria-hidden>
                         <OpenAIIcon />
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-500">
-                        Date
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-500">
                         Query
@@ -149,35 +174,36 @@ export function AuditResults() {
                             }}
                             className={`border-b border-zinc-100 last:border-0 transition ${
                               matchingResult
-                                ? "cursor-pointer hover:bg-zinc-50"
+                                ? "cursor-pointer hover:bg-zinc-50 animate-fade-in"
                                 : ""
                             } ${isExpanded ? "bg-zinc-50" : ""}`}
                             aria-expanded={isExpanded}
                           >
                             <td className="px-4 py-3 text-zinc-400">
                               {isLoadingRow ? (
-                                <CellSkeleton className="h-5 w-5" />
+                                <div
+                                  className="h-5 w-5 animate-spin rounded-full border-2 border-zinc-200 border-t-zinc-500"
+                                  aria-hidden
+                                />
                               ) : (
                                 <OpenAIIcon />
                               )}
                             </td>
                             <td className="px-4 py-3 text-sm text-zinc-900">
                               {isLoadingRow ? (
-                                <CellSkeleton className="w-20" />
-                              ) : (
-                                formatDate(matchingResult!.created_at)
-                              )}
-                            </td>
-                            <td className="px-4 py-3 text-sm text-zinc-900">
-                              {isLoadingRow ? (
-                                <CellSkeleton className="w-48 max-w-full" />
+                                <span className="text-zinc-600">{query}</span>
                               ) : (
                                 matchingResult!.query
                               )}
                             </td>
                             <td className="px-4 py-3">
                               {isLoadingRow ? (
-                                <CellSkeleton className="w-16" />
+                                <RowSearchingState />
+                              ) : isLoading &&
+                                asStringArray(
+                                  matchingResult!.citation_urls
+                                ).length === 0 ? (
+                                <RowSearchingState />
                               ) : (
                                 <TopSourcesPreview
                                   urls={asStringArray(

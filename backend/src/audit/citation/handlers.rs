@@ -1,14 +1,44 @@
-use axum::{extract::Path, Extension, Json};
+use axum::{extract::Path, http::HeaderMap, Extension, Json};
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, PgPool};
 use uuid::Uuid;
 
 use crate::error::{self, ApiError};
 use crate::llm;
+use crate::rate_limit;
 
 use super::parsing;
 use super::prompts;
 use super::urls;
+
+const RATE_LIMIT_MESSAGE: &str =
+  "Rate limit exceeded. Free tier: 2 audits per 2 days. Sign in for more.";
+
+/// Enforces rate limit for unauthenticated requests. Logged-in users (with
+/// `X-Internal-User-Id`) bypass. Returns `Err` with 429 if limit exceeded.
+async fn enforce_rate_limit(
+  headers: &HeaderMap,
+  rate_limit_pool: Option<&PgPool>,
+) -> Result<(), ApiError> {
+  if headers.get("X-Internal-User-Id").is_some() {
+    return Ok(());
+  }
+  let Some(rl_pool) = rate_limit_pool else {
+    return Ok(());
+  };
+  let ip = headers
+    .get("X-Client-IP")
+    .and_then(|v| v.to_str().ok())
+    .unwrap_or("unknown");
+  let allowed = rate_limit::check_and_record(rl_pool, ip)
+    .await
+    .map_err(error::db_error)?;
+  if allowed {
+    Ok(())
+  } else {
+    Err(error::rate_limit_exceeded(RATE_LIMIT_MESSAGE))
+  }
+}
 
 fn extract_string_array(json: &serde_json::Value, key: &str) -> Vec<String> {
   json
@@ -138,8 +168,12 @@ pub async fn generate_prompts_and_competitors(
 /// Creates a citation check job and optionally starts the search.
 pub async fn create_citation(
   Extension(pool): Extension<PgPool>,
+  Extension(rate_limit_pool): Extension<Option<PgPool>>,
+  headers: HeaderMap,
   Json(body): Json<CreateCitationRequest>,
 ) -> Result<(axum::http::StatusCode, Json<CreateCitationResponse>), ApiError> {
+  enforce_rate_limit(&headers, rate_limit_pool.as_ref()).await?;
+
   let company_name = body.company_name.trim();
   let website_url = body.website_url.trim();
   let product_description = body.product_description.trim();

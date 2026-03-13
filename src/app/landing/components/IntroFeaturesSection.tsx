@@ -15,7 +15,7 @@ export function IntroFeaturesSection({
 }: IntroFeaturesSectionProps) {
   return (
     <>
-      <section className="pt-20 pb-16 md:pt-28 md:pb-24">
+      <section className="border-t border-zinc-200 pt-20 pb-16 md:pt-28 md:pb-24">
         <div className="max-w-6xl px-6 md:px-10 lg:px-12">
           <div className="grid gap-6 md:grid-cols-2 md:items-start md:gap-20">
             <h2 className="text-xl font-semibold leading-snug tracking-tight text-zinc-900 md:text-[1.5rem] lg:text-[1.75rem]">

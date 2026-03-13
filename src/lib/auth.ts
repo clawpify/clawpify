@@ -22,6 +22,23 @@ export async function getAuthToken(req: Request): Promise<string | null> {
   return null;
 }
 
+export async function getAuthOptional(req: Request): Promise<{
+  userId: string;
+  orgId?: string;
+  orgRole?: string;
+} | null> {
+  if (!CLERK_SECRET_KEY) return null;
+  const token = await getAuthToken(req);
+  if (!token) return null;
+  const payload = await verifyToken(token, { secretKey: CLERK_SECRET_KEY });
+  if (!payload?.sub) return null;
+  return {
+    userId: payload.sub,
+    orgId: payload.org_id as string | undefined,
+    orgRole: payload.org_role as string | undefined,
+  };
+}
+
 export async function requireAuth(req: Request): Promise<{
   userId: string;
   orgId?: string;

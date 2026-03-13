@@ -1,0 +1,5 @@
+CREATE TABLE IF NOT EXISTS audit_rate_limits (
+  ip_hash TEXT PRIMARY KEY,
+  first_used_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  usage_count INTEGER NOT NULL DEFAULT 0
+);

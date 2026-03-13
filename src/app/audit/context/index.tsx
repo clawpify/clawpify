@@ -2,9 +2,14 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
+import { useLocalStorage } from "../../../hooks/useLocalStorage";
+import { useAuth } from "@clerk/react";
+import { logAgentActivity, useAuthenticatedFetch } from "../../../lib/api";
 import {
   createCitation,
   generatePromptsAndCompetitors,
@@ -30,6 +35,9 @@ type AuditContextValue = {
   setRunChatGPTSearch: React.Dispatch<React.SetStateAction<boolean>>;
   data: CitationData | null;
   error: string | null;
+  showWaitlistModal: boolean;
+  setShowWaitlistModal: React.Dispatch<React.SetStateAction<boolean>>;
+  closeWaitlistModal: () => void;
   generate: () => Promise<void>;
   submit: () => Promise<void>;
   reset: () => void;
@@ -44,6 +52,8 @@ const defaultForm: CitationForm = {
 const AuditContext = createContext<AuditContextValue | null>(null);
 
 export function AuditProvider({ children }: { children: ReactNode }) {
+  const { getToken, isSignedIn } = useAuth();
+  const fetchAuth = useAuthenticatedFetch();
   const [step, setStep] = useState<AuditStep>("results");
   const [formStep, setFormStep] = useState<FormStep>(1);
   const [form, setForm] = useState<CitationForm>(defaultForm);
@@ -52,8 +62,31 @@ export function AuditProvider({ children }: { children: ReactNode }) {
   const [runChatGPTSearch, setRunChatGPTSearch] = useState(true);
   const [data, setData] = useState<CitationData | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [showWaitlistModal, setShowWaitlistModal] = useState(false);
+  const [waitlistDismissed, setWaitlistDismissed] = useLocalStorage(
+    "clawpify-waitlist-dismissed",
+    false
+  );
+  const waitlistModalTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (waitlistModalTimeoutRef.current) {
+        clearTimeout(waitlistModalTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const closeWaitlistModal = useCallback(() => {
+    setShowWaitlistModal(false);
+    setWaitlistDismissed(true);
+  }, [setWaitlistDismissed]);
 
   const reset = useCallback(() => {
+    if (waitlistModalTimeoutRef.current) {
+      clearTimeout(waitlistModalTimeoutRef.current);
+      waitlistModalTimeoutRef.current = null;
+    }
     setStep("form");
     setFormStep(1);
     setForm(defaultForm);
@@ -62,6 +95,7 @@ export function AuditProvider({ children }: { children: ReactNode }) {
     setRunChatGPTSearch(true);
     setData(null);
     setError(null);
+    setShowWaitlistModal(false);
   }, []);
 
   const generate = useCallback(async () => {
@@ -78,9 +112,11 @@ export function AuditProvider({ children }: { children: ReactNode }) {
     setStep("generating");
 
     try {
+      const token = await getToken();
       const { prompts, competitors } = await generatePromptsAndCompetitors(
         parsed.data.website_url,
-        parsed.data.company_name
+        parsed.data.company_name,
+        token
       );
       setGeneratedPrompts(prompts);
       const normalized = competitors.slice(0, 7);
@@ -92,7 +128,7 @@ export function AuditProvider({ children }: { children: ReactNode }) {
       setError(e instanceof Error ? e.message : "Failed to generate");
       setStep("results");
     }
-  }, [form.company_name, form.website_url]);
+  }, [form.company_name, form.website_url, getToken]);
 
   const submit = useCallback(async () => {
     const parsed = citationFormSchema.safeParse(form);
@@ -108,16 +144,19 @@ export function AuditProvider({ children }: { children: ReactNode }) {
     }
 
     setError(null);
+    setData(null);
     setStep("loading");
 
     try {
+      const token = await getToken();
       const { id } = await createCitation(
         {
           ...parsed.data,
           product_description: parsed.data.product_description || "—",
         },
         hasCustomPrompts ? generatedPrompts : undefined,
-        runChatGPTSearch
+        runChatGPTSearch,
+        token
       );
 
       const poll = async () => {
@@ -126,12 +165,31 @@ export function AuditProvider({ children }: { children: ReactNode }) {
           setData(d);
           setStep("results");
           setFormStep(1);
+          if (isSignedIn) {
+            logAgentActivity(fetchAuth, {
+              agent_name: "Citation Auditor",
+              action_type: "audit_completed",
+              payload: { citation_id: id, company_name: parsed.data.company_name },
+            });
+          }
+          if (!waitlistDismissed) {
+            waitlistModalTimeoutRef.current = setTimeout(
+              () => setShowWaitlistModal(true),
+              3000
+            );
+          }
           return;
         }
         if (d.status === "failed") {
           setError("The citation check failed. Please try again.");
           setStep("results");
           setFormStep(1);
+          if (!waitlistDismissed) {
+            waitlistModalTimeoutRef.current = setTimeout(
+              () => setShowWaitlistModal(true),
+              3000
+            );
+          }
           return;
         }
         if (d.results && d.results.length > 0) {
@@ -146,7 +204,15 @@ export function AuditProvider({ children }: { children: ReactNode }) {
       setStep("results");
       setFormStep(1);
     }
-  }, [form, generatedPrompts, runChatGPTSearch]);
+  }, [
+    form,
+    generatedPrompts,
+    runChatGPTSearch,
+    getToken,
+    waitlistDismissed,
+    isSignedIn,
+    fetchAuth,
+  ]);
 
   const value: AuditContextValue = {
     step,
@@ -162,6 +228,9 @@ export function AuditProvider({ children }: { children: ReactNode }) {
     setRunChatGPTSearch,
     data,
     error,
+    showWaitlistModal,
+    setShowWaitlistModal,
+    closeWaitlistModal,
     generate,
     submit,
     reset,

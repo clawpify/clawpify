@@ -89,6 +89,21 @@ bun dev
 bun start
 ```
 
+#### 5. Database migrations (Railway)
+
+If your database is on Railway, run migrations with the Railway CLI (uses `DATABASE_URL` from your project):
+
+```bash
+railway run bash -c 'for f in migrations/*.sql; do psql $DATABASE_URL -f $f -v ON_ERROR_STOP=1; done'
+```
+
+Or run each migration manually:
+
+```bash
+railway run psql $DATABASE_URL -f migrations/005_waitlist.sql
+railway run psql $DATABASE_URL -f migrations/006_waitlist_rate_limits_and_unique.sql
+```
+
 ## Contact
 
 Questions, feedback, or want to contribute? Reach out:
