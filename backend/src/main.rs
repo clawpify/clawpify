@@ -10,7 +10,7 @@ use serde::Serialize;
 use std::net::SocketAddr;
 use tower_http::cors::{AllowOrigin, Any, CorsLayer};
 
-use backend::{audit, db, stores};
+use backend::{agent_activity, ai_visibility, audit, db, stores, waitlist};
 
 #[derive(Serialize)]
 struct ApiResponse {
@@ -49,6 +49,16 @@ async fn main() {
   let pool = db::create_pool(&database_url)
     .await
     .expect("Failed to create DB pool");
+
+  let rate_limit_pool = if let Ok(url) = std::env::var("RATE_LIMIT_DATABASE_URL") {
+    Some(
+      db::create_rate_limit_pool(&url)
+        .await
+        .expect("Failed to create rate limit DB pool"),
+    )
+  } else {
+    None
+  };
 
   let allowed = std::env::var("CORS_ALLOWED_ORIGINS")
     .unwrap_or_else(|_| "http://localhost:3001,http://127.0.0.1:3001".to_string());
@@ -95,6 +105,14 @@ async fn main() {
       "/api/stores",
       get(stores::list_stores).post(stores::create_store),
     )
+    .route(
+      "/api/ai-visibility/products",
+      get(ai_visibility::get_products),
+    )
+    .route(
+      "/api/agent-activity",
+      get(agent_activity::list_activity).post(agent_activity::log_activity),
+    )
     .route_layer(middleware::from_fn(require_internal_auth))
     .layer(Extension(pool.clone()));
 
@@ -115,7 +133,9 @@ async fn main() {
       "/api/chatgpt-citation/:id",
       get(audit::citation::get_citation),
     )
-    .layer(Extension(pool));
+    .route("/api/waitlist", post(waitlist::join))
+    .layer(Extension(pool))
+    .layer(Extension(rate_limit_pool));
 
   let app = Router::new().merge(protected).merge(public).layer(cors);
 

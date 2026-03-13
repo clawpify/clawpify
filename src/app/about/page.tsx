@@ -19,7 +19,29 @@ export function AboutPage() {
             ← Back
           </Link>
           <p className="about-mono mt-4 max-w-2xl text-lg text-zinc-600">
-            We're building Clawpify to bring discovery into the agent economy.
+            Agents are opening new sales channels for commerce. Protocols like{" "}
+            <a
+              href="https://ucp.dev"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline transition hover:text-zinc-900"
+            >
+              Shopify's Universal Commerce Protocol
+            </a>{" "}
+            and{" "}
+            <a
+              href="https://docs.stripe.com/agentic-commerce/protocol"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline transition hover:text-zinc-900"
+            >
+              Stripe's Agentic Commerce Protocol
+            </a>{" "}
+            are defining how AI agents discover, recommend, and transact with merchants.
+          </p>
+          <p className="about-mono mt-4 max-w-2xl text-lg text-zinc-600">
+            We're building Clawpify to bring discovery into this agent economy—and we're ready for
+            ecommerce.
           </p>
         </div>
         <main className="flex-1 overflow-y-auto px-6 md:px-10 lg:px-12">

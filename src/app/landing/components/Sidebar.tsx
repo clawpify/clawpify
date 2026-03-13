@@ -3,16 +3,32 @@ import { Link } from "react-router-dom";
 import { SignInButton, SignUpButton } from "@clerk/react";
 const productItems = [
   { label: "Open Claw for Shopify", href: "https://clawpify.com", external: true },
-  { label: "SEO audit", href: "/audit", external: false },
+  {
+    label: "Query ChatGPT",
+    href: "/audit",
+    external: false,
+    tag: "Try demo",
+  },
 ];
 
+const developerItems = [
+  { label: " Were Open source", href: "https://github.com/clawpify/clawpify", external: true },
+];
+
+// const writingItems = [
+//   { label: "Blog", href: "#", external: false },
+//   { label: "Guides", href: "#", external: false },
+// ];
+
 const navLinks = [
-  { label: "Pricing", href: "#", external: true },
+  // { label: "Pricing", href: "#", external: true },
   { label: "About", href: "/about", external: false },
 ];
 
 export function Sidebar() {
   const [productsExpanded, setProductsExpanded] = useState(true);
+  const [developersExpanded, setDevelopersExpanded] = useState(false);
+  // const [writingExpanded, setWritingExpanded] = useState(false);
   const [isOpen, setIsOpen] = useState(true);
 
   return (
@@ -23,7 +39,7 @@ export function Sidebar() {
     >
       <div className={`mb-10 flex items-center gap-2 ${isOpen ? "justify-between" : "flex-col"}`}>
         <Link to="/" className="flex items-center gap-2">
-          <div className="h-9 w-9 shrink-0 rounded bg-[#2563eb]" />
+          <div className="h-9 w-9 shrink-0 rounded bg-[#b5ddfb]" />
           {isOpen && (
             <span className="font-mono text-lg font-medium uppercase text-zinc-900">CLAWPIFY</span>
           )}
@@ -68,8 +84,56 @@ export function Sidebar() {
           </button>
           {productsExpanded && (
             <div className="flex flex-col gap-1 pl-2">
-              {productItems.map((item) =>
-                "external" in item && item.external ? (
+              {productItems.map((item) => {
+                const linkClass =
+                  "font-mono py-2 text-sm font-medium uppercase text-zinc-600 transition hover:text-zinc-900 flex items-center gap-2";
+                const content = (
+                  <>
+                    {item.label}
+                    {"tag" in item && item.tag && (
+                      <span className="rounded-md bg-[#b5ddfb] px-1.5 py-0.5 text-[10px] font-medium uppercase text-[#1e3a5f]">
+                        {item.tag}
+                      </span>
+                    )}
+                  </>
+                );
+                return item.external ? (
+                  <a
+                    key={item.label}
+                    href={item.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={linkClass}
+                  >
+                    {content}
+                  </a>
+                ) : item.href ? (
+                  <Link key={item.label} to={item.href} className={linkClass}>
+                    {content}
+                  </Link>
+                ) : null;
+              })}
+            </div>
+          )}
+        </div>
+        <div>
+          <button
+            type="button"
+            onClick={() => setDevelopersExpanded((e) => !e)}
+            className="font-mono grid w-full grid-cols-[1fr_1rem] items-center gap-2 py-2 text-left text-sm font-medium uppercase text-zinc-900 transition hover:text-zinc-600"
+          >
+            Developers
+            <span
+              className={`flex justify-end text-zinc-400 transition-transform ${developersExpanded ? "rotate-90" : "rotate-0"}`}
+              aria-hidden
+            >
+              ›
+            </span>
+          </button>
+          {developersExpanded && (
+            <div className="flex flex-col gap-1 pl-2">
+              {developerItems.map((item) =>
+                item.external ? (
                   <a
                     key={item.label}
                     href={item.href}
@@ -79,19 +143,61 @@ export function Sidebar() {
                   >
                     {item.label}
                   </a>
-                ) : "href" in item && item.href ? (
-                  <a
+                ) : (
+                  <Link
                     key={item.label}
-                    href={item.href}
+                    to={item.href}
                     className="font-mono py-2 text-sm font-medium uppercase text-zinc-600 transition hover:text-zinc-900"
                   >
                     {item.label}
-                  </a>
-                ) : null
+                  </Link>
+                )
               )}
             </div>
           )}
         </div>
+        {/* Writing section commented out
+        <div>
+          <button
+            type="button"
+            onClick={() => setWritingExpanded((e) => !e)}
+            className="font-mono grid w-full grid-cols-[1fr_1rem] items-center gap-2 py-2 text-left text-sm font-medium uppercase text-zinc-900 transition hover:text-zinc-600"
+          >
+            Writing
+            <span
+              className={`flex justify-end text-zinc-400 transition-transform ${writingExpanded ? "rotate-90" : "rotate-0"}`}
+              aria-hidden
+            >
+              ›
+            </span>
+          </button>
+          {writingExpanded && (
+            <div className="flex flex-col gap-1 pl-2">
+              {writingItems.map((item) =>
+                item.external ? (
+                  <a
+                    key={item.label}
+                    href={item.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-mono py-2 text-sm font-medium uppercase text-zinc-600 transition hover:text-zinc-900"
+                  >
+                    {item.label}
+                  </a>
+                ) : (
+                  <Link
+                    key={item.label}
+                    to={item.href}
+                    className="font-mono py-2 text-sm font-medium uppercase text-zinc-600 transition hover:text-zinc-900"
+                  >
+                    {item.label}
+                  </Link>
+                )
+              )}
+            </div>
+          )}
+        </div>
+        */}
         {navLinks.map(({ label, href, external }) =>
           external ? (
             <a
@@ -124,7 +230,7 @@ export function Sidebar() {
           <SignUpButton mode="redirect" forceRedirectUrl="/app">
             <button
               type="button"
-              className="font-mono w-full rounded-none border border-zinc-900 bg-zinc-900 px-4 py-3 text-sm font-medium uppercase text-white transition hover:bg-zinc-800"
+              className="font-mono w-full rounded-sm border border-[#26251e] bg-[#26251e] px-4 py-3 text-sm font-medium uppercase text-white transition hover:bg-[#1a1914] hover:border-[#1a1914]"
             >
               GET STARTED FOR FREE
             </button>
@@ -132,7 +238,7 @@ export function Sidebar() {
           <SignInButton mode="redirect" forceRedirectUrl="/app">
             <button
               type="button"
-              className="font-mono block w-full rounded-none border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-medium uppercase text-zinc-900 transition hover:bg-zinc-100"
+              className="font-mono block w-full rounded-sm border border-zinc-200 bg-transparent px-4 py-3 text-sm font-medium uppercase text-[#26251e] transition hover:border-[#26251e] hover:bg-[#26251e] hover:text-white"
             >
               Sign in
             </button>

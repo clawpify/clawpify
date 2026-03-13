@@ -2,21 +2,18 @@ mod gemini;
 mod openai;
 mod perplexity;
 
-use std::str::FromStr;
-use std::sync::Pin;
+use std::future::Future;
+use std::pin::Pin;
 use std::sync::Arc;
 
 pub use gemini::GeminiProvider;
-pub use openai::OpenAIProvider;
-pub use perplexity::PerplexityProvider
-
-use crate::llm::config::ProviderConfig;
-
+pub use openai::OpenAiProvider;
+pub use perplexity::PerplexityProvider;
 
 #[derive(Clone, Debug, Default)]
-pub struct Provider {
+pub struct CompleteOptions {
   pub json_mode: bool,
-  pub web_mode: bool,
+  pub web_search: bool,
 }
 
 impl CompleteOptions {
@@ -25,7 +22,7 @@ impl CompleteOptions {
     self
   }
 
-  pub fn with_web_mode(mut self, v: bool) -> Self {
+  pub fn with_web_search(mut self, v: bool) -> Self {
     self.web_search = v;
     self
   }
@@ -46,20 +43,18 @@ pub trait AiProvider: Send + Sync {
   ) -> Pin<Box<dyn Future<Output = Result<CompleteResult, String>> + Send>>;
 }
 
-pub fn default_providers() -> <Arc<dyn AiProvider>> {
+pub fn default_providers() -> Vec<Arc<dyn AiProvider>> {
   let mut out = Vec::new();
 
-  if let Some(config) = config::gemini_config() {
+  if let Some(cfg) = crate::llm::config::openai_config() {
     out.push(Arc::new(OpenAiProvider::new(cfg)) as Arc<dyn AiProvider>);
   }
-
   if let Some(cfg) = crate::llm::config::perplexity_config() {
     out.push(Arc::new(PerplexityProvider::new(cfg)) as Arc<dyn AiProvider>);
   }
-
   if let Some(cfg) = crate::llm::config::gemini_config() {
     out.push(Arc::new(GeminiProvider::new(cfg)) as Arc<dyn AiProvider>);
-}
+  }
 
   out
 }

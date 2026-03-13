@@ -1,6 +1,11 @@
 # Clawpify
 
 [![CI](https://github.com/clawpify/clawpify/actions/workflows/ci.yml/badge.svg)](https://github.com/clawpify/clawpify/actions/workflows/ci.yml)
+[![Discord](https://img.shields.io/discord/1469593952330973227?label=discord&logo=discord)](https://discord.gg/HD6Tc56Z)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](http://makeapullrequest.com)
+[![GitHub stars](https://img.shields.io/github/stars/clawpify/clawpify)](https://github.com/clawpify/clawpify)
+[![GitHub contributors](https://img.shields.io/github/contributors/clawpify/clawpify)](https://github.com/clawpify/clawpify/graphs/contributors)
 
 **Open-source SEO and AEO tool for commerce.**
 
@@ -87,6 +92,21 @@ bun dev
 
 ```bash
 bun start
+```
+
+#### 5. Database migrations (Railway)
+
+If your database is on Railway, run migrations with the Railway CLI (uses `DATABASE_URL` from your project):
+
+```bash
+railway run bash -c 'for f in migrations/*.sql; do psql $DATABASE_URL -f $f -v ON_ERROR_STOP=1; done'
+```
+
+Or run each migration manually:
+
+```bash
+railway run psql $DATABASE_URL -f migrations/005_waitlist.sql
+railway run psql $DATABASE_URL -f migrations/006_waitlist_rate_limits_and_unique.sql
 ```
 
 ## Contact

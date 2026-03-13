@@ -9,4 +9,5 @@ pub use handlers::{
   CreateCitationRequest, CreateCitationResponse, GenerateRequest, GenerateResponse,
 };
 
+pub use openai::{call_chat, call_responses_api};
 pub use urls::{normalize_domain, normalize_url, validate_url};

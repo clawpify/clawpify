@@ -65,6 +65,19 @@ body {
   }
 }
 
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out forwards;
+}
+
 nav a {
   margin-right: 1rem;
 }
@@ -85,7 +98,7 @@ nav a {
   font-weight: 500;
   letter-spacing: 0.02em;
   text-transform: uppercase;
-  color: #18181b;
+  color: #26251e;
   text-align: center;
   display: block;
   width: 100%;

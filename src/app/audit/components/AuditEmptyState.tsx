@@ -6,7 +6,7 @@ export function AuditEmptyState() {
     <div className="flex flex-1 flex-col space-y-4">
       <ChartAreaInteractive
         data={[]}
-        title="Brand Visibility in AI"
+        title="Brand Visibility in ChatGPT"
         description="Input needed to display chart"
         showTimeRange={false}
         emptyMessage="Input needed to display chart"
