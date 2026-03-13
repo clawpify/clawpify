@@ -31,7 +31,7 @@ pub async fn get_products(
   let org_id = auth::get_org_id(&headers)?;
 
   let store = sqlx::query!(
-    "SELECT id FROM stores WHERE id = $1 AND org_id = $2",
+    "SELECT id, config, platform FROM stores WHERE id = $1 AND org_id = $2",
     query.store_id,
     org_id
   )

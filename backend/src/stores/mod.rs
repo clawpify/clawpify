@@ -63,7 +63,7 @@ pub async fn create_store(
   let row = sqlx::query_as!(
     Store,
     r#"INSERT INTO stores (org_id, platform, config) VALUES ($1, $2, $3)
-        RETURNING id, org_id, platform, config, created_at"#,
+           RETURNING id, org_id, platform, config, created_at"#,
     org_id,
     platform,
     config
