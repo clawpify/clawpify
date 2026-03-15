@@ -25,8 +25,10 @@ export function FAQSection() {
               {description}
             </p>
             <a
-              href="#"
-              className="mt-6 inline-block bg-zinc-900 px-5 py-2.5 font-mono text-[0.7rem] font-medium uppercase tracking-widest text-white transition hover:bg-zinc-800"
+              href="https://calendar.notion.so/meet/alhwyn/clawpify"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-6 inline-block bg-zinc-900 px-5 py-2.5 text-xs font-medium uppercase text-white transition hover:bg-zinc-800"
             >
               {ctaLabel}
             </a>

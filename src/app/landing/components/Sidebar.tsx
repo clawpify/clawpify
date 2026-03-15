@@ -164,7 +164,7 @@ function SidebarInner({ isOpen, setIsOpen, hidePanelToggle }: { isOpen: boolean;
             href="https://calendar.notion.so/meet/alhwyn/clawpify"
             target="_blank"
             rel="noopener noreferrer"
-            className="block w-full rounded-none border border-[#26251e] bg-[#26251e] px-3 py-2.5 text-center text-xs font-medium uppercase text-white transition hover:bg-[#1a1914] hover:border-[#1a1914]"
+            className="block w-full rounded-none border border-zinc-900 bg-zinc-900 px-3 py-2.5 text-center text-xs font-medium uppercase text-white transition hover:bg-zinc-800 hover:border-zinc-800"
           >
             BOOK A CALL
           </a>

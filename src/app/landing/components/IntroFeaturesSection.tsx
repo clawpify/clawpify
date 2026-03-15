@@ -68,7 +68,7 @@ function ProductMetaMockup() {
             dragMomentum={false}
             onDragStart={() => setTopCard(card.image)}
             whileDrag={{ scale: 1.05 }}
-            className="absolute left-1/2 -ml-[5rem] md:-ml-[7rem] bottom-4 md:bottom-10 w-40 md:w-56 overflow-hidden rounded-xl bg-white shadow-lg cursor-grab active:cursor-grabbing"
+            className="absolute left-1/2 -ml-[5rem] md:-ml-[7rem] bottom-4 md:bottom-10 w-40 md:w-56 overflow-hidden bg-white border border-black/10 shadow-sm cursor-grab active:cursor-grabbing"
             style={{
               x: card.x,
               rotate: card.rotate,
@@ -76,7 +76,7 @@ function ProductMetaMockup() {
             }}
           >
             <img src={card.image} alt="" className="h-28 md:h-44 w-full object-cover pointer-events-none" />
-            <div className="absolute right-2.5 top-2.5 grid h-7 w-7 place-items-center rounded-full bg-white/90 shadow-sm backdrop-blur-sm">
+            <div className="absolute right-2.5 top-2.5 grid h-7 w-7 place-items-center bg-white/90 shadow-sm backdrop-blur-sm">
               <Badge />
             </div>
             <div className="px-3 pt-2.5 pb-1">
@@ -140,7 +140,11 @@ export function IntroFeaturesSection({
           <div className="border border-black/10 bg-white shadow-sm">
             {/* Title bar */}
             <div className="flex items-center gap-2.5 border-b border-black/10 bg-[#f5f5f5] px-4 py-2.5">
-              <span className="h-3 w-3 bg-[#1d1d1f]" />
+              <div className="hero-model-label__dots" aria-hidden>
+                <span className="hero-model-label__dot hero-model-label__dot--red" />
+                <span className="hero-model-label__dot hero-model-label__dot--yellow" />
+                <span className="hero-model-label__dot hero-model-label__dot--green" />
+              </div>
               <span className="font-mono text-[0.68rem] font-medium uppercase tracking-widest text-[#555]">
                 Products
               </span>

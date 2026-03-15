@@ -74,12 +74,23 @@ export function Footer() {
                 <ul className="flex flex-col gap-1.5">
                   {links.map(({ label, href }) => (
                     <li key={label}>
-                      <Link
-                        to={href}
-                        className="font-mono text-[0.78rem] text-[#26251e] transition hover:text-[#6b6455]"
-                      >
-                        {label}
-                      </Link>
+                      {href.startsWith("http") ? (
+                        <a
+                          href={href}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="font-mono text-[0.78rem] text-[#26251e] transition hover:text-[#6b6455]"
+                        >
+                          {label}
+                        </a>
+                      ) : (
+                        <Link
+                          to={href}
+                          className="font-mono text-[0.78rem] text-[#26251e] transition hover:text-[#6b6455]"
+                        >
+                          {label}
+                        </Link>
+                      )}
                     </li>
                   ))}
                 </ul>

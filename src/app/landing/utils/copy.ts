@@ -56,17 +56,17 @@ export const copy = {
     {
       label: "COMMERCE",
       title: "Your products, found by AI",
-      description: "Optimize your Shopify or WooCommerce store so ChatGPT, Perplexity, and other AI agents surface your products when shoppers ask for recommendations.",
+      description: "Make your store AI-ready so agents actually find and recommend what you sell.",
     },
     {
       label: "ANALYTICS",
       title: "See how agents see you",
-      description: "Track which AI agents recommend your products, how often you appear in results, and where you're losing visibility to competitors.",
+      description: "Know which agents recommend you, how often, and where competitors are winning.",
     },
     {
       label: "BRAND ALIGNMENT",
       title: "Make sure AI recommends your brand",
-      description: "Ensure every AI agent — from ChatGPT to Perplexity — accurately represents your brand and consistently recommends your products to shoppers.",
+      description: "Keep your brand story straight across every AI that talks about you.",
     },
   ],
   introAiSearch: {
@@ -164,7 +164,7 @@ export const copy = {
       },
       {
         heading: "Connect",
-        links: [{ label: "Book a demo", href: "#" }],
+        links: [{ label: "Book a demo", href: "https://calendar.notion.so/meet/alhwyn/clawpify" }],
       },
     ],
     copyright: "© 2026 Clawpify",
