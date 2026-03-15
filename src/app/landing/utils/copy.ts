@@ -11,7 +11,7 @@ export const copy = {
     rotatingWords: ["Commerce", "B2B", "SaaS", "E-commerce", "Agents"],
     subline:
       "Audits that reveal which prompts convert. Optimization methods that make agents buy.",
-    ctaPrimary: "Get started free",
+    ctaPrimary: "Book a call",
     ctaSecondary: "Explore docs",
     heroDemo: {
       exploreLabel: "TRY IT OUT OR SCROLL DOWN",
@@ -106,7 +106,7 @@ export const copy = {
   cta: {
     title: "Ready to sell to agents faster?",
     subline: "Join stores already optimizing for AI-driven purchases.",
-    button: "Get started free",
+    button: "Book a call",
   },
   faq: {
     sectionLabel: "FAQ",

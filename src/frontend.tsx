@@ -9,19 +9,27 @@ import "./lib/chartConfig";
 const elem = document.getElementById("root")!;
 const pk = process.env.BUN_PUBLIC_CLERK_PUBLISHABLE_KEY ?? "";
 
+const inner = (
+  <BrowserRouter>
+    <App />
+  </BrowserRouter>
+);
+
 const app = (
   <StrictMode>
-    <ClerkProvider
-      publishableKey={pk}
-      signInUrl="/sign-in"
-      signUpUrl="/sign-up"
-      afterSignOutUrl="/"
-      appearance={clerkAppearance}
-    >
-      <BrowserRouter>
-        <App />
-      </BrowserRouter>
-    </ClerkProvider>
+    {pk ? (
+      <ClerkProvider
+        publishableKey={pk}
+        signInUrl="/sign-in"
+        signUpUrl="/sign-up"
+        afterSignOutUrl="/"
+        appearance={clerkAppearance}
+      >
+        {inner}
+      </ClerkProvider>
+    ) : (
+      inner
+    )}
   </StrictMode>
 );
 

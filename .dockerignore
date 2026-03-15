@@ -1,0 +1,11 @@
+backend/
+dist/
+node_modules/
+.git/
+.github/
+.cursor/
+docs/
+migrations/
+scripts/
+*.md
+.env*

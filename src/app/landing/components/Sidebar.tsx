@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { SignInButton, SignUpButton } from "@clerk/react";
 const productItems = [
   { label: "Open Claw for Shopify", href: "https://clawpify.com", external: true },
   { label: "Query ChatGPT", href: "/audit", external: false },
@@ -161,22 +160,20 @@ function SidebarInner({ isOpen, setIsOpen, hidePanelToggle }: { isOpen: boolean;
       {isOpen && (
       <div className="border-t border-zinc-200 pt-5">
         <div className="flex flex-col gap-2">
-          <SignUpButton mode="redirect" forceRedirectUrl="/app">
-            <button
-              type="button"
-              className="w-full rounded-none border border-[#26251e] bg-[#26251e] px-3 py-2.5 text-xs font-medium uppercase text-white transition hover:bg-[#1a1914] hover:border-[#1a1914]"
-            >
-              GET STARTED FOR FREE
-            </button>
-          </SignUpButton>
-          <SignInButton mode="redirect" forceRedirectUrl="/app">
-            <button
-              type="button"
-              className="block w-full rounded-none border border-zinc-200 bg-transparent px-3 py-2.5 text-xs font-medium uppercase text-[#26251e] transition hover:border-[#26251e] hover:bg-[#26251e] hover:text-white"
-            >
-              Sign in
-            </button>
-          </SignInButton>
+          <a
+            href="https://calendar.notion.so/meet/alhwyn/clawpify"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block w-full rounded-none border border-[#26251e] bg-[#26251e] px-3 py-2.5 text-center text-xs font-medium uppercase text-white transition hover:bg-[#1a1914] hover:border-[#1a1914]"
+          >
+            BOOK A CALL
+          </a>
+          <Link
+            to="/sign-in"
+            className="block w-full rounded-none border border-zinc-200 bg-transparent px-3 py-2.5 text-center text-xs font-medium uppercase text-[#26251e] transition hover:border-[#26251e] hover:bg-[#26251e] hover:text-white"
+          >
+            Sign in
+          </Link>
         </div>
       </div>
       )}
