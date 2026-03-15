@@ -1,16 +1,39 @@
 export const copy = {
   intro: {
-    heading: "Find what agents want to buy",
+    heading: "Own how AI sells your products",
     paragraph:
       "Optimize product data, reveal which prompts convert, and earn more from AI-driven purchases.",
+    ctaLabel: "GET STARTED",
+    ctaHref: "#",
   },
   hero: {
-    headline: "Bring discovery into the Agent economy",
+    headline: "Bring product discovery into the AI economy",
     rotatingWords: ["Commerce", "B2B", "SaaS", "E-commerce", "Agents"],
     subline:
       "Audits that reveal which prompts convert. Optimization methods that make agents buy.",
     ctaPrimary: "Get started free",
     ctaSecondary: "Explore docs",
+    heroDemo: {
+      exploreLabel: "TRY IT OUT OR SCROLL DOWN",
+      aiAgents: [
+        { id: "openai", label: "OpenAI", productIds: [0, 1, 2], response: "Great question! Here are some of the best gift ideas for your mom. I've selected a mix of self-care, handmade, and gourmet options that are highly rated across multiple stores." },
+        { id: "perplexity", label: "Perplexity", productIds: [0, 3, 5], response: "Based on reviews from 12 sources, these are the top-rated gifts for mothers in 2026. A premium skincare set, a relaxing lavender bath collection, and a curated matcha sampler — all with 4.5+ star ratings." },
+        { id: "claude", label: "Claude", productIds: [0, 1, 2], response: "I'd love to help you find something special. Here are a few thoughtful options — a skincare set for relaxation, a handcrafted bracelet, and an organic tea sampler she can enjoy daily." },
+        { id: "meta", label: "Llama", productIds: [1, 3, 5], response: "Here are the top trending gifts for moms right now. A handmade bracelet, a soothing lavender bath set, and a matcha collection — all popular picks with excellent customer feedback." },
+        { id: "grok", label: "Grok", productIds: [2, 4, 3], response: "Yo, birthday gift for mom? I gotchu. Scraped the entire internet in like 0.2 seconds. Organic tea, a handwoven band, and a lavender bath set — trust me, she's gonna cry (the good kind)." },
+        { id: "gemini", label: "Gemini", productIds: [0, 4, 5], response: "Looking at the latest reviews and trending products, a Nordic skincare set, a woven friendship band, and a matcha gift collection stand out as excellent choices. Each one is thoughtful and highly rated." },
+      ],
+      query: "best birthday gifts for mom?",
+      emptyMessage: "Your products not found in this AI's results.",
+      products: [
+        { name: "Nordic Skincare Set", price: "$48", store: "GlowCo", image: "/image/product-skincare.png" },
+        { name: "Handcrafted Leather Bracelet", price: "$62", store: "Artisan Goods", image: "/image/product-bracelet.png" },
+        { name: "Organic Tea Sampler Box", price: "$34", store: "Tea House", image: "/image/product-tea.png" },
+        { name: "Lavender Bath Set", price: "$39", store: "GlowCo", image: "/image/product-skincare.png" },
+        { name: "Woven Friendship Band", price: "$28", store: "Artisan Goods", image: "/image/product-bracelet.png" },
+        { name: "Matcha Gift Collection", price: "$42", store: "Tea House", image: "/image/product-tea.png" },
+      ],
+    },
   },
   stats: {
     stores: "500+",
@@ -30,9 +53,21 @@ export const copy = {
     solution: "Clawpify erases that drag in one audit.",
   },
   features: [
-    { title: "Commerce" },
-    { title: "B2B" },
-    { title: "A2A" },
+    {
+      label: "COMMERCE",
+      title: "Your products, found by AI",
+      description: "Optimize your Shopify or WooCommerce store so ChatGPT, Perplexity, and other AI agents surface your products when shoppers ask for recommendations.",
+    },
+    {
+      label: "ANALYTICS",
+      title: "See how agents see you",
+      description: "Track which AI agents recommend your products, how often you appear in results, and where you're losing visibility to competitors.",
+    },
+    {
+      label: "BRAND ALIGNMENT",
+      title: "Make sure AI recommends your brand",
+      description: "Ensure every AI agent — from ChatGPT to Perplexity — accurately represents your brand and consistently recommends your products to shoppers.",
+    },
   ],
   introAiSearch: {
     heading: "See what AI thinks about your brand",
@@ -72,6 +107,45 @@ export const copy = {
     title: "Ready to sell to agents faster?",
     subline: "Join stores already optimizing for AI-driven purchases.",
     button: "Get started free",
+  },
+  faq: {
+    sectionLabel: "FAQ",
+    heading: "Your questions, answered",
+    description:
+      "We're here to help. Reach out to our sales team for guidance on how to integrate Clawpify into your commerce workflow.",
+    ctaLabel: "BOOK A DEMO",
+    items: [
+      {
+        question: "Who can use Clawpify?",
+        answer:
+          "Clawpify is built for e-commerce brands and agencies. If you sell products online and want AI agents to recommend them, Clawpify is a fit for you. We work with companies ranging from Shopify solo stores to enterprise retailers.",
+      },
+      {
+        question: "Can I try Clawpify for free?",
+        answer:
+          "Yes. We offer a free audit so you can see how your products perform across AI agents before committing to a plan.",
+      },
+      {
+        question: "Can I use Clawpify with my team?",
+        answer:
+          "Absolutely. Clawpify supports team workspaces so multiple people can collaborate on audits, view reports, and apply optimizations together.",
+      },
+      {
+        question: "How long does it take to set up and start using Clawpify?",
+        answer:
+          "Most stores are up and running in under 10 minutes. Connect your platform, run the audit, and start optimizing right away.",
+      },
+      {
+        question: "Does Clawpify support multiple e-commerce platforms?",
+        answer:
+          "Yes. We currently support Shopify, WooCommerce, and custom storefronts via our API, with more integrations on the way.",
+      },
+      {
+        question: "Will it integrate with my existing tools?",
+        answer:
+          "Clawpify is designed to fit into your current stack. We offer integrations with popular analytics, CMS, and marketing platforms.",
+      },
+    ],
   },
   footer: {
     navColumns: [

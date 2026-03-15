@@ -33,7 +33,7 @@ const server = serve({
       const file = Bun.file(filePath);
       if (await file.exists()) {
         return new Response(file, {
-          headers: { "Content-Type": "image/png" },
+          headers: { "Content-Type": file.type },
         });
       }
       return new Response("Not found", { status: 404 });
