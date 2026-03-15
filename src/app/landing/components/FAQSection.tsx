@@ -11,10 +11,10 @@ export function FAQSection() {
 
   return (
     <section className="border-t border-zinc-200 bg-[#f2f3f1] py-16 md:py-24">
-      <div className="max-w-screen-2xl px-5 md:px-8 lg:px-10">
+      <div className="w-full">
         <div className="grid gap-10 md:grid-cols-2 md:gap-16">
           {/* Left column */}
-          <div className="flex flex-col items-start">
+          <div className="flex flex-col items-start px-5 md:px-8 lg:px-10">
             <span className="font-mono text-xs tracking-wide text-zinc-500">
               {sectionLabel}
             </span>
@@ -35,7 +35,7 @@ export function FAQSection() {
           </div>
 
           {/* Right column - Accordion */}
-          <div className="flex flex-col">
+          <div className="flex flex-col px-5 md:px-8 lg:px-10">
             {items.map((item, i) => {
               const isOpen = openIndex === i;
               return (
