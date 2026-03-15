@@ -65,7 +65,7 @@ export const copy = {
     },
     {
       label: "BRAND ALIGNMENT",
-      title: "Make sure AI recommends your brand",
+      title: "Make sure AI aligns with your brand",
       description: "Keep your brand story straight across every AI that talks about you.",
     },
   ],
