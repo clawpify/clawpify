@@ -38,6 +38,9 @@ const server = serve({
         headers: { "Content-Type": "application/xml" },
       }),
 
+    "/favicon-32.png": () => new Response(Bun.file("public/favicon-32.png")),
+    "/apple-touch-icon.png": () => new Response(Bun.file("public/apple-touch-icon.png")),
+
     "/image/*": async (req) => {
       const pathname = new URL(req.url).pathname;
       const filePath = `public${pathname}`;
