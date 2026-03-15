@@ -52,10 +52,10 @@ const AI_EXPLORE_LINKS = [
 export function Footer() {
   return (
     <footer className="border-t border-zinc-200 bg-[#f2f3f1]">
-      <div className="mx-auto max-w-screen-2xl px-5 pt-10 pb-8 md:px-8 lg:px-10">
-        <div className="grid grid-cols-1 md:grid-cols-[3fr_2fr]">
+      <div className="w-full pb-8">
+        <div className="grid w-full grid-cols-1 px-5 pt-10 md:min-h-[190px] md:grid-cols-[minmax(0,1fr)_1px_minmax(0,1fr)] md:items-stretch md:pr-8 md:pl-0 md:pt-0 lg:pr-10 lg:pl-0">
           {/* Left side — big brand name + tagline */}
-          <div className="hidden md:flex flex-col justify-end gap-3 pb-4">
+          <div className="hidden flex-col justify-end gap-1 pb-0 md:flex md:pl-6 md:pr-8 md:pt-10 lg:pl-8">
             <span className="font-mono text-[clamp(3rem,5vw,5rem)] font-medium uppercase leading-none tracking-tight text-[#26251e]">
               CLAWPIFY
             </span>
@@ -64,8 +64,10 @@ export function Footer() {
             </p>
           </div>
 
+          <div className="hidden md:block md:w-px md:self-stretch bg-zinc-200" aria-hidden />
+
           {/* Right side — nav columns */}
-          <div className="grid grid-cols-2 gap-x-10 gap-y-8 sm:grid-cols-4">
+          <div className="grid grid-cols-2 gap-x-8 gap-y-6 sm:grid-cols-3 md:pl-8 md:grid-cols-5 md:items-start md:gap-x-6 md:gap-y-0 md:pt-10">
             {copy.footer.navColumns.map(({ heading, links }) => (
               <div key={heading}>
                 <h4 className="font-mono mb-2.5 text-[0.65rem] font-medium uppercase tracking-widest text-[#8a8378]">
@@ -99,8 +101,10 @@ export function Footer() {
           </div>
         </div>
 
+        <div className="border-t border-zinc-200" />
+
         {/* Bottom row: logo + explore with AI */}
-        <div className="mt-10 flex flex-col gap-5 border-t border-zinc-200 pt-6 sm:flex-row sm:items-center sm:justify-between">
+        <div className="mt-10 flex flex-col gap-5 px-5 pt-6 sm:flex-row sm:items-center sm:justify-between md:px-8 lg:px-10">
           <div className="flex items-center gap-2">
             <div className="h-5 w-5 shrink-0 bg-[#b5ddfb]" />
             <span className="font-mono text-[0.72rem] font-medium uppercase tracking-widest text-[#26251e]">

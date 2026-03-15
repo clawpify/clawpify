@@ -29,6 +29,11 @@ const routeMeta: Record<string, RouteMeta> = {
     description:
       "See what AI models think about your brand and how you compare to competitors in AI-powered search.",
   },
+  "/blog": {
+    title: "Blog - Clawpify",
+    description:
+      "Thoughts on AI commerce, product discovery, and the shift from search to agents.",
+  },
 };
 
 function escapeAttr(str: string): string {
@@ -147,6 +152,7 @@ function buildSeoBlock(pathname: string): string {
     <meta name="description" content="${escapeAttr(meta.description)}" />
     <link rel="canonical" href="${canonical}" />
     <meta property="og:type" content="website" />
+    <meta property="og:locale" content="en_US" />
     <meta property="og:site_name" content="Clawpify" />
     <meta property="og:title" content="${escapeAttr(meta.title)}" />
     <meta property="og:description" content="${escapeAttr(meta.description)}" />
@@ -180,16 +186,20 @@ Sitemap: ${BASE_URL}/sitemap.xml`;
 }
 
 export function generateSitemapXml(): string {
-  const publicPaths = ["/", "/about", "/audit", "/audit/web-search"];
-  const today = new Date().toISOString().split("T")[0];
+  const publicPaths: { path: string; lastmod: string; priority: string }[] = [
+    { path: "/", lastmod: "2026-03-15", priority: "1.0" },
+    { path: "/about", lastmod: "2026-03-10", priority: "0.8" },
+    { path: "/audit", lastmod: "2026-03-12", priority: "0.9" },
+    { path: "/audit/web-search", lastmod: "2026-03-12", priority: "0.8" },
+    { path: "/blog", lastmod: "2026-03-10", priority: "0.7" },
+  ];
 
   const entries = publicPaths
-    .map((path) => {
+    .map(({ path, lastmod, priority }) => {
       const loc = path === "/" ? BASE_URL : `${BASE_URL}${path}`;
-      const priority = path === "/" ? "1.0" : "0.8";
       return `  <url>
     <loc>${loc}</loc>
-    <lastmod>${today}</lastmod>
+    <lastmod>${lastmod}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>${priority}</priority>
   </url>`;

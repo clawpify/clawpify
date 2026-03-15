@@ -1,4 +1,4 @@
-import { Routes, Route, Link, useLocation } from "react-router-dom";
+import { Routes, Route, Link, Navigate, useLocation } from "react-router-dom";
 import {
   Show,
   SignInButton,
@@ -29,6 +29,8 @@ import { RadarPage } from "./app/radar/page";
 import { ShieldPage } from "./app/shield/page";
 import { SettingsPage } from "./app/settings/page";
 import { OnboardingPage } from "./app/onboarding/page";
+import { WritingPage } from "./app/writing";
+import { WritingPostPage } from "./app/writing/post";
 import { OrgGate } from "./components/OrgGate";
 import { OnboardingGate } from "./components/OnboardingGate";
 
@@ -38,18 +40,23 @@ export function App() {
   const isAudit =
     location.pathname === "/audit" || location.pathname.startsWith("/audit/");
   const isAbout = location.pathname === "/about";
+  const isWriting =
+    location.pathname === "/blog" ||
+    location.pathname.startsWith("/blog/") ||
+    location.pathname === "/writing" ||
+    location.pathname.startsWith("/writing/");
   const isAuthPage =
     location.pathname === "/sign-in" || location.pathname === "/sign-up";
   const isOnboarding = location.pathname === "/onboarding";
   const isWorkspace =
     location.pathname === "/app" || location.pathname.startsWith("/app/");
   const showNav =
-    !isLanding && !isAudit && !isAbout && !isAuthPage && !isOnboarding && !isWorkspace;
+    !isLanding && !isAudit && !isAbout && !isWriting && !isAuthPage && !isOnboarding && !isWorkspace;
 
   return (
     <div
       className={
-        isLanding || isAudit || isAbout || isAuthPage || isOnboarding || isWorkspace
+        isLanding || isAudit || isAbout || isWriting || isAuthPage || isOnboarding || isWorkspace
           ? "min-h-screen bg-[#f2f3f1]"
           : "min-h-screen bg-[#f2f3f1] p-6"
       }
@@ -96,6 +103,10 @@ export function App() {
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/about" element={<AboutPage />} />
+        <Route path="/blog" element={<WritingPage />} />
+        <Route path="/blog/:slug" element={<WritingPostPage />} />
+        <Route path="/writing" element={<Navigate to="/blog" replace />} />
+        <Route path="/writing/:slug" element={<Navigate to={`/blog/${location.pathname.split("/").pop() ?? ""}`} replace />} />
         <Route path="/audit" element={<AuditPage />} />
         <Route path="/audit/web-search" element={<WebSearchInfo />} />
         <Route path="/onboarding" element={<OnboardingPage />} />

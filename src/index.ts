@@ -3,9 +3,11 @@ import index from "./index.html";
 import { getAuthOptional, requireAuth, AuthError } from "./lib/auth";
 import { createProxyHandler, proxyToRustPublic } from "./utils/networkFns";
 import { scrapeUrlForContent } from "./utils/scrape";
-import { generateRobotsTxt, generateSitemapXml } from "./lib/seo";
+import { generateRobotsTxt, generateSitemapXml, injectSeoMeta } from "./lib/seo";
 
 const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 3001;
+
+const rawHtml = await Bun.file(import.meta.dir + "/index.html").text();
 
 const proxy = (path: string | ((req: Request) => string)) =>
   createProxyHandler(path, AuthError, requireAuth);
@@ -50,7 +52,7 @@ const server = serve({
       return new Response("Not found", { status: 404 });
     },
 
-    "/*": index,
+    "/": index,
 
     "/api/hello": {
       async GET() {
@@ -166,6 +168,13 @@ const server = serve({
         }
       },
     },
+  },
+
+  fetch(req) {
+    const pathname = new URL(req.url).pathname;
+    return new Response(injectSeoMeta(rawHtml, pathname), {
+      headers: { "Content-Type": "text/html; charset=utf-8" },
+    });
   },
 
   development: process.env.NODE_ENV !== "production" && {

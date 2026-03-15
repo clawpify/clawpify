@@ -6,11 +6,12 @@ const productItems = [
 ];
 
 const developerItems = [
-  { label: " Were Open source", href: "https://github.com/clawpify/clawpify", external: true },
+  { label: "GitHub", href: "https://github.com/clawpify", external: true },
 ];
 
 const navLinks = [
   { label: "About", href: "/about", external: false },
+  { label: "Writing", href: "/blog", external: false },
 ];
 
 function SidebarInner({ isOpen, setIsOpen, hidePanelToggle }: { isOpen: boolean; setIsOpen: (fn: (o: boolean) => boolean) => void; hidePanelToggle?: boolean }) {
@@ -19,8 +20,8 @@ function SidebarInner({ isOpen, setIsOpen, hidePanelToggle }: { isOpen: boolean;
 
   return (
     <>
-      <div className={`mb-8 flex items-center gap-1.5 ${isOpen ? "justify-between" : "flex-col"}`}>
-        <Link to="/" className="flex items-center gap-1.5">
+      <header className={`mb-8 flex items-center gap-1.5 ${isOpen ? "justify-between" : "flex-col"}`}>
+        <Link to="/" className="flex items-center gap-1.5" aria-label="Clawpify home">
           <div className="h-7 w-7 shrink-0 bg-[#b5ddfb]" />
           {isOpen && (
             <span className="text-base font-medium uppercase text-zinc-900">CLAWPIFY</span>
@@ -48,14 +49,15 @@ function SidebarInner({ isOpen, setIsOpen, hidePanelToggle }: { isOpen: boolean;
             </svg>
           </button>
         )}
-      </div>
+      </header>
 
       {isOpen && (
-        <nav className="flex flex-1 flex-col gap-1">
+        <nav className="flex flex-1 flex-col gap-1" aria-label="Main navigation">
         <div>
           <button
             type="button"
             onClick={() => setProductsExpanded((e) => !e)}
+            aria-expanded={productsExpanded}
             className="grid w-full grid-cols-[1fr_0.75rem] items-center gap-1.5 py-1.5 text-left text-xs font-medium uppercase text-zinc-900 transition hover:text-zinc-600"
           >
             Products
@@ -81,6 +83,7 @@ function SidebarInner({ isOpen, setIsOpen, hidePanelToggle }: { isOpen: boolean;
                     className={linkClass}
                   >
                     {content}
+                    <span className="sr-only"> (opens in new tab)</span>
                   </a>
                 ) : item.href ? (
                   <Link key={item.label} to={item.href} className={linkClass}>
@@ -95,6 +98,7 @@ function SidebarInner({ isOpen, setIsOpen, hidePanelToggle }: { isOpen: boolean;
           <button
             type="button"
             onClick={() => setDevelopersExpanded((e) => !e)}
+            aria-expanded={developersExpanded}
             className="grid w-full grid-cols-[1fr_0.75rem] items-center gap-1.5 py-1.5 text-left text-xs font-medium uppercase text-zinc-900 transition hover:text-zinc-600"
           >
             Developers
@@ -117,6 +121,7 @@ function SidebarInner({ isOpen, setIsOpen, hidePanelToggle }: { isOpen: boolean;
                     className="py-1.5 text-xs font-medium uppercase text-zinc-600 transition hover:text-zinc-900"
                   >
                     {item.label}
+                    <span className="sr-only"> (opens in new tab)</span>
                   </a>
                 ) : (
                   <Link
@@ -141,7 +146,8 @@ function SidebarInner({ isOpen, setIsOpen, hidePanelToggle }: { isOpen: boolean;
               className="grid w-full grid-cols-[1fr_0.75rem] items-center gap-1.5 py-1.5 text-left text-xs font-medium uppercase text-zinc-900 transition hover:text-zinc-600"
             >
               {label}
-              <span className="flex justify-end text-zinc-400">›</span>
+              <span className="sr-only"> (opens in new tab)</span>
+              <span className="flex justify-end text-zinc-400" aria-hidden>›</span>
             </a>
           ) : (
             <Link
@@ -167,6 +173,7 @@ function SidebarInner({ isOpen, setIsOpen, hidePanelToggle }: { isOpen: boolean;
             className="block w-full rounded-none border border-zinc-900 bg-zinc-900 px-3 py-2.5 text-center text-xs font-medium uppercase text-white transition hover:bg-zinc-800 hover:border-zinc-800"
           >
             BOOK A CALL
+            <span className="sr-only"> (opens in new tab)</span>
           </a>
           <Link
             to="/sign-in"
@@ -201,10 +208,13 @@ export function Sidebar() {
 
       {/* Mobile overlay */}
       {mobileOpen && (
-        <div className="fixed inset-0 z-50 md:hidden">
-          <div
-            className="absolute inset-0 bg-black/30"
+        <div className="fixed inset-0 z-50 md:hidden" role="dialog" aria-label="Navigation menu">
+          <button
+            type="button"
+            className="absolute inset-0 bg-black/30 cursor-default"
             onClick={() => setMobileOpen(false)}
+            aria-label="Close menu"
+            tabIndex={-1}
           />
           <aside className="relative z-10 flex h-full w-64 flex-col bg-[#f2f3f1] p-5 shadow-xl">
             <button

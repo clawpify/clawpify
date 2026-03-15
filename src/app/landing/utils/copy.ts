@@ -155,8 +155,12 @@ export const copy = {
         links: [
           { label: "Home", href: "/" },
           { label: "About", href: "/about" },
-          { label: "Writing", href: "#" },
+          { label: "Writing", href: "/blog" },
         ],
+      },
+      {
+        heading: "Developer",
+        links: [{ label: "GitHub", href: "https://github.com/clawpify" }],
       },
       {
         heading: "Legal",
@@ -164,7 +168,10 @@ export const copy = {
       },
       {
         heading: "Connect",
-        links: [{ label: "Book a demo", href: "https://calendar.notion.so/meet/alhwyn/clawpify" }],
+        links: [
+          { label: "Book a demo", href: "https://calendar.notion.so/meet/alhwyn/clawpify" },
+          { label: "Discord", href: "https://discord.gg/a2tRAjWV" },
+        ],
       },
     ],
     copyright: "© 2026 Clawpify",

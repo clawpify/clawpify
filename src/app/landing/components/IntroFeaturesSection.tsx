@@ -118,6 +118,7 @@ type IntroFeaturesSectionProps = {
   features: ReadonlyArray<Feature>;
   sectionId?: string;
   image?: string;
+  imageAlt?: string;
   mockup?: boolean;
   ctaLabel?: string;
   ctaHref?: string;
@@ -129,6 +130,7 @@ export function IntroFeaturesSection({
   features,
   sectionId,
   image,
+  imageAlt,
   mockup,
   ctaLabel,
   ctaHref,
@@ -166,7 +168,7 @@ export function IntroFeaturesSection({
                 ) : (
                   <img
                     src={image}
-                    alt=""
+                    alt={imageAlt ?? ""}
                     className="h-full w-full object-cover"
                   />
                 )}
