@@ -3,6 +3,7 @@ import index from "./index.html";
 import { getAuthOptional, requireAuth, AuthError } from "./lib/auth";
 import { createProxyHandler, proxyToRustPublic } from "./utils/networkFns";
 import { scrapeUrlForContent } from "./utils/scrape";
+import { generateRobotsTxt, generateSitemapXml } from "./lib/seo";
 
 const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 3001;
 
@@ -21,12 +22,22 @@ async function proxyCitation(req: Request, path: string, body?: string): Promise
         body,
       })
     : req;
-  return proxyToRustPublic(reqToForward, path, { clientIP, auth });
+  return proxyToRustPublic(reqToForward, path, { clientIP, auth: auth ?? undefined });
 }
 
 const server = serve({
   port,
   routes: {
+    "/robots.txt": () =>
+      new Response(generateRobotsTxt(), {
+        headers: { "Content-Type": "text/plain" },
+      }),
+
+    "/sitemap.xml": () =>
+      new Response(generateSitemapXml(), {
+        headers: { "Content-Type": "application/xml" },
+      }),
+
     "/image/*": async (req) => {
       const pathname = new URL(req.url).pathname;
       const filePath = `public${pathname}`;
@@ -115,7 +126,7 @@ const server = serve({
         const path = new URL(req.url).pathname;
         const clientIP = serverRef?.requestIP(req)?.address ?? "unknown";
         const auth = await getAuthOptional(req);
-        return proxyToRustPublic(req, path, { clientIP, auth });
+        return proxyToRustPublic(req, path, { clientIP, auth: auth ?? undefined });
       },
     },
 
