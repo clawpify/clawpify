@@ -5,4 +5,3 @@ export { StoresPage } from "./modules/stores/StoresPage";
 export { ContentPage } from "./modules/content/ContentPage";
 export { SearchPage } from "./modules/search/SearchPage";
 export { ReportsPage } from "./modules/reports/ReportsPage";
-export { AiVisibilityPage } from "./modules/ai-visibility/AiVisibilityPage";

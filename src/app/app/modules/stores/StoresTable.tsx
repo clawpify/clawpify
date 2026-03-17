@@ -87,10 +87,10 @@ export function StoresTable({
           {error}
         </div>
       )}
-      <div className="rounded-lg border border-gray-200 bg-white">
+      <div className="rounded-lg border border-zinc-200 bg-white">
         <table className="w-full min-w-[600px]">
           <thead>
-            <tr className="border-b border-gray-200 bg-gray-50">
+            <tr className="border-b border-zinc-200 bg-zinc-50">
               <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                 {copy.storesTable.columns.name}
               </th>
@@ -110,7 +110,7 @@ export function StoresTable({
                 </td>
               </tr>
             ) : stores.length === 0 ? (
-              <tr className="border-b border-gray-100 transition hover:bg-gray-50">
+              <tr className="border-b border-zinc-100 transition hover:bg-zinc-50">
                 <td colSpan={3} className="px-4 py-12 text-center">
                   <div className="mx-auto max-w-sm">
                     <p className="text-sm font-medium text-gray-900">
@@ -133,7 +133,7 @@ export function StoresTable({
               stores.map((store) => (
                 <tr
                   key={store.id}
-                  className="border-b border-gray-100 transition hover:bg-gray-50"
+                  className="border-b border-zinc-100 transition hover:bg-zinc-50"
                 >
                   <td className="px-4 py-3 text-sm font-medium text-gray-900">
                     {storeName(store)}

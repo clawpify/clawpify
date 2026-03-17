@@ -22,7 +22,6 @@ import {
   ContentPage,
   SearchPage,
   ReportsPage,
-  AiVisibilityPage,
 } from "./app/app";
 import { DashboardPage } from "./app/dashboard/page";
 import { RadarPage } from "./app/radar/page";
@@ -118,7 +117,6 @@ export function App() {
           <Route path="content" element={<ContentPage />} />
           <Route path="search" element={<SearchPage />} />
           <Route path="reports" element={<ReportsPage />} />
-          <Route path="ai-visibility" element={<AiVisibilityPage />} />
         </Route>
         <Route
           path="/sign-in"

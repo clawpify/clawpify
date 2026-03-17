@@ -1,5 +1,5 @@
 import { serve } from "bun";
-import index from "./index.html";
+import tailwindPlugin from "bun-plugin-tailwind";
 import { getAuthOptional, requireAuth, AuthError } from "./lib/auth";
 import { createProxyHandler, proxyToRustPublic } from "./utils/networkFns";
 import { scrapeUrlForContent } from "./utils/scrape";
@@ -7,7 +7,54 @@ import { generateRobotsTxt, generateSitemapXml, injectSeoMeta } from "./lib/seo"
 
 const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 3001;
 
-const rawHtml = await Bun.file(import.meta.dir + "/index.html").text();
+const clientDefines: Record<string, string> = {
+  "process.env.NODE_ENV": JSON.stringify(process.env.NODE_ENV ?? "development"),
+};
+for (const [key, value] of Object.entries(process.env)) {
+  if ((key.startsWith("BUN_PUBLIC_") || key.startsWith("VITE_")) && value != null) {
+    clientDefines[`process.env.${key}`] = JSON.stringify(value);
+  }
+}
+
+const frontendBuild = await Bun.build({
+  entrypoints: [import.meta.dir + "/index.html"],
+  target: "browser",
+  sourcemap: "none",
+  minify: process.env.NODE_ENV === "production",
+  define: clientDefines,
+  plugins: [tailwindPlugin],
+});
+
+if (!frontendBuild.success) {
+  throw new Error("Failed to build frontend bundle from index.html");
+}
+
+const builtAssets = new Map<string, Blob>();
+let mainBundle: Blob | null = null;
+let htmlTemplate = "";
+for (const output of frontendBuild.outputs) {
+  const fileName = output.path.split("/").pop();
+  if (!fileName) continue;
+  if (fileName.endsWith(".html")) {
+    htmlTemplate = await output.text();
+    continue;
+  }
+  if (!mainBundle && fileName.endsWith(".js")) mainBundle = output;
+  builtAssets.set(`/${fileName}`, output);
+}
+
+if (!htmlTemplate) {
+  throw new Error("Missing built HTML output");
+}
+
+const rawHtml = htmlTemplate
+  .replaceAll('href="./', 'href="/')
+  .replaceAll('src="./', 'src="/');
+
+// Compatibility for cached HTML that still points to /frontend.tsx
+if (mainBundle) {
+  builtAssets.set("/frontend.tsx", mainBundle);
+}
 
 const proxy = (path: string | ((req: Request) => string)) =>
   createProxyHandler(path, AuthError, requireAuth);
@@ -51,8 +98,6 @@ const server = serve({
       }
       return new Response("Not found", { status: 404 });
     },
-
-    "/": index,
 
     "/api/hello": {
       async GET() {
@@ -172,6 +217,15 @@ const server = serve({
 
   fetch(req) {
     const pathname = new URL(req.url).pathname;
+    const asset = builtAssets.get(pathname);
+    if (asset) {
+      return new Response(asset, {
+        headers: { "Content-Type": asset.type || "application/octet-stream" },
+      });
+    }
+    if (pathname.includes(".")) {
+      return new Response("Not found", { status: 404 });
+    }
     return new Response(injectSeoMeta(rawHtml, pathname), {
       headers: { "Content-Type": "text/html; charset=utf-8" },
     });
