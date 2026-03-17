@@ -1,6 +1,3 @@
-/// Validates that a URL is safe for server-side fetching.
-/// When TRUSTED_HOSTS is set (pipe-separated), only hosts matching that list are allowed.
-/// When unset, all URLs are allowed.
 pub fn validate_url(url: &str) -> Result<(), String> {
   let trusted: Option<Vec<String>> = std::env::var("TRUSTED_HOSTS")
     .ok()
@@ -23,7 +20,6 @@ pub fn validate_url(url: &str) -> Result<(), String> {
   validate_url_with_trusted(url, refs.as_deref())
 }
 
-/// Validates URL with an explicit trusted-hosts list (for testing).
 pub fn validate_url_with_trusted(
   url: &str,
   trusted_hosts: Option<&[&str]>,
@@ -56,7 +52,6 @@ fn host_matches_trusted(host: &str, trusted: &str) -> bool {
   host == trusted || host.ends_with(&format!(".{}", trusted))
 }
 
-/// Normalizes a URL: ensures it has https:// scheme.
 pub fn normalize_url(url: &str) -> String {
   let url = url.trim();
   if url.starts_with("https://") {
@@ -98,31 +93,11 @@ mod tests {
   #[test]
   fn test_validate_url_when_trusted_hosts_set() {
     let trusted = ["myshopify.com", "shopify.com"];
-    assert!(validate_url_with_trusted(
-      "https://store.myshopify.com",
-      Some(&trusted)
-    )
-    .is_ok());
-    assert!(validate_url_with_trusted(
-      "https://www.shopify.com",
-      Some(&trusted)
-    )
-    .is_ok());
-    assert!(validate_url_with_trusted(
-      "https://myshopify.com",
-      Some(&trusted)
-    )
-    .is_ok());
-    assert!(validate_url_with_trusted(
-      "https://example.com",
-      Some(&trusted)
-    )
-    .is_err());
-    assert!(validate_url_with_trusted(
-      "https://localhost",
-      Some(&trusted)
-    )
-    .is_err());
+    assert!(validate_url_with_trusted("https://store.myshopify.com", Some(&trusted)).is_ok());
+    assert!(validate_url_with_trusted("https://www.shopify.com", Some(&trusted)).is_ok());
+    assert!(validate_url_with_trusted("https://myshopify.com", Some(&trusted)).is_ok());
+    assert!(validate_url_with_trusted("https://example.com", Some(&trusted)).is_err());
+    assert!(validate_url_with_trusted("https://localhost", Some(&trusted)).is_err());
   }
 
   #[test]
@@ -132,34 +107,22 @@ mod tests {
 
   #[test]
   fn test_normalize_url_http() {
-    assert_eq!(
-      normalize_url("http://example.com"),
-      "https://example.com"
-    );
+    assert_eq!(normalize_url("http://example.com"), "https://example.com");
   }
 
   #[test]
   fn test_normalize_url_https_unchanged() {
-    assert_eq!(
-      normalize_url("https://example.com"),
-      "https://example.com"
-    );
+    assert_eq!(normalize_url("https://example.com"), "https://example.com");
   }
 
   #[test]
   fn test_normalize_url_trimmed() {
-    assert_eq!(
-      normalize_url("  example.com  "),
-      "https://example.com"
-    );
+    assert_eq!(normalize_url("  example.com  "), "https://example.com");
   }
 
   #[test]
   fn test_normalize_domain_full_url() {
-    assert_eq!(
-      normalize_domain("https://www.example.com/path"),
-      "example.com"
-    );
+    assert_eq!(normalize_domain("https://www.example.com/path"), "example.com");
   }
 
   #[test]

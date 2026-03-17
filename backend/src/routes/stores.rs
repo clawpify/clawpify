@@ -1,75 +1,64 @@
-use axum::Extension;
-use serde::{Deserialize, Serialize};
+use axum::{middleware, routing::get, Extension, Json, Router};
 use sqlx::PgPool;
-use uuid::Uuid;
 
 use crate::auth;
+use crate::dto::stores::CreateStoreRequest;
 use crate::error::{self, ApiError};
+use crate::middleware as mw;
+use crate::models::store::Store;
 
-#[derive(Serialize, sqlx::FromRow)]
-pub struct Store {
-  pub id: Uuid,
-  pub org_id: String,
-  pub platform: String,
-  pub config: serde_json::Value,
-  pub created_at: chrono::DateTime<chrono::Utc>,
+pub fn routes() -> Router<()> {
+  Router::new()
+    .route("/stores", get(list_stores).post(create_store))
+    .route_layer(middleware::from_fn(mw::require_internal_auth))
 }
 
-#[derive(Deserialize)]
-pub struct CreateStoreRequest {
-  pub base_url: String,
-  #[serde(default)]
-  pub platform: String,
-}
-
-pub async fn list_stores(
+async fn list_stores(
   Extension(pool): Extension<PgPool>,
   headers: axum::http::HeaderMap,
-) -> Result<axum::Json<Vec<Store>>, ApiError> {
+) -> Result<Json<Vec<Store>>, ApiError> {
   let org_id = auth::get_org_id(&headers)?;
-  let rows = sqlx::query_as!(
-    Store,
+  let rows = sqlx::query_as::<_, Store>(
     r#"SELECT id, org_id, platform, config, created_at FROM stores WHERE org_id = $1"#,
-    org_id
   )
+  .bind(&org_id)
   .fetch_all(&pool)
   .await
   .map_err(error::db_error)?;
-  Ok(axum::Json(rows))
+  Ok(Json(rows))
 }
 
-pub async fn create_store(
+async fn create_store(
   Extension(pool): Extension<PgPool>,
   headers: axum::http::HeaderMap,
-  axum::Json(body): axum::Json<CreateStoreRequest>,
-) -> Result<axum::Json<Store>, ApiError> {
+  Json(body): Json<CreateStoreRequest>,
+) -> Result<Json<Store>, ApiError> {
   let org_id = auth::get_org_id(&headers)?;
   let base_url = body.base_url.trim_end_matches('/').to_string();
   let platform = if body.platform.is_empty() {
-    "url"
+    "url".to_string()
   } else {
-    body.platform.as_str()
+    body.platform
   };
   let config = serde_json::json!({ "baseUrl": base_url });
 
-  sqlx::query!(
+  sqlx::query(
     "INSERT INTO organizations (id) VALUES ($1) ON CONFLICT (id) DO NOTHING",
-    org_id
   )
+  .bind(&org_id)
   .execute(&pool)
   .await
   .map_err(error::db_error)?;
 
-  let row = sqlx::query_as!(
-    Store,
+  let row = sqlx::query_as::<_, Store>(
     r#"INSERT INTO stores (org_id, platform, config) VALUES ($1, $2, $3)
-           RETURNING id, org_id, platform, config, created_at"#,
-    org_id,
-    platform,
-    config
+       RETURNING id, org_id, platform, config, created_at"#,
   )
+  .bind(&org_id)
+  .bind(&platform)
+  .bind(&config)
   .fetch_one(&pool)
   .await
   .map_err(error::db_error)?;
-  Ok(axum::Json(row))
+  Ok(Json(row))
 }

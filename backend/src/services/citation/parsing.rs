@@ -1,6 +1,5 @@
 use super::urls::normalize_for_match;
 
-/// Common words to exclude from brand extraction (false positives).
 const STOPWORDS: &[&str] = &[
   "a", "an", "the", "and", "or", "in", "on", "at", "to", "for", "of", "with", "by", "from", "as",
   "is", "was", "are", "be", "have", "has", "do", "will", "would", "can", "product", "company",

@@ -1,4 +1,4 @@
-use super::models::ProductData;
+use crate::models::product::ProductData;
 use serde::Serialize;
 
 const PENALTY_TITLE_SHORT: i32 = 25;
@@ -16,7 +16,6 @@ const MIN_DESC_LEN: usize = 50;
 const MIN_AGENT_DESC_LEN: usize = 100;
 const MIN_AGENT_TITLE_LEN: usize = 20;
 
-/// Product quality scores from the audit scoring logic.
 #[derive(Debug, Serialize)]
 pub struct ProductScores {
   pub data_quality: i32,
@@ -25,8 +24,6 @@ pub struct ProductScores {
   pub recommendations: Vec<String>,
 }
 
-/// Scores a product for data quality and agent-friendliness.
-/// Returns issues and recommendations for improving product metadata.
 pub fn score_product(product: &ProductData) -> ProductScores {
   let mut issues = Vec::new();
   let mut recommendations = Vec::new();
@@ -128,7 +125,7 @@ fn check_agent_friendliness(product: &ProductData, issues: &mut Vec<String>) -> 
 
 #[cfg(test)]
 mod tests {
-  use super::super::models::{ProductData, ProductMeta};
+  use crate::models::product::{ProductData, ProductMeta};
   use super::*;
 
   fn make_product(
@@ -163,13 +160,13 @@ mod tests {
   #[test]
   fn test_score_product_ideal() {
     let product = make_product(
-            "Wireless Bluetooth Headphones - Premium Sound",
-            Some("High-quality wireless headphones with 30hr battery, noise cancellation, and premium drivers. Ideal for commuting and travel."),
-            Some("99.99"),
-            Some("Wireless Bluetooth Headphones"),
-            Some("High-quality wireless headphones"),
-            true,
-        );
+      "Wireless Bluetooth Headphones - Premium Sound",
+      Some("High-quality wireless headphones with 30hr battery, noise cancellation, and premium drivers. Ideal for commuting and travel."),
+      Some("99.99"),
+      Some("Wireless Bluetooth Headphones"),
+      Some("High-quality wireless headphones"),
+      true,
+    );
     let scores = score_product(&product);
     assert_eq!(scores.data_quality, 100);
     assert_eq!(scores.agent_friendliness, 100);

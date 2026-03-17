@@ -1,34 +1,22 @@
-use axum::Extension;
-use serde::{Deserialize, Serialize};
+use axum::{middleware, routing::get, Extension, Json, Router};
 use sqlx::PgPool;
-use uuid::Uuid;
 
 use crate::auth;
+use crate::dto::activity::LogActivityRequest;
 use crate::error::{self, ApiError};
+use crate::middleware as mw;
+use crate::models::activity::AgentActivity;
 
-#[derive(Serialize, sqlx::FromRow)]
-pub struct AgentActivity {
-  pub id: Uuid,
-  pub org_id: String,
-  pub store_id: Option<Uuid>,
-  pub agent_name: String,
-  pub action_type: String,
-  pub payload: Option<serde_json::Value>,
-  pub created_at: chrono::DateTime<chrono::Utc>,
+pub fn routes() -> Router<()> {
+  Router::new()
+    .route("/agent-activity", get(list_activity).post(log_activity))
+    .route_layer(middleware::from_fn(mw::require_internal_auth))
 }
 
-#[derive(Deserialize)]
-pub struct LogActivityRequest {
-  pub store_id: Option<Uuid>,
-  pub agent_name: String,
-  pub action_type: String,
-  pub payload: Option<serde_json::Value>,
-}
-
-pub async fn list_activity(
+async fn list_activity(
   Extension(pool): Extension<PgPool>,
   headers: axum::http::HeaderMap,
-) -> Result<axum::Json<Vec<AgentActivity>>, ApiError> {
+) -> Result<Json<Vec<AgentActivity>>, ApiError> {
   let org_id = auth::get_org_id(&headers)?;
   let rows = sqlx::query_as::<_, AgentActivity>(
     r#"SELECT id, org_id, store_id, agent_name, action_type, payload, created_at
@@ -41,14 +29,14 @@ pub async fn list_activity(
   .fetch_all(&pool)
   .await
   .map_err(error::db_error)?;
-  Ok(axum::Json(rows))
+  Ok(Json(rows))
 }
 
-pub async fn log_activity(
+async fn log_activity(
   Extension(pool): Extension<PgPool>,
   headers: axum::http::HeaderMap,
-  axum::Json(body): axum::Json<LogActivityRequest>,
-) -> Result<axum::Json<AgentActivity>, ApiError> {
+  Json(body): Json<LogActivityRequest>,
+) -> Result<Json<AgentActivity>, ApiError> {
   let org_id = auth::get_org_id(&headers)?;
 
   if body.agent_name.is_empty() || body.action_type.is_empty() {
@@ -68,5 +56,5 @@ pub async fn log_activity(
   .fetch_one(&pool)
   .await
   .map_err(error::db_error)?;
-  Ok(axum::Json(row))
+  Ok(Json(row))
 }

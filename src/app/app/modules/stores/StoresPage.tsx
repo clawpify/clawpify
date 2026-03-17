@@ -20,7 +20,7 @@ export function StoresPage() {
       onAdd: () => setShowConnectModal(true),
     });
     return () => setConfig({});
-  }, [setConfig]);
+  }, [setConfig, setShowConnectModal]);
 
   return (
     <main className="flex-1 overflow-y-auto">

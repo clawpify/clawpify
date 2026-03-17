@@ -20,7 +20,7 @@ export function WorkspaceMainHeader() {
   } = config;
 
   return (
-    <header className="shrink-0 border-b border-zinc-200 bg-white px-4 py-3">
+    <header className="shrink-0 border-b border-zinc-200 bg-white px-6 py-4">
       <div className="flex flex-wrap items-center justify-between gap-4">
         {/* Left: context dropdown */}
         <div className="flex items-center gap-2">
@@ -55,6 +55,7 @@ export function WorkspaceMainHeader() {
             ))}
             <button
               type="button"
+              onClick={() => onAdd?.()}
               className="rounded p-1.5 text-zinc-500 transition hover:bg-zinc-200/60 hover:text-zinc-900"
               aria-label="Add"
             >

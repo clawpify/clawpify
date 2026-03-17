@@ -44,7 +44,7 @@ impl AiProvider for OpenAiProvider {
       if opts.web_search {
         let client = reqwest::Client::new();
 
-        let body = crate::audit::citation::call_responses_api(
+        let body = crate::services::citation::openai::call_responses_api(
           &client, &api_key, &model, &prompt,
         )
         .await?;
@@ -57,7 +57,7 @@ impl AiProvider for OpenAiProvider {
         })
       } else {
 
-        let text = crate::audit::citation::call_chat(
+        let text = crate::services::citation::openai::call_chat(
           &api_key, &model, &prompt, opts.json_mode,
         )
         .await?;

@@ -1,8 +1,6 @@
 const OPENAI_RESPONSES_URL: &str = "https://api.openai.com/v1/responses";
 const OPENAI_CHAT_URL: &str = "https://api.openai.com/v1/chat/completions";
 
-/// Calls OpenAI Chat Completions API and returns the assistant message content.
-/// When json_response is true, requests response_format json_object.
 pub async fn call_chat(
   api_key: &str,
   model: &str,

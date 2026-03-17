@@ -53,7 +53,7 @@ export function App() {
     <div
       className={
         isLanding || isAudit || isAbout || isWriting || isAuthPage || isOnboarding || isWorkspace
-          ? "min-h-screen bg-[#f2f3f1]"
+          ? "min-h-screen bg-[#edeef0]"
           : "min-h-screen bg-[#f2f3f1] p-6"
       }
     >

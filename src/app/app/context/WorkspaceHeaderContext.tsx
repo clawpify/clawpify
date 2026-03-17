@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, type ReactNode } from "react";
+import { createContext, useContext, useState, useMemo, type ReactNode } from "react";
 
 export type WorkspaceHeaderConfig = {
   context?: string;
@@ -16,8 +16,9 @@ const WorkspaceHeaderContext = createContext<{
 
 export function WorkspaceHeaderProvider({ children }: { children: ReactNode }) {
   const [config, setConfig] = useState<WorkspaceHeaderConfig>({});
+  const value = useMemo(() => ({ config, setConfig }), [config]);
   return (
-    <WorkspaceHeaderContext.Provider value={{ config, setConfig }}>
+    <WorkspaceHeaderContext.Provider value={value}>
       {children}
     </WorkspaceHeaderContext.Provider>
   );
