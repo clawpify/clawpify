@@ -59,19 +59,19 @@ export async function createCitation(
   return data;
 }
 
-export type JoinWaitlistRequest = {
+export type SubscribeRequest = {
   email: string;
 };
 
-export type JoinWaitlistResponse = {
-  id: string;
-  already_on_list: boolean;
+export type SubscribeResponse = {
+  ok: boolean;
+  already_subscribed?: boolean;
 };
 
-export async function joinWaitlist(
-  body: JoinWaitlistRequest
-): Promise<JoinWaitlistResponse> {
-  const res = await fetch(`${API_BASE}/api/waitlist`, {
+export async function subscribe(
+  body: SubscribeRequest
+): Promise<SubscribeResponse> {
+  const res = await fetch(`${API_BASE}/api/subscribers`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
@@ -80,7 +80,7 @@ export async function joinWaitlist(
     const err = await res.json().catch(() => ({}));
     throw new Error((err as { error?: string }).error || `Request failed: ${res.status}`);
   }
-  return res.json() as Promise<JoinWaitlistResponse>;
+  return res.json() as Promise<SubscribeResponse>;
 }
 
 export async function pollCitation(id: string): Promise<CitationData> {

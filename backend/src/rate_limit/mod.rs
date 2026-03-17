@@ -1,8 +1,7 @@
-//! Rate limiting for the free SEO audit tool and waitlist.
+//! Rate limiting for the free SEO audit tool.
 //!
 //! Uses Postgres tables to track usage per hashed IP:
 //! - `audit_rate_limits`: 2 uses per 2-day rolling window
-//! - `waitlist_rate_limits`: 5 uses per 2-day rolling window
 //! Logged-in users bypass via `X-Internal-User-Id`.
 
 use sha2::{Digest, Sha256};
@@ -10,7 +9,6 @@ use sqlx::PgPool;
 
 const WINDOW_DAYS: i64 = 2;
 const AUDIT_MAX_USES: i32 = 2;
-const WAITLIST_MAX_USES: i32 = 5;
 
 /// Checks the audit rate limit for the given IP and records the use if allowed.
 ///
@@ -24,14 +22,6 @@ const WAITLIST_MAX_USES: i32 = 5;
 pub async fn check_and_record(pool: &PgPool, ip: &str) -> Result<bool, sqlx::Error> {
   let ip_hash = hash_ip(ip);
   check_and_record_audit_by_hash(pool, &ip_hash).await
-}
-
-/// Checks the waitlist rate limit for the given IP and records the use if allowed.
-/// Uses `waitlist_rate_limits` table with 5 uses per 2-day window.
-#[must_use = "callers must handle the Result and act on Ok(false)"]
-pub async fn check_and_record_waitlist(pool: &PgPool, ip: &str) -> Result<bool, sqlx::Error> {
-  let ip_hash = hash_ip(ip);
-  check_and_record_waitlist_by_hash(pool, &ip_hash).await
 }
 
 pub(crate) fn hash_ip(ip: &str) -> String {
@@ -49,19 +39,6 @@ async fn check_and_record_audit_by_hash(
     ip_hash,
     "audit_rate_limits",
     AUDIT_MAX_USES,
-  )
-  .await
-}
-
-async fn check_and_record_waitlist_by_hash(
-  pool: &PgPool,
-  ip_hash: &str,
-) -> Result<bool, sqlx::Error> {
-  check_and_record_by_hash_impl(
-    pool,
-    ip_hash,
-    "waitlist_rate_limits",
-    WAITLIST_MAX_USES,
   )
   .await
 }

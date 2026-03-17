@@ -1,23 +1,11 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useUser, UserButton } from "@clerk/react";
-import {
-  HomeIcon,
-  UsersIcon,
-  StoreIcon,
-  SearchIcon,
-  ChartBarIcon,
-  EyeIcon,
-} from "../../../icons/workspace-icons";
+import { HomeIcon } from "../../../icons/workspace-icons";
 import { copy } from "../utils/copy";
 
 const workspaceNav = [
   { label: copy.sidebar.home, href: "/app", icon: HomeIcon },
-  { label: copy.sidebar.agents, href: "/app/agents", icon: UsersIcon },
-  { label: copy.sidebar.store, href: "/app/stores", icon: StoreIcon },
-  { label: copy.sidebar.search, href: "/app/search", icon: SearchIcon },
-  { label: copy.sidebar.reports, href: "/app/reports", icon: ChartBarIcon },
-  { label: copy.sidebar.aiVisibility, href: "/app/ai-visibility", icon: EyeIcon },
 ];
 
 export function WorkspaceSidebar() {

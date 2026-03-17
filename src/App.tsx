@@ -31,9 +31,6 @@ import { SettingsPage } from "./app/settings/page";
 import { OnboardingPage } from "./app/onboarding/page";
 import { WritingPage } from "./app/writing";
 import { WritingPostPage } from "./app/writing/post";
-import { OrgGate } from "./components/OrgGate";
-import { OnboardingGate } from "./components/OnboardingGate";
-
 export function App() {
   const location = useLocation();
   const isLanding = location.pathname === "/";
@@ -112,13 +109,7 @@ export function App() {
         <Route path="/onboarding" element={<OnboardingPage />} />
         <Route
           path="/app"
-          element={
-            <OrgGate>
-              <OnboardingGate>
-                <WorkspaceLayout />
-              </OnboardingGate>
-            </OrgGate>
-          }
+          element={<WorkspaceLayout />}
         >
           <Route index element={<HomePage />} />
           <Route path="home" element={<HomePage />} />
@@ -163,38 +154,10 @@ export function App() {
             </div>
           }
         />
-        <Route
-          path="/dashboard"
-          element={
-            <OrgGate>
-              <DashboardPage />
-            </OrgGate>
-          }
-        />
-        <Route
-          path="/radar"
-          element={
-            <OrgGate>
-              <RadarPage />
-            </OrgGate>
-          }
-        />
-        <Route
-          path="/shield"
-          element={
-            <OrgGate>
-              <ShieldPage />
-            </OrgGate>
-          }
-        />
-        <Route
-          path="/settings"
-          element={
-            <OrgGate>
-              <SettingsPage />
-            </OrgGate>
-          }
-        />
+        <Route path="/dashboard" element={<DashboardPage />} />
+        <Route path="/radar" element={<RadarPage />} />
+        <Route path="/shield" element={<ShieldPage />} />
+        <Route path="/settings" element={<SettingsPage />} />
       </Routes>
     </div>
   );

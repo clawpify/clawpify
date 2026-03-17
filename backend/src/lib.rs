@@ -8,4 +8,4 @@ pub mod provider;
 pub mod llm;
 pub mod rate_limit;
 pub mod stores;
-pub mod waitlist;
+pub mod subscribers;

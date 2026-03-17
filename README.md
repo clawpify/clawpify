@@ -102,12 +102,7 @@ If your database is on Railway, run migrations with the Railway CLI (uses `DATAB
 railway run bash -c 'for f in migrations/*.sql; do psql $DATABASE_URL -f $f -v ON_ERROR_STOP=1; done'
 ```
 
-Or run each migration manually:
-
-```bash
-railway run psql $DATABASE_URL -f migrations/005_waitlist.sql
-railway run psql $DATABASE_URL -f migrations/006_waitlist_rate_limits_and_unique.sql
-```
+Or run each migration manually in order (001 through 009).
 
 ## Contact
 

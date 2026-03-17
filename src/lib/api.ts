@@ -1,4 +1,5 @@
 import { useAuth } from "@clerk/react";
+import { useCallback } from "react";
 
 const API_BASE = "";
 
@@ -28,15 +29,20 @@ export async function logAgentActivity(
 export function useAuthenticatedFetch() {
   const { getToken } = useAuth();
 
-  return async (path: string, init?: RequestInit): Promise<Response> => {
-    const token = await getToken();
-    const headers = new Headers(init?.headers);
-    if (token) {
-      headers.set("Authorization", `Bearer ${token}`);
-    }
-    return fetch(`${API_BASE}${path}`, {
-      ...init,
-      headers,
-    });
-  };
+  return useCallback(
+    async (path: string, init?: RequestInit): Promise<Response> => {
+      const request = async (forceRefresh = false) => {
+        const token = await getToken(forceRefresh ? { skipCache: true } : undefined);
+        const headers = new Headers(init?.headers);
+        if (token) headers.set("Authorization", `Bearer ${token}`);
+        return fetch(`${API_BASE}${path}`, { ...init, headers });
+      };
+
+      const res = await request();
+      // Retry once with a fresh token if the cached one was expired
+      if (res.status === 401) return request(true);
+      return res;
+    },
+    [getToken],
+  );
 }

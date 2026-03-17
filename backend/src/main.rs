@@ -10,7 +10,7 @@ use serde::Serialize;
 use std::net::SocketAddr;
 use tower_http::cors::{AllowOrigin, Any, CorsLayer};
 
-use backend::{agent_activity, ai_visibility, audit, db, stores, waitlist};
+use backend::{agent_activity, ai_visibility, audit, db, stores, subscribers};
 
 #[derive(Serialize)]
 struct ApiResponse {
@@ -133,7 +133,7 @@ async fn main() {
       "/api/chatgpt-citation/:id",
       get(audit::citation::get_citation),
     )
-    .route("/api/waitlist", post(waitlist::join))
+    .route("/api/subscribers", post(subscribers::subscribe))
     .layer(Extension(pool))
     .layer(Extension(rate_limit_pool));
 

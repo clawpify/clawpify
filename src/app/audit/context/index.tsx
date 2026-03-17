@@ -2,12 +2,9 @@ import {
   createContext,
   useCallback,
   useContext,
-  useEffect,
-  useRef,
   useState,
   type ReactNode,
 } from "react";
-import { useLocalStorage } from "../../../hooks/useLocalStorage";
 import { useAuth } from "@clerk/react";
 import { logAgentActivity, useAuthenticatedFetch } from "../../../lib/api";
 import {
@@ -35,9 +32,6 @@ type AuditContextValue = {
   setRunChatGPTSearch: React.Dispatch<React.SetStateAction<boolean>>;
   data: CitationData | null;
   error: string | null;
-  showWaitlistModal: boolean;
-  setShowWaitlistModal: React.Dispatch<React.SetStateAction<boolean>>;
-  closeWaitlistModal: () => void;
   generate: () => Promise<void>;
   submit: () => Promise<void>;
   reset: () => void;
@@ -62,31 +56,8 @@ export function AuditProvider({ children }: { children: ReactNode }) {
   const [runChatGPTSearch, setRunChatGPTSearch] = useState(true);
   const [data, setData] = useState<CitationData | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [showWaitlistModal, setShowWaitlistModal] = useState(false);
-  const [waitlistDismissed, setWaitlistDismissed] = useLocalStorage(
-    "clawpify-waitlist-dismissed",
-    false
-  );
-  const waitlistModalTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    return () => {
-      if (waitlistModalTimeoutRef.current) {
-        clearTimeout(waitlistModalTimeoutRef.current);
-      }
-    };
-  }, []);
-
-  const closeWaitlistModal = useCallback(() => {
-    setShowWaitlistModal(false);
-    setWaitlistDismissed(true);
-  }, [setWaitlistDismissed]);
 
   const reset = useCallback(() => {
-    if (waitlistModalTimeoutRef.current) {
-      clearTimeout(waitlistModalTimeoutRef.current);
-      waitlistModalTimeoutRef.current = null;
-    }
     setStep("form");
     setFormStep(1);
     setForm(defaultForm);
@@ -95,7 +66,6 @@ export function AuditProvider({ children }: { children: ReactNode }) {
     setRunChatGPTSearch(true);
     setData(null);
     setError(null);
-    setShowWaitlistModal(false);
   }, []);
 
   const generate = useCallback(async () => {
@@ -172,24 +142,12 @@ export function AuditProvider({ children }: { children: ReactNode }) {
               payload: { citation_id: id, company_name: parsed.data.company_name },
             });
           }
-          if (!waitlistDismissed) {
-            waitlistModalTimeoutRef.current = setTimeout(
-              () => setShowWaitlistModal(true),
-              3000
-            );
-          }
           return;
         }
         if (d.status === "failed") {
           setError("The citation check failed. Please try again.");
           setStep("results");
           setFormStep(1);
-          if (!waitlistDismissed) {
-            waitlistModalTimeoutRef.current = setTimeout(
-              () => setShowWaitlistModal(true),
-              3000
-            );
-          }
           return;
         }
         if (d.results && d.results.length > 0) {
@@ -204,15 +162,7 @@ export function AuditProvider({ children }: { children: ReactNode }) {
       setStep("results");
       setFormStep(1);
     }
-  }, [
-    form,
-    generatedPrompts,
-    runChatGPTSearch,
-    getToken,
-    waitlistDismissed,
-    isSignedIn,
-    fetchAuth,
-  ]);
+  }, [form, generatedPrompts, runChatGPTSearch, getToken, isSignedIn, fetchAuth]);
 
   const value: AuditContextValue = {
     step,
@@ -228,9 +178,6 @@ export function AuditProvider({ children }: { children: ReactNode }) {
     setRunChatGPTSearch,
     data,
     error,
-    showWaitlistModal,
-    setShowWaitlistModal,
-    closeWaitlistModal,
     generate,
     submit,
     reset,

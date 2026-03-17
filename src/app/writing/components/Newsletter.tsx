@@ -1,13 +1,25 @@
 import { useState } from "react";
+import { subscribe } from "../../audit/utils/networkFns";
 
 export function Newsletter() {
   const [email, setEmail] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!email) return;
-    setSubmitted(true);
+    setLoading(true);
+    setError(null);
+    try {
+      await subscribe({ email: email.trim() });
+      setSubmitted(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -27,22 +39,29 @@ export function Newsletter() {
           ) : (
             <form
               onSubmit={handleSubmit}
-              className="relative z-10 flex w-full max-w-xs border border-zinc-300 bg-white"
+              className="relative z-10 flex flex-col items-center gap-2 w-full max-w-xs"
             >
-              <input
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="ENTER YOUR EMAIL"
-                className="flex-1 min-w-0 bg-transparent px-3 py-2.5 font-mono text-[0.62rem] font-medium uppercase tracking-widest text-[#26251e] placeholder:text-[#8a8378] outline-none"
-              />
-              <button
-                type="submit"
-                className="shrink-0 bg-[#1d1d1f] px-4 py-2.5 font-mono text-[0.62rem] font-medium uppercase tracking-widest text-white transition hover:bg-[#333]"
-              >
-                Subscribe
-              </button>
+              <div className="flex w-full border border-zinc-300 bg-white">
+                <input
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="ENTER YOUR EMAIL"
+                  disabled={loading}
+                  className="flex-1 min-w-0 bg-transparent px-3 py-2.5 font-mono text-[0.62rem] font-medium uppercase tracking-widest text-[#26251e] placeholder:text-[#8a8378] outline-none disabled:opacity-60"
+                />
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="shrink-0 bg-[#1d1d1f] px-4 py-2.5 font-mono text-[0.62rem] font-medium uppercase tracking-widest text-white transition hover:bg-[#333] disabled:opacity-60"
+                >
+                  {loading ? "..." : "Subscribe"}
+                </button>
+              </div>
+              {error && (
+                <p className="font-mono text-[0.62rem] text-red-600">{error}</p>
+              )}
             </form>
           )}
         </div>

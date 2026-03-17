@@ -4,10 +4,9 @@ import { AuditProvider, useAudit } from "./context";
 import { AuditForm } from "./components/AuditForm";
 import { AuditResults } from "./components/AuditResults";
 import { AuditEmptyState } from "./components/AuditEmptyState";
-import { WaitlistModal } from "./components/WaitlistModal";
 
 function AuditContent() {
-  const { step, data, showWaitlistModal, closeWaitlistModal } = useAudit();
+  const { step, data } = useAudit();
 
   const showAnalysis = step === "loading" || (step === "results" && !!data);
   const showEmptyState =
@@ -64,8 +63,6 @@ function AuditContent() {
         </div>
       </aside>
       </div>
-
-      <WaitlistModal open={showWaitlistModal} onClose={closeWaitlistModal} />
     </div>
   );
 }
