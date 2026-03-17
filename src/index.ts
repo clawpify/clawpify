@@ -174,7 +174,7 @@ const server = serve({
         return proxyToRustPublic(req, path);
       },
     },
-    "/api/waitlist": {
+    "/api/subscribers": {
       async POST(req) {
         const path = new URL(req.url).pathname;
         const clientIP = serverRef?.requestIP(req)?.address ?? "unknown";

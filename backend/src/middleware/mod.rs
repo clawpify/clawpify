@@ -32,6 +32,15 @@ pub async fn require_internal_auth(request: Request, next: Next) -> Response {
   next.run(request).await
 }
 
+pub async fn log_requests(request: Request, next: Next) -> Response {
+  let method = request.method().clone();
+  let path = request.uri().path().to_owned();
+  let response = next.run(request).await;
+  let status = response.status();
+  println!("[{}] {} -> {}", method, path, status);
+  response
+}
+
 pub fn cors_layer() -> CorsLayer {
   use axum::http::HeaderValue;
 

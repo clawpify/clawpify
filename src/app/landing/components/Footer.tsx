@@ -106,7 +106,7 @@ export function Footer() {
         {/* Bottom row: logo + explore with AI */}
         <div className="mt-10 flex flex-col gap-5 px-5 pt-6 sm:flex-row sm:items-center sm:justify-between md:px-8 lg:px-10">
           <div className="flex items-center gap-2">
-            <div className="h-5 w-5 shrink-0 bg-[#b5ddfb]" />
+            <div className="h-5 w-5 shrink-0 bg-[#b5ddfb]" aria-hidden />
             <span className="font-mono text-[0.72rem] font-medium uppercase tracking-widest text-[#26251e]">
               Clawpify
             </span>

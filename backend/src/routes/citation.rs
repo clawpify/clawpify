@@ -72,14 +72,54 @@ fn create_citation_behavior(_requested_run_search: Option<bool>) -> CreateCitati
   }
 }
 
+fn derive_company_name(website_url: &str) -> String {
+  let host = url::Url::parse(website_url)
+    .ok()
+    .and_then(|url| url.host_str().map(str::to_owned))
+    .or_else(|| {
+      url::Url::parse(&format!("https://{website_url}"))
+        .ok()
+        .and_then(|url| url.host_str().map(str::to_owned))
+    })
+    .unwrap_or_default();
+
+  let normalized = host
+    .strip_prefix("www.")
+    .unwrap_or(&host)
+    .split('.')
+    .next()
+    .unwrap_or("")
+    .replace(['-', '_'], " ");
+
+  normalized
+    .split_whitespace()
+    .map(|word| {
+      let mut chars = word.chars();
+      match chars.next() {
+        Some(first) => format!("{}{}", first.to_uppercase(), chars.as_str().to_lowercase()),
+        None => String::new(),
+      }
+    })
+    .collect::<Vec<_>>()
+    .join(" ")
+}
+
 async fn generate_prompts(
   Json(body): Json<GenerateRequest>,
 ) -> Result<Json<GenerateResponse>, ApiError> {
-  let company_name = body.company_name.trim();
+  let derived_company_name = derive_company_name(body.website_url.trim());
+  let company_name = if body.company_name.trim().is_empty() {
+    derived_company_name.as_str()
+  } else {
+    body.company_name.trim()
+  };
   let website_url = body.website_url.trim();
 
-  if company_name.is_empty() || website_url.is_empty() {
-    return Err(error::bad_request("company_name and website_url are required"));
+  if website_url.is_empty() {
+    return Err(error::bad_request("website_url is required"));
+  }
+  if company_name.is_empty() {
+    return Err(error::bad_request("company_name could not be derived from website_url"));
   }
 
   let result = generate::generate_prompts_and_competitors(
@@ -100,8 +140,13 @@ async fn create_citation(
 ) -> Result<(axum::http::StatusCode, Json<CreateCitationResponse>), ApiError> {
   enforce_rate_limit(&headers, rate_limit_pool.as_ref()).await?;
 
-  let company_name = body.company_name.trim();
   let website_url = body.website_url.trim();
+  let derived_company_name = derive_company_name(website_url);
+  let company_name = if body.company_name.trim().is_empty() {
+    derived_company_name.as_str()
+  } else {
+    body.company_name.trim()
+  };
   let product_description = body.product_description.trim();
   let custom_prompts = body.custom_prompts.as_ref().map(|p| {
     p.iter()
@@ -111,8 +156,11 @@ async fn create_citation(
   });
 
   let has_custom = custom_prompts.as_ref().map(|p| !p.is_empty()).unwrap_or(false);
-  if company_name.is_empty() || website_url.is_empty() {
-    return Err(error::bad_request("company_name and website_url are required"));
+  if website_url.is_empty() {
+    return Err(error::bad_request("website_url is required"));
+  }
+  if company_name.is_empty() {
+    return Err(error::bad_request("company_name could not be derived from website_url"));
   }
   if !has_custom && product_description.is_empty() {
     return Err(error::bad_request("product_description or custom_prompts are required"));

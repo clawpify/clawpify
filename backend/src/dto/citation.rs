@@ -4,6 +4,7 @@ use uuid::Uuid;
 
 #[derive(Deserialize)]
 pub struct GenerateRequest {
+  #[serde(default)]
   pub company_name: String,
   pub website_url: String,
   #[serde(default)]
@@ -18,6 +19,7 @@ pub struct GenerateResponse {
 
 #[derive(Deserialize)]
 pub struct CreateCitationRequest {
+  #[serde(default)]
   pub company_name: String,
   pub website_url: String,
   #[serde(default)]

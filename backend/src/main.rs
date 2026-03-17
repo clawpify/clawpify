@@ -1,5 +1,6 @@
 use std::net::SocketAddr;
 
+use axum::middleware::from_fn;
 use backend::{db, middleware, routes};
 
 #[tokio::main]
@@ -21,7 +22,9 @@ async fn main() {
     None
   };
 
-  let app = routes::api_router(pool, rate_limit_pool).layer(middleware::cors_layer());
+  let app = routes::api_router(pool, rate_limit_pool)
+    .layer(from_fn(middleware::log_requests))
+    .layer(middleware::cors_layer());
 
   let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
   println!("Server is running on {}", addr);

@@ -24,6 +24,7 @@ export function Newsletter() {
 
   return (
     <section className="relative overflow-hidden bg-[#f2f3f1] py-16 md:py-24">
+      <div className="newsletter-grid absolute inset-0" aria-hidden />
       <div className="mx-auto max-w-[995px] px-5 md:px-8">
         <div className="relative flex flex-col items-center justify-center">
 
@@ -46,9 +47,9 @@ export function Newsletter() {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="ENTER YOUR EMAIL"
+                  placeholder="Enter your email"
                   disabled={loading}
-                  className="flex-1 min-w-0 bg-transparent px-3 py-2.5 font-mono text-[0.62rem] font-medium uppercase tracking-widest text-[#26251e] placeholder:text-[#8a8378] outline-none disabled:opacity-60"
+                  className="flex-1 min-w-0 bg-transparent px-3 py-2.5 font-mono text-[0.72rem] text-[#26251e] placeholder:text-[#8a8378] outline-none disabled:opacity-60"
                 />
                 <button
                   type="submit"

@@ -1,9 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-const productItems = [
-  { label: "Open Claw for Shopify", href: "https://clawpify.com", external: true },
-  { label: "Query ChatGPT", href: "/audit", external: false },
-];
+import { HeroModalShell } from "../../audit/components/HeroModalShell";
+import { subscribe } from "../../audit/utils/networkFns";
 
 const developerItems = [
   { label: "GitHub", href: "https://github.com/clawpify", external: true },
@@ -14,8 +12,17 @@ const navLinks = [
   { label: "Writing", href: "/blog", external: false },
 ];
 
-function SidebarInner({ isOpen, setIsOpen, hidePanelToggle }: { isOpen: boolean; setIsOpen: (fn: (o: boolean) => boolean) => void; hidePanelToggle?: boolean }) {
-  const [productsExpanded, setProductsExpanded] = useState(true);
+function SidebarInner({
+  isOpen,
+  setIsOpen,
+  hidePanelToggle,
+  onOpenSubscribeModal,
+}: {
+  isOpen: boolean;
+  setIsOpen: (fn: (o: boolean) => boolean) => void;
+  hidePanelToggle?: boolean;
+  onOpenSubscribeModal: () => void;
+}) {
   const [developersExpanded, setDevelopersExpanded] = useState(false);
 
   return (
@@ -53,47 +60,6 @@ function SidebarInner({ isOpen, setIsOpen, hidePanelToggle }: { isOpen: boolean;
 
       {isOpen && (
         <nav className="flex flex-1 flex-col gap-1" aria-label="Main navigation">
-        <div>
-          <button
-            type="button"
-            onClick={() => setProductsExpanded((e) => !e)}
-            aria-expanded={productsExpanded}
-            className="grid w-full grid-cols-[1fr_0.75rem] items-center gap-1.5 py-1.5 text-left text-xs font-medium uppercase text-zinc-900 transition hover:text-zinc-600"
-          >
-            Products
-            <span
-              className={`flex justify-end text-zinc-400 transition-transform ${productsExpanded ? "rotate-90" : "rotate-0"}`}
-              aria-hidden
-            >
-              ›
-            </span>
-          </button>
-          {productsExpanded && (
-            <div className="flex flex-col gap-0.5 pl-1.5">
-              {productItems.map((item) => {
-                const linkClass =
-                  "py-1.5 text-xs font-medium uppercase text-zinc-600 transition hover:text-zinc-900 flex items-center gap-1.5";
-                const content = item.label;
-                return item.external ? (
-                  <a
-                    key={item.label}
-                    href={item.href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={linkClass}
-                  >
-                    {content}
-                    <span className="sr-only"> (opens in new tab)</span>
-                  </a>
-                ) : item.href ? (
-                  <Link key={item.label} to={item.href} className={linkClass}>
-                    {content}
-                  </Link>
-                ) : null;
-              })}
-            </div>
-          )}
-        </div>
         <div>
           <button
             type="button"
@@ -166,7 +132,7 @@ function SidebarInner({ isOpen, setIsOpen, hidePanelToggle }: { isOpen: boolean;
       {isOpen && (
       <div className="border-t border-zinc-200 pt-5">
         <div className="flex flex-col gap-2">
-          <a
+          {/* <a
             href="https://calendar.notion.so/meet/alhwyn/clawpify"
             target="_blank"
             rel="noopener noreferrer"
@@ -174,13 +140,14 @@ function SidebarInner({ isOpen, setIsOpen, hidePanelToggle }: { isOpen: boolean;
           >
             BOOK A CALL
             <span className="sr-only"> (opens in new tab)</span>
-          </a>
-          <Link
-            to="/sign-in"
+          </a> */}
+          <button
+            type="button"
+            onClick={onOpenSubscribeModal}
             className="block w-full rounded-none border border-zinc-200 bg-transparent px-3 py-2.5 text-center text-xs font-medium uppercase text-[#26251e] transition hover:border-[#26251e] hover:bg-[#26251e] hover:text-white"
           >
             Sign in
-          </Link>
+          </button>
         </div>
       </div>
       )}
@@ -191,6 +158,26 @@ function SidebarInner({ isOpen, setIsOpen, hidePanelToggle }: { isOpen: boolean;
 export function Sidebar() {
   const [isOpen, setIsOpen] = useState(true);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [subscribeModalOpen, setSubscribeModalOpen] = useState(false);
+  const [subscribeEmail, setSubscribeEmail] = useState("");
+  const [subscribeLoading, setSubscribeLoading] = useState(false);
+  const [subscribeSuccess, setSubscribeSuccess] = useState(false);
+  const [subscribeError, setSubscribeError] = useState<string | null>(null);
+
+  async function handleSubscribeSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!subscribeEmail.trim()) return;
+    setSubscribeLoading(true);
+    setSubscribeError(null);
+    try {
+      await subscribe({ email: subscribeEmail.trim() });
+      setSubscribeSuccess(true);
+    } catch (err) {
+      setSubscribeError(err instanceof Error ? err.message : "Something went wrong");
+    } finally {
+      setSubscribeLoading(false);
+    }
+  }
 
   return (
     <>
@@ -227,7 +214,12 @@ export function Sidebar() {
                 <path d="M18 6 6 18M6 6l12 12" />
               </svg>
             </button>
-            <SidebarInner isOpen={true} setIsOpen={setIsOpen} hidePanelToggle />
+            <SidebarInner
+              isOpen={true}
+              setIsOpen={setIsOpen}
+              hidePanelToggle
+              onOpenSubscribeModal={() => setSubscribeModalOpen(true)}
+            />
           </aside>
         </div>
       )}
@@ -238,8 +230,61 @@ export function Sidebar() {
           isOpen ? "w-56 p-5" : "w-12 p-2.5"
         }`}
       >
-        <SidebarInner isOpen={isOpen} setIsOpen={setIsOpen} />
+        <SidebarInner
+          isOpen={isOpen}
+          setIsOpen={setIsOpen}
+          onOpenSubscribeModal={() => setSubscribeModalOpen(true)}
+        />
       </aside>
+
+      {subscribeModalOpen && (
+        <HeroModalShell onClose={() => setSubscribeModalOpen(false)}>
+          <h2 className="font-serif text-xl italic leading-tight text-[#26251e]">
+            Subscribe
+          </h2>
+          <p className="mt-2 font-mono text-[0.72rem] font-medium uppercase tracking-widest text-[#8a8378]">
+            Sign in isn&apos;t available yet. Subscribe and we&apos;ll keep you
+            posted when access opens up.
+          </p>
+
+          <div className="mt-8 flex flex-col gap-3">
+            {subscribeSuccess ? (
+              <p className="border border-[rgba(0,0,0,0.1)] bg-[#f5f5f5] px-4 py-3 text-center font-mono text-[0.68rem] font-medium uppercase tracking-widest text-[#555]">
+                Thank you for subscribing.
+              </p>
+            ) : (
+              <form
+                onSubmit={handleSubscribeSubmit}
+                className="flex w-full border border-[rgba(0,0,0,0.1)] bg-white"
+              >
+                <input
+                  type="email"
+                  required
+                  value={subscribeEmail}
+                  onChange={(e) => setSubscribeEmail(e.target.value)}
+                  placeholder="Enter your email"
+                  disabled={subscribeLoading}
+                  className="flex-1 min-w-0 bg-transparent px-3 py-2.5 font-mono text-[0.72rem] text-[#26251e] placeholder:text-[#8a8378] outline-none disabled:opacity-60"
+                />
+                <button
+                  type="submit"
+                  disabled={subscribeLoading}
+                  className="shrink-0 bg-[#1d1d1f] px-4 py-2.5 font-mono text-[0.62rem] font-medium uppercase tracking-widest text-white transition hover:bg-[#333] disabled:opacity-60"
+                >
+                  {subscribeLoading ? "..." : "Subscribe"}
+                </button>
+              </form>
+            )}
+
+            {subscribeError && (
+              <p className="text-center font-mono text-[0.62rem] text-red-600">
+                {subscribeError}
+              </p>
+            )}
+
+          </div>
+        </HeroModalShell>
+      )}
     </>
   );
 }
