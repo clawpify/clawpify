@@ -11,14 +11,18 @@ use crate::rate_limit;
 use crate::services::citation::{generate, runner, urls};
 
 const RATE_LIMIT_MESSAGE: &str =
-  "Rate limit exceeded. Free tier: 2 audits per 2 days. Sign in for more.";
+  "Rate limit exceeded. Free tier: 2 audits per day. Sign in for more.";
 
 pub fn routes() -> Router<()> {
+  let protected = Router::new()
+    .route("/citations", get(list_citations_by_org))
+    .route_layer(middleware::from_fn(mw::require_internal_auth));
+
   Router::new()
     .route("/chatgpt-citation/generate", post(generate_prompts))
     .route("/chatgpt-citation", post(create_citation))
     .route("/chatgpt-citation/:id", get(get_citation))
-    .route("/citations", get(list_citations_by_org).route_layer(middleware::from_fn(mw::require_internal_auth)))
+    .merge(protected)
 }
 
 async fn enforce_rate_limit(
@@ -54,6 +58,18 @@ fn resolve_stored_description(
     .filter(|p| !p.is_empty())
     .and_then(|p| p.first().cloned())
     .unwrap_or_else(|| product_description.to_string())
+}
+
+struct CreateCitationBehavior {
+  status: &'static str,
+  should_start_analysis: bool,
+}
+
+fn create_citation_behavior(_requested_run_search: Option<bool>) -> CreateCitationBehavior {
+  CreateCitationBehavior {
+    status: "running",
+    should_start_analysis: true,
+  }
 }
 
 async fn generate_prompts(
@@ -105,8 +121,7 @@ async fn create_citation(
   urls::validate_url(website_url).map_err(|e| error::bad_request(&e))?;
 
   let stored_desc = resolve_stored_description(custom_prompts.as_ref(), product_description);
-  let run_search = body.run_search.unwrap_or(true);
-  let status = if run_search { "running" } else { "completed" };
+  let behavior = create_citation_behavior(body.run_search);
 
   let org_id: Option<String> = headers
     .get("X-Internal-Org-Id")
@@ -123,13 +138,13 @@ async fn create_citation(
   .bind(company_name)
   .bind(website_url)
   .bind(&stored_desc)
-  .bind(status)
+  .bind(behavior.status)
   .bind(org_id.as_deref())
   .execute(&pool)
   .await
   .map_err(error::db_error)?;
 
-  if run_search {
+  if behavior.should_start_analysis {
     let pool_clone = pool.clone();
     let company_name = company_name.to_string();
     let website_url = website_url.to_string();
@@ -149,11 +164,6 @@ async fn create_citation(
       )
       .await;
     });
-  } else {
-    let _ = sqlx::query("UPDATE chatgpt_citations SET completed_at = NOW() WHERE id = $1")
-      .bind(citation_id)
-      .execute(&pool)
-      .await;
   }
 
   Ok((
@@ -257,4 +267,23 @@ async fn list_citations_by_org(
   }
 
   Ok(Json(ListCitationsResponse { citations: out }))
+}
+
+#[cfg(test)]
+mod tests {
+  use super::create_citation_behavior;
+
+  #[test]
+  fn create_citation_starts_analysis_when_run_search_is_false() {
+    let behavior = create_citation_behavior(Some(false));
+    assert_eq!(behavior.status, "running");
+    assert!(behavior.should_start_analysis);
+  }
+
+  #[test]
+  fn create_citation_starts_analysis_when_run_search_is_missing() {
+    let behavior = create_citation_behavior(None);
+    assert_eq!(behavior.status, "running");
+    assert!(behavior.should_start_analysis);
+  }
 }

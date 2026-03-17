@@ -168,6 +168,12 @@ const server = serve({
       },
     },
 
+    "/api/audit-leads": {
+      async POST(req) {
+        const path = new URL(req.url).pathname;
+        return proxyToRustPublic(req, path);
+      },
+    },
     "/api/waitlist": {
       async POST(req) {
         const path = new URL(req.url).pathname;

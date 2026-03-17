@@ -70,14 +70,27 @@ export const copy = {
     },
   ],
   introAiSearch: {
-    heading: "See what AI thinks about your brand",
+    panelLabel: "Insights",
+    heading: "Turn AI searches into actionable insights",
     paragraph:
-      "See what a council of AI models thinks about your prompt within AI search—and how you stack up against competitors.",
+      "Run a prompt across AI search, see how models and competitors respond, and turn every result into clear actions for your team.",
   },
   featuresAiSearch: [
-    { title: "AI Search" },
-    { title: "Competitors" },
-    { title: "Prompts" },
+    {
+      label: "PROMPT ANALYSIS",
+      title: "Run one prompt across AI search",
+      description: "See how major models answer the same query and where your brand actually appears.",
+    },
+    {
+      label: "COMPETITOR INTEL",
+      title: "Spot who wins the recommendation",
+      description: "Compare which competitors are cited, what they are praised for, and where you are missing.",
+    },
+    {
+      label: "ACTIONABLE INSIGHTS",
+      title: "Get fixes your team can act on",
+      description: "Turn AI results into concrete content, schema, and merchandising updates that improve visibility.",
+    },
   ],
   howItWorks: {
     title: "How it works",

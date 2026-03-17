@@ -24,12 +24,11 @@ export function Newsletter() {
 
   return (
     <section className="relative overflow-hidden bg-[#f2f3f1] py-16 md:py-24">
-      <div className="newsletter-grid absolute inset-y-0 left-1/2 -translate-x-1/2 w-[99%] h-full" />
       <div className="mx-auto max-w-[995px] px-5 md:px-8">
         <div className="relative flex flex-col items-center justify-center">
 
-          <h2 className="relative z-10 font-serif text-[clamp(1.6rem,4vw,2.4rem)] italic leading-[1.15] text-[#26251e] mb-8 text-center">
-            Subscribe to<br />our newsletter
+          <h2 className="relative z-10 mb-8 text-center font-serif text-[clamp(1.6rem,4vw,2.4rem)] italic leading-[1.15] text-[#26251e]">
+            Subscribe to<br />our updates
           </h2>
 
           {submitted ? (

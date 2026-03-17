@@ -1,4 +1,5 @@
 mod activity;
+mod audit_leads;
 mod citation;
 mod stores;
 mod subscribers;
@@ -57,6 +58,7 @@ pub fn api_router(pool: PgPool, rate_limit_pool: Option<PgPool>) -> Router {
     .merge(stores::routes())
     .merge(visibility::routes())
     .merge(activity::routes())
+    .merge(audit_leads::routes())
     .merge(subscribers::routes())
     .merge(placeholder_routes());
 

@@ -7,8 +7,20 @@ function normalizeUrl(url: string): string {
   return s;
 }
 
+/** Extract domain from URL for use as company name (e.g. "https://www.shopify.com" -> "shopify.com") */
+export function domainFromUrl(url: string): string {
+  const s = url.trim();
+  if (!s) return "";
+  try {
+    const u = new URL(s.startsWith("http") ? s : `https://${s}`);
+    return u.hostname.replace(/^www\./i, "").toLowerCase();
+  } catch {
+    return s.split("/")[0]?.replace(/^www\./i, "") ?? "";
+  }
+}
+
 export const citationFormSchema = z.object({
-  company_name: z.string().min(1, "Company name is required").trim(),
+  company_name: z.string().trim().optional().default(""),
   website_url: z
     .string()
     .min(1, "Domain is required")

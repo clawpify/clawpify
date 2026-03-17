@@ -1,12 +1,18 @@
+import { useAuth } from "@clerk/react";
 import { useAudit } from "../context";
 import {
-  BuildingIcon,
   ChevronDownIcon,
   GlobeIcon,
   ListIcon,
   MetricIcon,
 } from "../../../icons/audit-icons";
 import { BrandFavicon } from "./BrandFavicon";
+
+const SIGNUP_DISMISSED_KEY = "clawpify_audit_signup_dismissed";
+
+function hasDismissedSignUp(): boolean {
+  return typeof localStorage !== "undefined" && localStorage.getItem(SIGNUP_DISMISSED_KEY) === "1";
+}
 
 function InputField({
   icon: Icon,
@@ -49,16 +55,19 @@ function DashedButton({
   icon: Icon,
   children,
   onClick,
+  disabled,
 }: {
   icon: React.ComponentType;
   children: React.ReactNode;
   onClick: () => void;
+  disabled?: boolean;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className="flex w-full items-center gap-2 rounded-lg border border-dashed border-zinc-300 px-3 py-2 text-sm text-zinc-500 transition hover:border-zinc-400 hover:bg-zinc-50"
+      disabled={disabled}
+      className="flex w-full items-center gap-2 rounded-lg border border-dashed border-zinc-300 px-3 py-2 text-sm text-zinc-500 transition hover:border-zinc-400 hover:bg-zinc-50 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:border-zinc-300"
     >
       <Icon />
       {children}
@@ -67,6 +76,7 @@ function DashedButton({
 }
 
 export function AuditForm() {
+  const { isSignedIn } = useAuth();
   const {
     form,
     setForm,
@@ -75,6 +85,7 @@ export function AuditForm() {
     setFormStep,
     generate,
     submit,
+    setShowSignUpModal,
     generatedPrompts,
     setGeneratedPrompts,
     generatedCompetitors,
@@ -89,7 +100,7 @@ export function AuditForm() {
   const isGenerating = isLoadingPrompts || isAnalyzing;
 
   const handleStep1Next = async () => {
-    if (!form.website_url.trim() || !form.company_name.trim()) return;
+    if (!form.website_url.trim()) return;
     await generate();
   };
 
@@ -102,14 +113,16 @@ export function AuditForm() {
   };
 
   const addCompetitor = () => {
-    setGeneratedCompetitors((prev) => [...prev, ""]);
+    setGeneratedCompetitors((prev) =>
+      prev.length < 3 ? [...prev, ""] : prev
+    );
   };
 
   const removeCompetitor = (i: number) => {
     setGeneratedCompetitors((prev) => prev.filter((_, idx) => idx !== i));
   };
 
-  const canProceedStep1 = form.website_url.trim() && form.company_name.trim();
+  const canProceedStep1 = !!form.website_url.trim();
   const canProceedStep2 =
     generatedPrompts.length > 0 &&
     generatedPrompts.some((p) => p.trim().length > 0);
@@ -163,18 +176,10 @@ export function AuditForm() {
             <div>
               <h3 className="text-sm font-medium text-zinc-900">Data source</h3>
               <p className="text-xs text-zinc-500">
-                Enter your company and website to generate prompts
+                Enter your website URL to generate prompts
               </p>
             </div>
             <div className="space-y-3">
-              <InputField
-                icon={BuildingIcon}
-                label="Company name"
-                value={form.company_name}
-                onChange={(v) => setForm((f) => ({ ...f, company_name: v }))}
-                placeholder="Acme Inc"
-                disabled={isGenerating}
-              />
               <InputField
                 icon={GlobeIcon}
                 label="Website URL"
@@ -190,7 +195,7 @@ export function AuditForm() {
             type="button"
             onClick={handleStep1Next}
             disabled={!canProceedStep1 || isGenerating}
-            className="w-full rounded-lg border border-zinc-200 bg-white px-4 py-2.5 text-sm font-medium text-zinc-900 transition hover:bg-zinc-50 disabled:opacity-50"
+            className="h-11 w-full rounded-lg border border-zinc-200 bg-white px-4 text-sm font-medium text-zinc-900 transition hover:bg-zinc-50 disabled:opacity-50"
           >
             {isGenerating ? "Generating..." : "Next"}
           </button>
@@ -259,7 +264,7 @@ export function AuditForm() {
             <button
               type="button"
               onClick={() => setFormStep(1)}
-              className="rounded-lg border border-zinc-200 px-4 py-2.5 text-sm font-medium text-zinc-900 transition hover:bg-zinc-50"
+              className="h-11 rounded-lg border border-zinc-200 px-4 text-sm font-medium text-zinc-900 transition hover:bg-zinc-50"
             >
               Back
             </button>
@@ -267,7 +272,7 @@ export function AuditForm() {
               type="button"
               onClick={() => setFormStep(3)}
               disabled={!canProceedStep2}
-              className="flex-1 rounded-lg border border-zinc-200 bg-white px-4 py-2.5 text-sm font-medium text-zinc-900 transition hover:bg-zinc-50 disabled:opacity-50"
+              className="h-11 flex-1 rounded-lg border border-zinc-200 bg-white px-4 text-sm font-medium text-zinc-900 transition hover:bg-zinc-50 disabled:opacity-50"
             >
               Next
             </button>
@@ -332,7 +337,11 @@ export function AuditForm() {
                 ))}
               </div>
 
-              <DashedButton icon={ListIcon} onClick={addCompetitor}>
+              <DashedButton
+                icon={ListIcon}
+                onClick={addCompetitor}
+                disabled={generatedCompetitors.length >= 3}
+              >
                 Add competitor
               </DashedButton>
             </div>
@@ -359,15 +368,21 @@ export function AuditForm() {
             <button
               type="button"
               onClick={() => setFormStep(2)}
-              className="rounded-lg border border-zinc-200 px-4 py-2.5 text-sm font-medium text-zinc-900 transition hover:bg-zinc-50"
+              className="h-11 rounded-lg border border-zinc-200 px-4 text-sm font-medium text-zinc-900 transition hover:bg-zinc-50"
             >
               Back
             </button>
             <button
               type="button"
-              onClick={submit}
+              onClick={() => {
+                if (isSignedIn || hasDismissedSignUp()) {
+                  submit();
+                } else {
+                  setShowSignUpModal(true);
+                }
+              }}
               disabled={isAnalyzing}
-              className="flex-1 rounded-lg bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-zinc-800 disabled:opacity-50"
+              className="h-11 flex-1 rounded-lg bg-zinc-900 px-4 text-sm font-medium text-white transition hover:bg-zinc-800 disabled:opacity-50"
             >
               {isAnalyzing ? "Analyzing..." : "Analyze"}
             </button>

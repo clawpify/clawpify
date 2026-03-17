@@ -237,6 +237,8 @@ nav a {
 
 .hero-model-shell {
   color: #26251e;
+  transform-origin: center top;
+  will-change: transform, opacity;
 }
 
 .hero-model-label {

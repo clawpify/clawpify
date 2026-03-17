@@ -11,8 +11,14 @@ import {
   createCitation,
   generatePromptsAndCompetitors,
   pollCitation,
+  RateLimitError,
 } from "../utils/networkFns";
-import { citationFormSchema, type CitationData, type CitationForm } from "../types";
+import {
+  citationFormSchema,
+  domainFromUrl,
+  type CitationData,
+  type CitationForm,
+} from "../types";
 
 export type AuditStep = "form" | "loading" | "results" | "generating";
 
@@ -32,6 +38,10 @@ type AuditContextValue = {
   setRunChatGPTSearch: React.Dispatch<React.SetStateAction<boolean>>;
   data: CitationData | null;
   error: string | null;
+  rateLimited: boolean;
+  dismissRateLimit: () => void;
+  showSignUpModal: boolean;
+  setShowSignUpModal: React.Dispatch<React.SetStateAction<boolean>>;
   generate: () => Promise<void>;
   submit: () => Promise<void>;
   reset: () => void;
@@ -56,6 +66,10 @@ export function AuditProvider({ children }: { children: ReactNode }) {
   const [runChatGPTSearch, setRunChatGPTSearch] = useState(true);
   const [data, setData] = useState<CitationData | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [rateLimited, setRateLimited] = useState(false);
+  const [showSignUpModal, setShowSignUpModal] = useState(false);
+
+  const dismissRateLimit = useCallback(() => setRateLimited(false), []);
 
   const reset = useCallback(() => {
     setStep("form");
@@ -66,6 +80,8 @@ export function AuditProvider({ children }: { children: ReactNode }) {
     setRunChatGPTSearch(true);
     setData(null);
     setError(null);
+    setRateLimited(false);
+    setShowSignUpModal(false);
   }, []);
 
   const generate = useCallback(async () => {
@@ -78,6 +94,13 @@ export function AuditProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    const companyName =
+      parsed.data.company_name?.trim() || domainFromUrl(parsed.data.website_url);
+    if (!companyName) {
+      setError("Could not derive company from URL");
+      return;
+    }
+
     setError(null);
     setStep("generating");
 
@@ -85,12 +108,12 @@ export function AuditProvider({ children }: { children: ReactNode }) {
       const token = await getToken();
       const { prompts, competitors } = await generatePromptsAndCompetitors(
         parsed.data.website_url,
-        parsed.data.company_name,
+        companyName,
         token
       );
       setGeneratedPrompts(prompts);
-      const normalized = competitors.slice(0, 7);
-      while (normalized.length < 7) normalized.push("");
+      const normalized = competitors.slice(0, 3);
+      while (normalized.length < 3) normalized.push("");
       setGeneratedCompetitors(normalized);
       setFormStep(2);
       setStep("form");
@@ -107,6 +130,15 @@ export function AuditProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    const companyName =
+      parsed.data.company_name?.trim() ||
+      domainFromUrl(parsed.data.website_url);
+    const payload = {
+      ...parsed.data,
+      company_name: companyName || parsed.data.website_url,
+      product_description: parsed.data.product_description || "—",
+    };
+
     const hasCustomPrompts = generatedPrompts.length > 0;
     if (!hasCustomPrompts && !parsed.data.product_description.trim()) {
       setError("Generate prompts first, or enter a product description.");
@@ -120,10 +152,7 @@ export function AuditProvider({ children }: { children: ReactNode }) {
     try {
       const token = await getToken();
       const { id } = await createCitation(
-        {
-          ...parsed.data,
-          product_description: parsed.data.product_description || "—",
-        },
+        payload,
         hasCustomPrompts ? generatedPrompts : undefined,
         runChatGPTSearch,
         token
@@ -139,7 +168,7 @@ export function AuditProvider({ children }: { children: ReactNode }) {
             logAgentActivity(fetchAuth, {
               agent_name: "Citation Auditor",
               action_type: "audit_completed",
-              payload: { citation_id: id, company_name: parsed.data.company_name },
+              payload: { citation_id: id, company_name: payload.company_name },
             });
           }
           return;
@@ -158,9 +187,15 @@ export function AuditProvider({ children }: { children: ReactNode }) {
 
       await poll();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Something went wrong");
-      setStep("results");
-      setFormStep(1);
+      if (e instanceof RateLimitError) {
+        setRateLimited(true);
+        setStep("form");
+        setFormStep(3);
+      } else {
+        setError(e instanceof Error ? e.message : "Something went wrong");
+        setStep("results");
+        setFormStep(1);
+      }
     }
   }, [form, generatedPrompts, runChatGPTSearch, getToken, isSignedIn, fetchAuth]);
 
@@ -178,6 +213,10 @@ export function AuditProvider({ children }: { children: ReactNode }) {
     setRunChatGPTSearch,
     data,
     error,
+    rateLimited,
+    dismissRateLimit,
+    showSignUpModal,
+    setShowSignUpModal,
     generate,
     submit,
     reset,

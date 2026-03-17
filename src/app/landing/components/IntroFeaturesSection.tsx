@@ -44,6 +44,18 @@ const META_CHECKS = ["Title", "Tags", "Schema"] as const;
 
 const GRID_BG = `url("data:image/svg+xml,${encodeURIComponent('<svg width="957" height="480" viewBox="0 0 957 480" fill="none" xmlns="http://www.w3.org/2000/svg"><g clip-path="url(#c)"><rect x="-210.11" y="1.586" width="1377" height="477" stroke="#bbb" stroke-width=".75"/><path d="M1008.45 54.572H-210.213" stroke="#bbb" stroke-width=".75"/><path d="M1008.45 107.523H-210.213" stroke="#bbb" stroke-width=".75"/><path d="M1008.45 160.535H-210.213" stroke="#bbb" stroke-width=".75"/><path d="M1008.45 266.494H-210.213" stroke="#bbb" stroke-width=".75"/><path d="M1008.45 319.479H-210.213" stroke="#bbb" stroke-width=".75"/><path d="M1008.45 372.273H-210.213" stroke="#bbb" stroke-width=".75"/><path d="M1008.45 425.449H-210.213" stroke="#bbb" stroke-width=".75"/><path d="M2.14 1.586v477" stroke="#bbb" stroke-width=".75"/><path d="M54.64 1.586v477" stroke="#bbb" stroke-width=".75"/><path d="M107.89 1.586v477" stroke="#bbb" stroke-width=".75"/><path d="M160.39 1.586v477" stroke="#bbb" stroke-width=".75"/><path d="M213.64 1.586v477" stroke="#bbb" stroke-width=".75"/><path d="M266.89 1.586v477" stroke="#bbb" stroke-width=".75"/><path d="M320.14 1.586v477" stroke="#bbb" stroke-width=".75"/><path d="M372.64 1.586v477" stroke="#bbb" stroke-width=".75"/><path d="M425.89 1.586v477" stroke="#bbb" stroke-width=".75"/><path d="M478.39 1.586v477" stroke="#bbb" stroke-width=".75"/><path d="M531.64 1.586v477" stroke="#bbb" stroke-width=".75"/><path d="M584.132 1.586v477" stroke="#bbb" stroke-width=".75"/><path d="M638.132 1.586v477" stroke="#bbb" stroke-width=".75"/><path d="M690.632 1.586v477" stroke="#bbb" stroke-width=".75"/><path d="M743.882 1.586v477" stroke="#bbb" stroke-width=".75"/><path d="M796.382 1.586v477" stroke="#bbb" stroke-width=".75"/><path d="M849.633 1.586v477" stroke="#bbb" stroke-width=".75"/><path d="M902.133 1.586v477" stroke="#bbb" stroke-width=".75"/><path d="M955.383 1.586v477" stroke="#bbb" stroke-width=".75"/><path d="M1166.9 213.836H-210.098" stroke="#bbb" stroke-width=".75"/></g><defs><clipPath id="c"><rect width="956.25" height="478.5" fill="white" transform="translate(.537 .75)"/></clipPath></defs></svg>')}")`;
 
+const INSIGHT_AGENT_ROWS = [
+  { name: "OpenAI", status: "You rank #2", accent: "bg-[#1d1d1f]" },
+  { name: "Perplexity", status: "Competitor leads", accent: "bg-[#1a7dbb]" },
+  { name: "Gemini", status: "Missing in results", accent: "bg-[#8e75b2]" },
+] as const;
+
+const INSIGHT_ACTIONS = [
+  "Add comparison-friendly product copy",
+  "Strengthen schema for key prompts",
+  "Publish landing pages for agent queries",
+] as const;
+
 function ProductMetaMockup() {
   const containerRef = useRef<HTMLDivElement>(null);
   const [topCard, setTopCard] = useState<string | null>(null);
@@ -106,6 +118,69 @@ function ProductMetaMockup() {
   );
 }
 
+function InsightsMockup() {
+  return (
+    <div
+      className="relative h-full min-h-[20rem] overflow-hidden bg-white p-4 md:min-h-[28rem] md:p-6"
+      style={{ backgroundImage: GRID_BG, backgroundSize: "cover", backgroundPosition: "center" }}
+      aria-hidden
+    >
+      <div className="mx-auto flex h-full max-w-[30rem] flex-col justify-center gap-3">
+        <div className="border border-black/10 bg-white p-3 shadow-sm md:p-4">
+          <div className="mb-2 font-mono text-[0.58rem] uppercase tracking-[0.24em] text-[#888]">
+            Prompt
+          </div>
+          <div className="text-sm font-medium leading-relaxed text-[#1d1d1f] md:text-[0.95rem]">
+            best noise cancelling headphones for remote work
+          </div>
+        </div>
+
+        <div className="border border-black/10 bg-white p-3 shadow-sm md:p-4">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <span className="font-mono text-[0.58rem] uppercase tracking-[0.24em] text-[#888]">
+              AI Search Analysis
+            </span>
+            <span className="font-mono text-[0.62rem] uppercase tracking-[0.18em] text-[#1d1d1f]">
+              3 Models
+            </span>
+          </div>
+          <div className="space-y-2">
+            {INSIGHT_AGENT_ROWS.map((row) => (
+              <div key={row.name} className="flex items-center justify-between gap-3 border border-black/10 px-3 py-2">
+                <div className="flex items-center gap-2">
+                  <span className={`h-2.5 w-2.5 rounded-full ${row.accent}`} />
+                  <span className="text-[0.72rem] font-medium text-[#1d1d1f] md:text-[0.78rem]">
+                    {row.name}
+                  </span>
+                </div>
+                <span className="font-mono text-[0.62rem] uppercase tracking-[0.18em] text-[#666]">
+                  {row.status}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="border border-black/10 bg-white p-3 shadow-sm md:p-4">
+          <div className="mb-3 font-mono text-[0.58rem] uppercase tracking-[0.24em] text-[#888]">
+            Actionable Insights
+          </div>
+          <div className="space-y-2">
+            {INSIGHT_ACTIONS.map((action) => (
+              <div key={action} className="flex items-start gap-2">
+                <CheckIcon />
+                <span className="text-[0.72rem] leading-relaxed text-[#1d1d1f] md:text-[0.78rem]">
+                  {action}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 type Feature = {
   label?: string;
   title: string;
@@ -117,9 +192,11 @@ type IntroFeaturesSectionProps = {
   paragraph: string;
   features: ReadonlyArray<Feature>;
   sectionId?: string;
+  panelLabel?: string;
   image?: string;
   imageAlt?: string;
   mockup?: boolean;
+  mockupVariant?: "products" | "insights";
   ctaLabel?: string;
   ctaHref?: string;
 };
@@ -129,13 +206,18 @@ export function IntroFeaturesSection({
   paragraph,
   features,
   sectionId,
+  panelLabel,
   image,
   imageAlt,
   mockup,
+  mockupVariant,
   ctaLabel,
   ctaHref,
 }: IntroFeaturesSectionProps) {
-  if (image || mockup) {
+  const usesPanelLayout = Boolean(image || mockup || mockupVariant);
+  const resolvedMockupVariant = mockupVariant ?? (mockup ? "products" : undefined);
+
+  if (usesPanelLayout) {
     return (
       <section id={sectionId} className="border-t border-zinc-200 bg-[#f2f3f1]">
         <div className="mx-auto max-w-screen-2xl px-5 md:px-8 lg:px-10 py-10 md:py-16">
@@ -148,7 +230,7 @@ export function IntroFeaturesSection({
                 <span className="hero-model-label__dot hero-model-label__dot--green" />
               </div>
               <span className="font-mono text-[0.68rem] font-medium uppercase tracking-widest text-[#555]">
-                Products
+                {panelLabel ?? "Products"}
               </span>
             </div>
 
@@ -163,8 +245,10 @@ export function IntroFeaturesSection({
                 </p>
               </div>
               <div className="border-t md:border-t-0 md:border-l border-black/10">
-                {mockup ? (
+                {resolvedMockupVariant === "products" ? (
                   <ProductMetaMockup />
+                ) : resolvedMockupVariant === "insights" ? (
+                  <InsightsMockup />
                 ) : (
                   <img
                     src={image}
@@ -199,7 +283,7 @@ export function IntroFeaturesSection({
 
   return (
     <>
-      <section className="border-t border-zinc-200 pt-16 pb-12 md:pt-20 md:pb-16">
+      <section id={sectionId} className="border-t border-zinc-200 pt-16 pb-12 md:pt-20 md:pb-16">
         <div className="max-w-6xl px-5 md:px-8 lg:px-10">
           <div className="grid gap-5 md:grid-cols-2 md:items-start md:gap-16">
             <h2 className="text-lg font-semibold leading-snug tracking-tight text-zinc-900 md:text-[1.2rem] lg:text-[1.4rem]">

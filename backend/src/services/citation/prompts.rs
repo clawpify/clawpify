@@ -35,7 +35,7 @@ pub fn build_gist_prompt(truncated_content: &str) -> String {
 pub fn build_prompts_prompt(company_name: &str, domain: &str, gist: Option<&str>) -> String {
   const PROMPTS_JSON_INSTRUCTIONS: &str = r#"Generate a JSON object with exactly two keys:
 1. "prompts": an array of 5 search queries that someone might ask ChatGPT when looking for products/services like this company offers. Each query should be the kind that would return product recommendations with citations. Examples: "What are the best X tools?", "Recommend X for B2B".
-2. "competitors": an array of 5-10 competitor company/brand names that operate in the same space.
+2. "competitors": an array of 3 competitor company/brand names that operate in the same space.
 
 Return ONLY valid JSON, no other text."#;
 

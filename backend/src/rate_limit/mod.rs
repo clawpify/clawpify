@@ -1,13 +1,13 @@
 //! Rate limiting for the free SEO audit tool.
 //!
 //! Uses Postgres tables to track usage per hashed IP:
-//! - `audit_rate_limits`: 2 uses per 2-day rolling window
+//! - `audit_rate_limits`: 2 uses per 1-day rolling window
 //! Logged-in users bypass via `X-Internal-User-Id`.
 
 use sha2::{Digest, Sha256};
 use sqlx::PgPool;
 
-const WINDOW_DAYS: i64 = 2;
+const WINDOW_DAYS: i64 = 1;
 const AUDIT_MAX_USES: i32 = 2;
 
 /// Checks the audit rate limit for the given IP and records the use if allowed.

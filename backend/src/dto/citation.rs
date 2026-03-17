@@ -25,6 +25,7 @@ pub struct CreateCitationRequest {
   #[serde(default)]
   pub custom_prompts: Option<Vec<String>>,
   #[serde(default)]
+  // Ignored for backward compatibility; analyze requests always run search server-side.
   pub run_search: Option<bool>,
 }
 

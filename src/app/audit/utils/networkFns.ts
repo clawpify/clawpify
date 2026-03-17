@@ -2,6 +2,13 @@ import type { CitationData, CitationForm } from "../types";
 
 const API_BASE = "";
 
+export class RateLimitError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "RateLimitError";
+  }
+}
+
 export type GenerateResponse = {
   prompts: string[];
   competitors: string[];
@@ -52,7 +59,9 @@ export async function createCitation(
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error((err as { error?: string }).error || `Request failed: ${res.status}`);
+    const msg = (err as { error?: string }).error || `Request failed: ${res.status}`;
+    if (res.status === 429) throw new RateLimitError(msg);
+    throw new Error(msg);
   }
 
   const data = (await res.json()) as { id: string };
@@ -67,6 +76,33 @@ export type SubscribeResponse = {
   ok: boolean;
   already_subscribed?: boolean;
 };
+
+export type AuditLeadRequest = {
+  name: string;
+  organization?: string;
+  email: string;
+  newsletter_opt_in: boolean;
+  interest?: string;
+};
+
+export type AuditLeadResponse = {
+  ok: boolean;
+};
+
+export async function submitAuditLead(
+  body: AuditLeadRequest
+): Promise<AuditLeadResponse> {
+  const res = await fetch(`${API_BASE}/api/audit-leads`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { error?: string }).error || `Request failed: ${res.status}`);
+  }
+  return res.json() as Promise<AuditLeadResponse>;
+}
 
 export async function subscribe(
   body: SubscribeRequest

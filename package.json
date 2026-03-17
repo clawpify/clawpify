@@ -4,7 +4,7 @@
   "private": false,
   "type": "module",
   "scripts": {
-    "dev": "bun src/index.ts",
+    "dev": "bun --watch src/index.ts",
     "test:backend": "cd backend && SQLX_OFFLINE=true cargo test --lib audit::",
     "test:backend:integration": "cd backend && cargo test --test llm_citation_test -- --ignored",
     "build": "bun build ./src/index.html --outdir=dist --sourcemap --target=browser --minify --define:process.env.NODE_ENV='\"production\"' --env='BUN_PUBLIC_*' --env='VITE_*'",
