@@ -2,11 +2,16 @@ import type { ReactNode } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useParams, Link } from "react-router-dom";
-import { Footer } from "../landing/components/Footer";
-import { Sidebar } from "../landing/components/Sidebar";
-import { Newsletter } from "./components/Newsletter";
-import { posts } from "./posts";
+import { Footer } from "../../landing/components/Footer";
+import { Sidebar } from "../../landing/components/Sidebar";
+import { Newsletter } from "./Newsletter";
+import { posts } from "../utils/posts";
 
+/**
+ * Table of contents component for a blog post.
+ *
+ * @param headings - The headings to display in the table of contents.
+ */
 function TableOfContents({ headings }: { headings: string[] }) {
   return (
     <nav className="hidden lg:block sticky top-24 self-start w-52 shrink-0">
@@ -29,26 +34,37 @@ function TableOfContents({ headings }: { headings: string[] }) {
   );
 }
 
+/**
+ * Slugify a heading.
+ *
+ * @param value - The heading to slugify.
+ * @returns The slugified heading.
+ */
 function slugifyHeading(value: string) {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, "-");
 }
 
+/**
+ * Get the text content of a React node.
+ *
+ * @param node - The React node to get the text content of.
+ * @returns The text content of the node.
+ */
 function getNodeText(node: ReactNode): string {
-  if (typeof node === "string" || typeof node === "number") {
-    return String(node);
-  }
+  if (typeof node === "string" || typeof node === "number") return String(node);
 
-  if (Array.isArray(node)) {
-    return node.map(getNodeText).join("");
-  }
+  if (Array.isArray(node)) return node.map(getNodeText).join("");
 
-  if (node && typeof node === "object" && "props" in node) {
-    return getNodeText((node as { props?: { children?: ReactNode } }).props?.children ?? "");
-  }
+  if (node && typeof node === "object" && "props" in node) return getNodeText((node as { props?: { children?: ReactNode } }).props?.children ?? "");
 
   return "";
 }
 
+/**
+ * Writing post page component.
+ *
+ * @returns The writing post page component.
+ */
 export function WritingPostPage() {
   const { slug } = useParams<{ slug: string }>();
   const post = posts.find((p) => p.slug === slug);
@@ -78,7 +94,7 @@ export function WritingPostPage() {
     );
   }
 
-  const headings = Array.from(post.content.matchAll(/^##\s+(.+)$/gm), (match) => match[1].trim());
+  const headings = Array.from(post.content.matchAll(/^##\s+(.+)$/gm), (match) => match[1]!.trim());
 
   return (
     <div className="landing flex h-screen overflow-hidden bg-[#f2f3f1]">

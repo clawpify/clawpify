@@ -6,11 +6,7 @@ export function HomePage() {
   const { setConfig } = useWorkspaceHeader();
 
   useEffect(() => {
-    setConfig({
-      context: "Overview",
-      tabs: [{ id: "overview", label: "Overview" }],
-      activeTab: "overview",
-    });
+    setConfig({ hideHeader: true });
     return () => setConfig({});
   }, [setConfig]);
 

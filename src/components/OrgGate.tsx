@@ -10,6 +10,12 @@ type OrgGateProps = {
   children: React.ReactNode;
 };
 
+/**
+ * Org gate component.
+ *
+ * @param children - The children to render.
+ * @returns The org gate component.
+ */
 export function OrgGate({ children }: OrgGateProps) {
   return (
     <>
@@ -23,6 +29,13 @@ export function OrgGate({ children }: OrgGateProps) {
   );
 }
 
+
+/**
+ * Org gate content component.
+ *
+ * @param children - The children to render.
+ * @returns The org gate content component.
+ */
 function OrgGateContent({ children }: OrgGateProps) {
   const { organization, isLoaded } = useOrganization();
 

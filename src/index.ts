@@ -120,9 +120,7 @@ const server = serve({
         return proxyToRustPublic(req, path);
       },
     },
-    "/api/radar": { async GET(req) { return proxy("/api/radar")(req); } },
     "/api/shield": { async PUT(req) { return proxy("/api/shield")(req); } },
-
     "/api/stores": {
       async GET(req) { return proxy("/api/stores")(req); },
       async POST(req) { return proxy("/api/stores")(req); },

@@ -6,6 +6,12 @@ type OnboardingGateProps = {
   children: React.ReactNode;
 };
 
+/**
+ * Onboarding gate component.
+ *
+ * @param children - The children to render.
+ * @returns The onboarding gate component.
+ */
 export function OnboardingGate({ children }: OnboardingGateProps) {
   return (
     <>
@@ -19,6 +25,12 @@ export function OnboardingGate({ children }: OnboardingGateProps) {
   );
 }
 
+/**
+ * Onboarding gate content component.
+ *
+ * @param children - The children to render.
+ * @returns The onboarding gate content component.
+ */
 function OnboardingGateContent({ children }: OnboardingGateProps) {
   const { user, isLoaded } = useUser();
 

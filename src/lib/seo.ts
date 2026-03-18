@@ -44,6 +44,10 @@ function escapeAttr(str: string): string {
     .replace(/>/g, "&gt;");
 }
 
+function safeJsonLd(schema: object): string {
+  return JSON.stringify(schema).replace(/<\/script>/gi, "<\\/script>");
+}
+
 function buildJsonLd(pathname: string): string {
   const schemas: object[] = [];
 
@@ -55,6 +59,10 @@ function buildJsonLd(pathname: string): string {
       url: BASE_URL,
       logo: `${BASE_URL}/image/clawpify.png`,
       description: defaultMeta.description,
+      sameAs: [
+        "https://twitter.com/clawpify",
+        "https://linkedin.com/company/clawpify",
+      ],
     });
 
     schemas.push({
@@ -62,6 +70,14 @@ function buildJsonLd(pathname: string): string {
       "@type": "WebSite",
       name: "Clawpify",
       url: BASE_URL,
+      potentialAction: {
+        "@type": "SearchAction",
+        target: {
+          "@type": "EntryPoint",
+          urlTemplate: `${BASE_URL}/audit?q={search_term_string}`,
+        },
+        "query-input": "required name=search_term_string",
+      },
     });
 
     schemas.push({
@@ -136,9 +152,45 @@ function buildJsonLd(pathname: string): string {
     });
   }
 
+  if (pathname === "/audit" || pathname === "/audit/web-search") {
+    const meta = routeMeta[pathname]!;
+    schemas.push({
+      "@context": "https://schema.org",
+      "@type": "Service",
+      name: meta.title,
+      description: meta.description,
+      url: `${BASE_URL}${pathname}`,
+      provider: {
+        "@type": "Organization",
+        name: "Clawpify",
+        url: BASE_URL,
+      },
+      offers: {
+        "@type": "Offer",
+        price: "0",
+        priceCurrency: "USD",
+      },
+    });
+  }
+
+  if (pathname === "/blog") {
+    schemas.push({
+      "@context": "https://schema.org",
+      "@type": "Blog",
+      name: "Clawpify Blog",
+      description: routeMeta["/blog"]!.description,
+      url: `${BASE_URL}/blog`,
+      publisher: {
+        "@type": "Organization",
+        name: "Clawpify",
+        url: BASE_URL,
+      },
+    });
+  }
+
   if (schemas.length === 0) return "";
   return schemas
-    .map((s) => `<script type="application/ld+json">${JSON.stringify(s)}</script>`)
+    .map((s) => `<script type="application/ld+json">${safeJsonLd(s)}</script>`)
     .join("\n    ");
 }
 
@@ -150,15 +202,21 @@ function buildSeoBlock(pathname: string): string {
 
   return `<title>${escapeAttr(meta.title)}</title>
     <meta name="description" content="${escapeAttr(meta.description)}" />
+    <meta name="robots" content="index, follow" />
     <link rel="canonical" href="${canonical}" />
     <meta property="og:type" content="website" />
     <meta property="og:locale" content="en_US" />
     <meta property="og:site_name" content="Clawpify" />
     <meta property="og:title" content="${escapeAttr(meta.title)}" />
     <meta property="og:description" content="${escapeAttr(meta.description)}" />
-    <meta property="og:image" content="${ogImage}" />
     <meta property="og:url" content="${canonical}" />
+    <meta property="og:image" content="${ogImage}" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:alt" content="${escapeAttr(meta.title)}" />
     <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content="@clawpify" />
     <meta name="twitter:title" content="${escapeAttr(meta.title)}" />
     <meta name="twitter:description" content="${escapeAttr(meta.description)}" />
     <meta name="twitter:image" content="${ogImage}" />${jsonLd ? "\n    " + jsonLd : ""}`;
@@ -166,6 +224,13 @@ function buildSeoBlock(pathname: string): string {
 
 const SEO_MARKER_RE = /<!-- SEO:START -->[\s\S]*?<!-- SEO:END -->/;
 
+/**
+ * Inject per-route SEO tags into the HTML template between the SEO markers.
+ *
+ * @param html - Raw HTML string containing `<!-- SEO:START -->` and `<!-- SEO:END -->` markers.
+ * @param pathname - URL pathname of the current route (e.g. `/audit`).
+ * @returns HTML string with the SEO block replaced.
+ */
 export function injectSeoMeta(html: string, pathname: string): string {
   const seoBlock = buildSeoBlock(pathname);
   return html.replace(
@@ -174,6 +239,11 @@ export function injectSeoMeta(html: string, pathname: string): string {
   );
 }
 
+/**
+ * Generate the contents of `robots.txt` for the public site.
+ *
+ * @returns Plain-text robots.txt string.
+ */
 export function generateRobotsTxt(): string {
   return `User-agent: *
 Allow: /
@@ -185,22 +255,27 @@ Disallow: /onboarding
 Sitemap: ${BASE_URL}/sitemap.xml`;
 }
 
+/**
+ * Generate the contents of `sitemap.xml` for all public routes.
+ *
+ * @returns XML sitemap string conforming to the sitemaps.org 0.9 schema.
+ */
 export function generateSitemapXml(): string {
-  const publicPaths: { path: string; lastmod: string; priority: string }[] = [
-    { path: "/", lastmod: "2026-03-15", priority: "1.0" },
-    { path: "/about", lastmod: "2026-03-10", priority: "0.8" },
-    { path: "/audit", lastmod: "2026-03-12", priority: "0.9" },
-    { path: "/audit/web-search", lastmod: "2026-03-12", priority: "0.8" },
-    { path: "/blog", lastmod: "2026-03-10", priority: "0.7" },
+  const publicPaths: { path: string; lastmod: string; changefreq: string; priority: string }[] = [
+    { path: "/",                lastmod: "2026-03-15", changefreq: "monthly", priority: "1.0" },
+    { path: "/about",           lastmod: "2026-03-10", changefreq: "monthly", priority: "0.8" },
+    { path: "/audit",           lastmod: "2026-03-12", changefreq: "weekly",  priority: "0.9" },
+    { path: "/audit/web-search",lastmod: "2026-03-12", changefreq: "weekly",  priority: "0.8" },
+    { path: "/blog",            lastmod: "2026-03-10", changefreq: "weekly",  priority: "0.7" },
   ];
 
   const entries = publicPaths
-    .map(({ path, lastmod, priority }) => {
+    .map(({ path, lastmod, changefreq, priority }) => {
       const loc = path === "/" ? BASE_URL : `${BASE_URL}${path}`;
       return `  <url>
     <loc>${loc}</loc>
     <lastmod>${lastmod}</lastmod>
-    <changefreq>weekly</changefreq>
+    <changefreq>${changefreq}</changefreq>
     <priority>${priority}</priority>
   </url>`;
     })

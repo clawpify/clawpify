@@ -2,11 +2,16 @@ import { useState } from "react";
 import { subscribe } from "../../audit/utils/networkFns";
 
 export function Newsletter() {
-  const [email, setEmail] = useState("");
+  const [email, setEmail]         = useState("");
   const [submitted, setSubmitted] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading]     = useState(false);
+  const [error, setError]         = useState<string | null>(null);
 
+  /**
+   * Handle the newsletter subscription form submission.
+   *
+   * @param e - The form submission event.
+   */
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!email) return;

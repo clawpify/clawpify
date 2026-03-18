@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { Footer } from "../landing/components/Footer";
 import { Sidebar } from "../landing/components/Sidebar";
 import { Newsletter } from "./components/Newsletter";
-import { posts } from "./posts";
+import { posts } from "./utils/posts";
 
 export function WritingPage() {
   return (

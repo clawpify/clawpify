@@ -1,27 +1,20 @@
-import whyWeChoseToOpenSourceClawpify from "./posts/why-we-chose-to-open-source-clawpify.mdx" with { type: "text" };
-
-export interface BlogPost {
-  slug: string;
-  title: string;
-  description: string;
-  author: string;
-  date: string;
-  category: string;
-  readTime: string;
-  content: string;
-}
-
-type BlogFrontmatter = Omit<BlogPost, "content">;
+import whyWeChoseToOpenSourceClawpify from "../posts/why-we-chose-to-open-source-clawpify.mdx" with { type: "text" };
+import type { BlogPost, BlogFrontmatter } from "../types";
 
 function parseFrontmatter(source: string): BlogPost {
   const match = source.match(/^---\n([\s\S]*?)\n---\n?([\s\S]*)$/);
 
-  if (!match) {
-    throw new Error("Blog post is missing frontmatter.");
-  }
+  if (!match) throw new Error("Blog post is missing frontmatter.");
 
-  const rawFrontmatter = match[1] ?? "";
-  const rawContent = match[2] ?? "";
+  const rawFrontmatter = match[1]!;
+  const rawContent = match[2]!;
+
+  /**
+   * Parse the frontmatter of a blog post.
+   *
+   * @param source - The source of the blog post.
+   * @returns The frontmatter of the blog post.
+   */
   const frontmatter = Object.fromEntries(
     rawFrontmatter
       .split("\n")
@@ -29,12 +22,12 @@ function parseFrontmatter(source: string): BlogPost {
       .filter(Boolean)
       .map((line) => {
         const separatorIndex = line.indexOf(":");
-        if (separatorIndex === -1) {
-          throw new Error(`Invalid frontmatter line: ${line}`);
-        }
+
+        if (separatorIndex === -1) throw new Error(`Invalid frontmatter line: ${line}`);
 
         const key = line.slice(0, separatorIndex).trim();
         const value = line.slice(separatorIndex + 1).trim().replace(/^"(.*)"$/, "$1");
+
         return [key, value];
       }),
   ) as Partial<BlogFrontmatter>;
@@ -50,9 +43,7 @@ function parseFrontmatter(source: string): BlogPost {
   ];
 
   for (const field of requiredFields) {
-    if (!frontmatter[field]) {
-      throw new Error(`Blog post frontmatter is missing "${field}".`);
-    }
+    if (!frontmatter[field]) throw new Error(`Blog post frontmatter is missing "${field}".`);
   }
 
   return {

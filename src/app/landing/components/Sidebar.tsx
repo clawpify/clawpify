@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { Show, SignInButton } from "@clerk/react";
 import { HeroModalShell } from "../../audit/components/HeroModalShell";
 import { subscribe } from "../../audit/utils/networkFns";
 
@@ -132,21 +133,30 @@ function SidebarInner({
       {isOpen && (
       <div className="border-t border-zinc-200 pt-5">
         <div className="flex flex-col gap-2">
-          {/* <a
-            href="https://calendar.notion.so/meet/alhwyn/clawpify"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="block w-full rounded-none border border-zinc-900 bg-zinc-900 px-3 py-2.5 text-center text-xs font-medium uppercase text-white transition hover:bg-zinc-800 hover:border-zinc-800"
-          >
-            BOOK A CALL
-            <span className="sr-only"> (opens in new tab)</span>
-          </a> */}
+          <Show when="signed-out">
+            <SignInButton mode="redirect" forceRedirectUrl="/app">
+              <button
+                type="button"
+                className="block w-full rounded-none border border-zinc-900 bg-zinc-900 px-3 py-2.5 text-center text-xs font-medium uppercase text-white transition hover:bg-zinc-800 hover:border-zinc-800"
+              >
+                Sign in
+              </button>
+            </SignInButton>
+          </Show>
+          <Show when="signed-in">
+            <Link
+              to="/app"
+              className="block w-full rounded-none border border-zinc-900 bg-zinc-900 px-3 py-2.5 text-center text-xs font-medium uppercase text-white transition hover:bg-zinc-800 hover:border-zinc-800"
+            >
+              Open app
+            </Link>
+          </Show>
           <button
             type="button"
             onClick={onOpenSubscribeModal}
             className="block w-full rounded-none border border-zinc-200 bg-transparent px-3 py-2.5 text-center text-xs font-medium uppercase text-[#26251e] transition hover:border-[#26251e] hover:bg-[#26251e] hover:text-white"
           >
-            Sign in
+            Wait list
           </button>
         </div>
       </div>
@@ -240,11 +250,11 @@ export function Sidebar() {
       {subscribeModalOpen && (
         <HeroModalShell onClose={() => setSubscribeModalOpen(false)}>
           <h2 className="font-serif text-xl italic leading-tight text-[#26251e]">
-            Subscribe
+            Join the wait list
           </h2>
           <p className="mt-2 font-mono text-[0.72rem] font-medium uppercase tracking-widest text-[#8a8378]">
-            Sign in isn&apos;t available yet. Subscribe and we&apos;ll keep you
-            posted when access opens up.
+            Drop your email and we&apos;ll keep you posted when new spots open
+            up.
           </p>
 
           <div className="mt-8 flex flex-col gap-3">

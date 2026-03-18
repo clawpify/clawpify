@@ -3,6 +3,11 @@ import { useWorkspaceHeader } from "../../context/WorkspaceHeaderContext";
 import { copy } from "../../utils/copy";
 import { ReportsContent } from "./ReportsContent";
 
+/**
+ * Reports page component.
+ *
+ * @returns The reports page component.
+ */
 export function ReportsPage() {
   const { setConfig } = useWorkspaceHeader();
 

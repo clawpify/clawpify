@@ -1,5 +1,12 @@
 import { useCallback, useState } from "react";
 
+/**
+ * Get a value from localStorage.
+ *
+ * @param key - The key to get.
+ * @param initialValue - The initial value to return if the key is not found.
+ * @returns The value from localStorage.
+ */
 function getStoredValue<T>(key: string, initialValue: T): T {
   if (typeof window === "undefined") return initialValue;
   try {
@@ -10,6 +17,12 @@ function getStoredValue<T>(key: string, initialValue: T): T {
   }
 }
 
+/**
+ * Set a value in localStorage.
+ *
+ * @param key - The key to set.
+ * @param value - The value to set.
+ */
 function setStoredValue<T>(key: string, value: T): void {
   if (typeof window === "undefined") return;
   try {

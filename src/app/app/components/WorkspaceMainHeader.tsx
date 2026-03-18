@@ -10,6 +10,9 @@ import {
 
 export function WorkspaceMainHeader() {
   const { config } = useWorkspaceHeader();
+  if (config.hideHeader) {
+    return null;
+  }
   const {
     context = "All stores",
     contextIcon,
