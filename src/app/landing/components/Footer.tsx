@@ -60,7 +60,7 @@ export function Footer() {
               CLAWPIFY
             </span>
             <p className="max-w-xs text-[0.8rem] leading-relaxed text-[#6b6455]">
-              Bring your product discovery into the AI economy
+              Make your product AI native
             </p>
           </div>
 

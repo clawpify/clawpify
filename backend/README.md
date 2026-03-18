@@ -1,6 +1,6 @@
 # Clawpify Backend
 
-Rust backend for the audit service (citation, insight, stores, audits).
+Rust API for stores, AI visibility exports, activity logging, and subscribers.
 
 ## Setup
 
@@ -8,25 +8,41 @@ Rust backend for the audit service (citation, insight, stores, audits).
    ```bash
    cp .env.example .env
    ```
-   Edit `.env` and set:
-   - `DATABASE_URL` – PostgreSQL connection string (required)
-   - `OPENAI_API_KEY` – for ChatGPT citation (required)
-   - `OPENAI_PROMPT_MODEL` – optional, model for prompt generation 
-   - `OPENAI_CITATION_MODEL` – optional, model for citation search
+   Edit `.env` and set `DATABASE_URL` (required).
 
-2. Run migrations (from project root):
+2. Run migrations (from project root), e.g.:
    ```bash
-   psql $DATABASE_URL -f migrations/001_initial_schema.sql
-   psql $DATABASE_URL -f migrations/002_organizations_and_constraints.sql
-   psql $DATABASE_URL -f migrations/003_chatgpt_citation.sql
+   for f in migrations/*.sql; do psql "$DATABASE_URL" -f "$f" -v ON_ERROR_STOP=1; done
    ```
-3. Generate sqlx query cache (for offline builds): `cargo sqlx prepare`
+
+3. Optional: generate sqlx query cache for offline builds:
+   ```bash
+   cargo sqlx prepare
+   ```
 
 ## Tests
 
-**Unit tests** (no network, no DB):
+```bash
+cargo test
+```
+
+## Logging
+
+Set `RUST_LOG` to control tracing output. For OpenAI Responses stream event logs (debug):
 
 ```bash
-SQLX_OFFLINE=true cargo test --lib audit::insight::tests
-SQLX_OFFLINE=true cargo test --lib audit::citation::urls::tests
+RUST_LOG=backend=debug
 ```
+
+## LLM agent streaming (NDJSON)
+
+`POST /api/llm/agents/stream` returns `application/x-ndjson` (one JSON object per line). Requires the same internal auth header as `POST /api/llm/agents` (`X-Internal-User-Id`). Use `curl -N` so lines flush as they arrive:
+
+```bash
+curl -N -s -X POST http://127.0.0.1:3000/api/llm/agents/stream \
+  -H 'Content-Type: application/json' \
+  -H 'X-Internal-User-Id: cli-test' \
+  -d '{"agents":[{"id":"a1","prompt":"Say hi in one sentence.","web_search":false}]}'
+```
+
+Optional: `RUST_LOG=backend=debug,llm.openai.stream=debug` for verbose OpenAI stream tracing.

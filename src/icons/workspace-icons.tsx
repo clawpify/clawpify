@@ -1,4 +1,4 @@
-import { ChartBarIcon } from "./audit-icons";
+import { ChartBarIcon } from "./app-icons";
 
 const iconProps = {
   viewBox: "0 0 24 24",

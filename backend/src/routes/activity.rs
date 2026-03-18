@@ -17,7 +17,7 @@ async fn list_activity(
   Extension(pool): Extension<PgPool>,
   headers: axum::http::HeaderMap,
 ) -> Result<Json<Vec<AgentActivity>>, ApiError> {
-  let org_id = auth::get_org_id(&headers)?;
+  let org_id = auth::org_scope_for_activity(&headers)?;
   let rows = sqlx::query_as::<_, AgentActivity>(
     r#"SELECT id, org_id, store_id, agent_name, action_type, payload, created_at
        FROM agent_activity
@@ -37,7 +37,7 @@ async fn log_activity(
   headers: axum::http::HeaderMap,
   Json(body): Json<LogActivityRequest>,
 ) -> Result<Json<AgentActivity>, ApiError> {
-  let org_id = auth::get_org_id(&headers)?;
+  let org_id = auth::org_scope_for_activity(&headers)?;
 
   if body.agent_name.is_empty() || body.action_type.is_empty() {
     return Err(error::bad_request("agent_name and action_type required"));

@@ -18,11 +18,14 @@ export function App() {
 
 export default App;
 
-/** Full-bleed grey shell + no global nav (workspace, marketing, auth, etc.). */
+/**
+ * 
+ * @param pathname - The pathname to check.
+ * @returns 
+ */
 function isFullBleedShell(p: string): boolean {
-  if (p === "/" || p === "/about" || p === "/onboarding") return true;
+  if (p === "/" || p === "/about") return true;
   if (p === "/sign-in" || p === "/sign-up") return true;
-  if (p === "/audit" || p.startsWith("/audit/")) return true;
   if (p === "/blog" || p.startsWith("/blog/")) return true;
   if (p === "/writing" || p.startsWith("/writing/")) return true;
   if (p === "/app" || p.startsWith("/app/")) return true;

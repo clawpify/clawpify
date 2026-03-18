@@ -9,7 +9,7 @@ type RouteMeta = {
 const defaultMeta: RouteMeta = {
   title: "Clawpify - Own How AI Sells Your Products",
   description:
-    "Optimize product data, reveal which prompts convert, and earn more from AI-driven purchases. Audit your store across ChatGPT, Perplexity, and more.",
+    "Optimize product data, reveal which prompts convert, and earn more from AI-driven purchases across ChatGPT, Perplexity, and more.",
 };
 
 const routeMeta: Record<string, RouteMeta> = {
@@ -18,16 +18,6 @@ const routeMeta: Record<string, RouteMeta> = {
     title: "About - Clawpify",
     description:
       "Learn how Clawpify helps e-commerce brands optimize for AI-driven commerce and get discovered by AI agents.",
-  },
-  "/audit": {
-    title: "Free AI Audit - Clawpify",
-    description:
-      "Run a free audit to see how your products perform across AI agents like ChatGPT, Perplexity, and Claude.",
-  },
-  "/audit/web-search": {
-    title: "AI Web Search - Clawpify",
-    description:
-      "See what AI models think about your brand and how you compare to competitors in AI-powered search.",
   },
   "/blog": {
     title: "Blog - Clawpify",
@@ -70,14 +60,6 @@ function buildJsonLd(pathname: string): string {
       "@type": "WebSite",
       name: "Clawpify",
       url: BASE_URL,
-      potentialAction: {
-        "@type": "SearchAction",
-        target: {
-          "@type": "EntryPoint",
-          urlTemplate: `${BASE_URL}/audit?q={search_term_string}`,
-        },
-        "query-input": "required name=search_term_string",
-      },
     });
 
     schemas.push({
@@ -92,7 +74,7 @@ function buildJsonLd(pathname: string): string {
         "@type": "Offer",
         price: "0",
         priceCurrency: "USD",
-        description: "Free AI audit",
+        description: "Get started free",
       },
     });
 
@@ -113,7 +95,7 @@ function buildJsonLd(pathname: string): string {
           name: "Can I try Clawpify for free?",
           acceptedAnswer: {
             "@type": "Answer",
-            text: "Yes. We offer a free audit so you can see how your products perform across AI agents before committing to a plan.",
+            text: "Yes. You can explore Clawpify and see how your products perform across AI agents before committing to a plan.",
           },
         },
         {
@@ -121,7 +103,7 @@ function buildJsonLd(pathname: string): string {
           name: "Can I use Clawpify with my team?",
           acceptedAnswer: {
             "@type": "Answer",
-            text: "Absolutely. Clawpify supports team workspaces so multiple people can collaborate on audits, view reports, and apply optimizations together.",
+            text: "Absolutely. Clawpify supports team workspaces so multiple people can collaborate, view reports, and apply optimizations together.",
           },
         },
         {
@@ -129,7 +111,7 @@ function buildJsonLd(pathname: string): string {
           name: "How long does it take to set up and start using Clawpify?",
           acceptedAnswer: {
             "@type": "Answer",
-            text: "Most stores are up and running in under 10 minutes. Connect your platform, run the audit, and start optimizing right away.",
+            text: "Most stores are up and running in under 10 minutes. Connect your platform and start optimizing right away.",
           },
         },
         {
@@ -149,27 +131,6 @@ function buildJsonLd(pathname: string): string {
           },
         },
       ],
-    });
-  }
-
-  if (pathname === "/audit" || pathname === "/audit/web-search") {
-    const meta = routeMeta[pathname]!;
-    schemas.push({
-      "@context": "https://schema.org",
-      "@type": "Service",
-      name: meta.title,
-      description: meta.description,
-      url: `${BASE_URL}${pathname}`,
-      provider: {
-        "@type": "Organization",
-        name: "Clawpify",
-        url: BASE_URL,
-      },
-      offers: {
-        "@type": "Offer",
-        price: "0",
-        priceCurrency: "USD",
-      },
     });
   }
 
@@ -228,7 +189,7 @@ const SEO_MARKER_RE = /<!-- SEO:START -->[\s\S]*?<!-- SEO:END -->/;
  * Inject per-route SEO tags into the HTML template between the SEO markers.
  *
  * @param html - Raw HTML string containing `<!-- SEO:START -->` and `<!-- SEO:END -->` markers.
- * @param pathname - URL pathname of the current route (e.g. `/audit`).
+ * @param pathname - URL pathname of the current route (e.g. `/`).
  * @returns HTML string with the SEO block replaced.
  */
 export function injectSeoMeta(html: string, pathname: string): string {
@@ -264,8 +225,6 @@ export function generateSitemapXml(): string {
   const publicPaths: { path: string; lastmod: string; changefreq: string; priority: string }[] = [
     { path: "/",                lastmod: "2026-03-15", changefreq: "monthly", priority: "1.0" },
     { path: "/about",           lastmod: "2026-03-10", changefreq: "monthly", priority: "0.8" },
-    { path: "/audit",           lastmod: "2026-03-12", changefreq: "weekly",  priority: "0.9" },
-    { path: "/audit/web-search",lastmod: "2026-03-12", changefreq: "weekly",  priority: "0.8" },
     { path: "/blog",            lastmod: "2026-03-10", changefreq: "weekly",  priority: "0.7" },
   ];
 

@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Show, SignInButton } from "@clerk/react";
-import { HeroModalShell } from "../../audit/components/HeroModalShell";
-import { subscribe } from "../../audit/utils/networkFns";
+import { HeroModalShell } from "./HeroModalShell";
+import { subscribe } from "../../../lib/subscribe";
 
 const developerItems = [
   { label: "GitHub", href: "https://github.com/clawpify", external: true },

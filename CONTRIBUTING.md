@@ -28,7 +28,7 @@ Thanks for your interest in contributing. Here's how to get started.
 
 1. Open an issue first for larger changes
 2. Fork, create a branch, make your changes
-3. Run tests: `bun test:backend` (and `bun test:backend:integration` if applicable)
+3. Run tests: `bun test:backend`
 4. Open a PR with a clear description of the change
 
 ## Code Style

@@ -8,6 +8,11 @@ import {
   ChevronDownIcon,
 } from "../../../icons/workspace-icons";
 
+/**
+ * Workspace main header component.
+ *
+ * @returns The workspace main header component.
+ */
 export function WorkspaceMainHeader() {
   const { config } = useWorkspaceHeader();
   if (config.hideHeader) {

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { subscribe } from "../../audit/utils/networkFns";
+import { subscribe } from "../../../lib/subscribe";
 
 export function Newsletter() {
   const [email, setEmail]         = useState("");

@@ -1,8 +1,16 @@
 pub mod config;
+pub mod orchestrator;
 pub mod providers;
-pub mod router;
+pub mod types;
 
-pub use config::ProviderConfig;
-pub use providers::{AiProvider, CompleteOptions, CompleteResult, citation_provider, default_providers};
-pub use router::{run_all_providers, run_single_provider};
-
+pub use config::load_registry;
+pub use orchestrator::Orchestrator;
+pub use providers::{LlmProvider, ProviderRegistry};
+pub use types::{
+  AgentJobResult, 
+  AgentRunConfig, 
+  ProviderId, 
+  SubAgentSpec,
+  WebSearchToolConfig, 
+  WebSearchUserLocation,
+};
