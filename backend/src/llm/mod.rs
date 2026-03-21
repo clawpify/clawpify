@@ -1,4 +1,6 @@
+pub mod citation_analysis;
 pub mod config;
+pub mod openrouter;
 pub mod orchestrator;
 pub mod providers;
 pub mod types;

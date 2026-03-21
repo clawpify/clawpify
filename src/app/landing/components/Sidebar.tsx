@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Show, SignInButton } from "@clerk/react";
 import { HeroModalShell } from "./HeroModalShell";
@@ -173,6 +173,15 @@ export function Sidebar() {
   const [subscribeLoading, setSubscribeLoading] = useState(false);
   const [subscribeSuccess, setSubscribeSuccess] = useState(false);
   const [subscribeError, setSubscribeError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!subscribeModalOpen) {
+      setSubscribeSuccess(false);
+      setSubscribeEmail("");
+      setSubscribeError(null);
+      setSubscribeLoading(false);
+    }
+  }, [subscribeModalOpen]);
 
   async function handleSubscribeSubmit(e: React.FormEvent) {
     e.preventDefault();

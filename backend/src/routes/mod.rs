@@ -1,4 +1,5 @@
 mod activity;
+mod citation_runs;
 mod llm;
 mod stores;
 mod subscribers;
@@ -16,6 +17,7 @@ pub fn api_router(pool: PgPool) -> Router {
     .merge(stores::routes())
     .merge(visibility::routes())
     .merge(activity::routes())
+    .merge(citation_runs::routes())
     .merge(subscribers::routes())
     .merge(llm::routes());
 
