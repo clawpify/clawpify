@@ -38,13 +38,6 @@ pub fn service_unavailable(msg: &str) -> ApiError {
   )
 }
 
-pub fn rate_limit_exceeded(msg: &str) -> ApiError {
-  (
-    StatusCode::TOO_MANY_REQUESTS,
-    Json(serde_json::json!({ "error": msg })),
-  )
-}
-
 pub fn db_error(e: sqlx::Error) -> ApiError {
   internal(e)
 }

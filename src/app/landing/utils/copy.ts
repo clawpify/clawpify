@@ -7,10 +7,10 @@ export const copy = {
     ctaHref: "#",
   },
   hero: {
-    headline: "Bring product discovery into the AI economy",
+    headline: "Make your product AI native",
     rotatingWords: ["Commerce", "B2B", "SaaS", "E-commerce", "Agents"],
     subline:
-      "Audits that reveal which prompts convert. Optimization methods that make agents buy.",
+      "Insights that reveal which prompts convert. Optimization methods that make agents buy.",
     ctaPrimary: "Book a call",
     ctaSecondary: "Explore docs",
     heroDemo: {
@@ -50,7 +50,7 @@ export const copy = {
       "Optimizing prompts that drive purchases",
       "Scaling across Shopify, WooCommerce, and more",
     ],
-    solution: "Clawpify erases that drag in one audit.",
+    solution: "Clawpify erases that drag in one workflow.",
   },
   features: [
     {
@@ -96,14 +96,14 @@ export const copy = {
     title: "How it works",
     steps: [
       { number: 1, title: "Connect your store", desc: "Link Shopify, WooCommerce, or other platforms in minutes." },
-      { number: 2, title: "Run the audit", desc: "We analyze your product data and AI prompt performance." },
+      { number: 2, title: "Analyze performance", desc: "We analyze your product data and AI prompt performance." },
       { number: 3, title: "Apply optimizations", desc: "Get actionable recommendations to convert more agents." },
     ],
   },
   testimonials: [
     {
       quote:
-        "Clawpify's audit revealed exactly which prompts were driving our agent conversions. We doubled our AI-driven sales in a month.",
+        "Clawpify revealed exactly which prompts were driving our agent conversions. We doubled our AI-driven sales in a month.",
       author: "Sarah Chen",
       role: "Head of E-commerce",
       company: "TechGear Co",
@@ -136,17 +136,17 @@ export const copy = {
       {
         question: "Can I try Clawpify for free?",
         answer:
-          "Yes. We offer a free audit so you can see how your products perform across AI agents before committing to a plan.",
+          "Yes. You can explore Clawpify and see how your products perform across AI agents before committing to a plan.",
       },
       {
         question: "Can I use Clawpify with my team?",
         answer:
-          "Absolutely. Clawpify supports team workspaces so multiple people can collaborate on audits, view reports, and apply optimizations together.",
+          "Absolutely. Clawpify supports team workspaces so multiple people can collaborate, view reports, and apply optimizations together.",
       },
       {
         question: "How long does it take to set up and start using Clawpify?",
         answer:
-          "Most stores are up and running in under 10 minutes. Connect your platform, run the audit, and start optimizing right away.",
+          "Most stores are up and running in under 10 minutes. Connect your platform and start optimizing right away.",
       },
       {
         question: "Does Clawpify support multiple e-commerce platforms?",

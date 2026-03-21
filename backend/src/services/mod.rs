@@ -1,2 +1,2 @@
-pub mod citation;
+pub mod citation_runs;
 pub mod insight;

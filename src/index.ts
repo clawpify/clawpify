@@ -2,7 +2,6 @@ import { serve } from "bun";
 import tailwindPlugin from "bun-plugin-tailwind";
 import { getAuthOptional, requireAuth, AuthError } from "./lib/auth";
 import { createProxyHandler, proxyToRustPublic } from "./utils/networkFns";
-import { scrapeUrlForContent } from "./utils/scrape";
 import { generateRobotsTxt, generateSitemapXml, injectSeoMeta } from "./lib/seo";
 
 const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 3001;
@@ -60,19 +59,6 @@ const proxy = (path: string | ((req: Request) => string)) =>
   createProxyHandler(path, AuthError, requireAuth);
 
 let serverRef: { requestIP: (r: Request) => { address: string } | null } | null = null;
-
-async function proxyCitation(req: Request, path: string, body?: string): Promise<Response> {
-  const clientIP = serverRef?.requestIP(req)?.address ?? "unknown";
-  const auth = await getAuthOptional(req);
-  const reqToForward = body
-    ? new Request(req.url, {
-        method: req.method,
-        headers: new Headers(req.headers),
-        body,
-      })
-    : req;
-  return proxyToRustPublic(reqToForward, path, { clientIP, auth: auth ?? undefined });
-}
 
 const server = serve({
   port,
@@ -133,45 +119,6 @@ const server = serve({
       async POST(req) { return proxy("/api/agent-activity")(req); },
     },
 
-    "/api/chatgpt-citation/generate": {
-      async POST(req) {
-        const path = new URL(req.url).pathname;
-        const body = (await req.json()) as {
-          company_name?: string;
-          website_url?: string;
-          website_content?: string;
-        };
-        let bodyToForward = body;
-        if (body.website_url?.trim() && !body.website_content?.trim()) {
-          const content = await scrapeUrlForContent(body.website_url);
-          if (content) bodyToForward = { ...body, website_content: content };
-        }
-        const bodyStr = JSON.stringify(bodyToForward);
-        return proxyCitation(req, path, bodyStr);
-      },
-    },
-
-    "/api/chatgpt-citation": {
-      async POST(req) {
-        const path = new URL(req.url).pathname;
-        const body = await req.text();
-        return proxyCitation(req, path, body || undefined);
-      },
-    },
-
-    "/api/chatgpt-citation/:id": {
-      async GET(req) {
-        const path = new URL(req.url).pathname;
-        return proxyCitation(req, path);
-      },
-    },
-
-    "/api/audit-leads": {
-      async POST(req) {
-        const path = new URL(req.url).pathname;
-        return proxyToRustPublic(req, path);
-      },
-    },
     "/api/subscribers": {
       async POST(req) {
         const path = new URL(req.url).pathname;

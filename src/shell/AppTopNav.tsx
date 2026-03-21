@@ -16,9 +16,6 @@ export function AppTopNav() {
       <Link to="/app" className="text-blue-500 hover:underline">
         Dashboard
       </Link>
-      <Link to="/shield" className="text-blue-500 hover:underline">
-        Shield
-      </Link>
       <Link to="/settings" className="text-blue-500 hover:underline">
         Settings
       </Link>

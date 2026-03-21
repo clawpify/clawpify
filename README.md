@@ -9,13 +9,13 @@
 
 **Open-source SEO and AEO tool for commerce.**
 
-AI is increasingly driving purchasing decisions and recommendations for people, as well as Agent-to-Agent commerce. Clawpify helps merchants prepare for this shift by auditing AI citations, tracking visibility across AI assistants, and improving how your products appear in AI-powered search and recommendations.
+AI is increasingly driving purchasing decisions and recommendations for people, as well as Agent-to-Agent commerce. Clawpify helps merchants prepare with SEO/AEO tooling, store connectivity, and exports aimed at AI discoverability.
 
 ## What Clawpify Does
 
-- **Audit AI citations** – Check how your Shopify store is cited by AI assistants
-- **Track visibility** – Monitor your presence across AI assistants (e.g., ChatGPT)
-- **Improve discoverability** – Optimize how products appear in AI-powered search and recommendations
+- **Connect your store** – Shopify (and more) with Clerk orgs and workspace tools
+- **AI visibility exports** – Structured product and people data for agents and search
+- **SEO / AEO** – Resources and workflows for commerce on the modern SERP
 
 ## Tech Stack
 
@@ -69,7 +69,7 @@ Clawpify uses [Clerk](https://clerk.com) for authentication. Each person who run
 | `BUN_PUBLIC_CLERK_PUBLISHABLE_KEY` | Yes | Clerk publishable key for the frontend |
 | `RUST_API_URL` | No | Backend API URL (default: `http://127.0.0.1:3000`) |
 | `PORT` | No | Server port (default: `3001`) |
-| `FIRECRAWL_API_KEY` | No | Firecrawl API key for better website scraping in citation generate (optional) |
+| `FIRECRAWL_API_KEY` | No | Firecrawl API key for website scraping (optional) |
 
 **Backend (`backend/`)**
 
@@ -78,9 +78,6 @@ If using the Rust backend, copy `backend/.env.example` to `backend/.env`:
 | Variable | Required | Description |
 |----------|----------|-------------|
 | `DATABASE_URL` | Yes | PostgreSQL connection string (e.g. `postgres://user:password@localhost:5432/clawpify`) |
-| `OPENAI_API_KEY` | Yes | OpenAI API key for citation features |
-| `OPENAI_PROMPT_MODEL` | No | Model for prompt/competitor generation (default: `gpt-4o-mini`) |
-| `OPENAI_CITATION_MODEL` | No | Model for citation search with web search (default: `gpt-4o`) |
 
 #### 3. Start development
 
@@ -102,7 +99,7 @@ If your database is on Railway, run migrations with the Railway CLI (uses `DATAB
 railway run bash -c 'for f in migrations/*.sql; do psql $DATABASE_URL -f $f -v ON_ERROR_STOP=1; done'
 ```
 
-Or run each migration manually in order (001 through 009).
+Or run each migration manually in order (`migrations/*.sql`).
 
 ## Contact
 
