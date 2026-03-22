@@ -9,7 +9,7 @@ export function WorkspaceSidebar() {
 
   return (
     <aside
-      className="sticky top-0 flex h-screen w-56 flex-col border-r border-zinc-200/50 bg-[#edeef0] px-3 py-3"
+      className="sticky top-0 flex h-screen w-[250px] flex-col border-r border-zinc-200/50 bg-[#edeef0] px-3 py-3"
       style={{ fontFamily: "var(--workspace-font)" }}
     >
       <div className="mb-4">

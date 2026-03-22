@@ -55,119 +55,166 @@ if (mainBundle) {
   builtAssets.set("/frontend.tsx", mainBundle);
 }
 
-const proxy = (path: string | ((req: Request) => string)) =>
+type ProxyPath = string | ((req: Request) => string);
+
+const pathnameOf = (req: Request) => new URL(req.url).pathname;
+const toPublicAssetPath = (req: Request) => `public${pathnameOf(req)}`;
+
+const proxy = (path: ProxyPath) =>
   createProxyHandler(path, AuthError, requireAuth);
 
+const authProxyHandler = (path: ProxyPath) => {
+  const handler = proxy(path);
+  return (req: Request) => handler(req);
+};
+
+const forwardPublic = (
+  req: Request,
+  options?: Parameters<typeof proxyToRustPublic>[2]
+) => proxyToRustPublic(req, pathnameOf(req), options);
+
 let serverRef: { requestIP: (r: Request) => { address: string } | null } | null = null;
+
+const handleRobotsTxt = () =>
+  new Response(generateRobotsTxt(), {
+    headers: { "Content-Type": "text/plain" },
+  });
+
+const handleSitemapXml = () =>
+  new Response(generateSitemapXml(), {
+    headers: { "Content-Type": "application/xml" },
+  });
+
+const handleImageAsset = async (req: Request) => {
+  const file = Bun.file(toPublicAssetPath(req));
+  if (await file.exists()) {
+    return new Response(file, {
+      headers: { "Content-Type": file.type },
+    });
+  }
+  return new Response("Not found", { status: 404 });
+};
+
+const handleHealth = (req: Request) => forwardPublic(req);
+
+const handleSubscribersPost = async (req: Request) => {
+  const clientIP = serverRef?.requestIP(req)?.address ?? "unknown";
+  const auth = await getAuthOptional(req);
+  return forwardPublic(req, { clientIP, auth: auth ?? undefined });
+};
+
+const handleCompleteOnboarding = async (req: Request) => {
+  try {
+    const auth = await requireAuth(req);
+    const { clerkClient } = await import("./lib/clerk.ts");
+    if (!clerkClient) {
+      return Response.json(
+        { error: "Clerk not configured" },
+        { status: 500 }
+      );
+    }
+
+    const body = (await req.json()) as {
+      firstName?: string;
+      lastName?: string;
+    };
+
+    if (body.firstName != null || body.lastName != null) {
+      await clerkClient.users.updateUser(auth.userId, {
+        ...(body.firstName != null && { firstName: body.firstName }),
+        ...(body.lastName != null && { lastName: body.lastName }),
+      });
+    }
+
+    await clerkClient.users.updateUserMetadata(auth.userId, {
+      publicMetadata: { onboardingComplete: true },
+    });
+
+    return Response.json({ success: true });
+  } catch (error) {
+    if (error instanceof AuthError) {
+      return Response.json({ error: error.message }, { status: 401 });
+    }
+    throw error;
+  }
+};
+
+const staticRoutes = {
+  "/robots.txt": handleRobotsTxt,
+  "/sitemap.xml": handleSitemapXml,
+  "/image/*": handleImageAsset,
+};
+
+const shieldHandler = authProxyHandler("/api/shield");
+const storesHandler = authProxyHandler("/api/stores");
+const storeByIdHandler = authProxyHandler(pathnameOf);
+const aiVisibilityProductsHandler = authProxyHandler("/api/ai-visibility/products");
+const agentActivityHandler = authProxyHandler("/api/agent-activity");
+
+const apiRoutes = {
+  "/api/health": {
+    async GET(req: Request) {
+      return handleHealth(req);
+    },
+  },
+  "/api/shield": {
+    async PUT(req: Request) {
+      return shieldHandler(req);
+    },
+  },
+  "/api/stores": {
+    async GET(req: Request) {
+      return storesHandler(req);
+    },
+    async POST(req: Request) {
+      return storesHandler(req);
+    },
+  },
+  "/api/stores/:id": {
+    async GET(req: Request) {
+      return storeByIdHandler(req);
+    },
+    async PATCH(req: Request) {
+      return storeByIdHandler(req);
+    },
+    async DELETE(req: Request) {
+      return storeByIdHandler(req);
+    },
+  },
+  "/api/ai-visibility/products": {
+    async GET(req: Request) {
+      return aiVisibilityProductsHandler(req);
+    },
+  },
+  "/api/agent-activity": {
+    async GET(req: Request) {
+      return agentActivityHandler(req);
+    },
+    async POST(req: Request) {
+      return agentActivityHandler(req);
+    },
+  },
+  "/api/subscribers": {
+    async POST(req: Request) {
+      return handleSubscribersPost(req);
+    },
+  },
+  "/api/user/complete-onboarding": {
+    async POST(req: Request) {
+      return handleCompleteOnboarding(req);
+    },
+  },
+};
 
 const server = serve({
   port,
   routes: {
-    "/robots.txt": () =>
-      new Response(generateRobotsTxt(), {
-        headers: { "Content-Type": "text/plain" },
-      }),
-
-    "/sitemap.xml": () =>
-      new Response(generateSitemapXml(), {
-        headers: { "Content-Type": "application/xml" },
-      }),
-
-    "/image/*": async (req) => {
-      const pathname = new URL(req.url).pathname;
-      const filePath = `public${pathname}`;
-      const file = Bun.file(filePath);
-      if (await file.exists()) {
-        return new Response(file, {
-          headers: { "Content-Type": file.type },
-        });
-      }
-      return new Response("Not found", { status: 404 });
-    },
-
-    "/api/hello": {
-      async GET() {
-        return Response.json({ message: "Hello, world!", method: "GET" });
-      },
-      async PUT() {
-        return Response.json({ message: "Hello, world!", method: "PUT" });
-      },
-    },
-
-    "/api/hello/:name": async req => {
-      return Response.json({
-        message: `Hello, ${req.params.name}!`,
-      });
-    },
-
-    "/api/health": {
-      async GET(req) {
-        const path = new URL(req.url).pathname;
-        return proxyToRustPublic(req, path);
-      },
-    },
-    "/api/shield": { async PUT(req) { return proxy("/api/shield")(req); } },
-    "/api/stores": {
-      async GET(req) { return proxy("/api/stores")(req); },
-      async POST(req) { return proxy("/api/stores")(req); },
-    },
-    "/api/ai-visibility/products": {
-      async GET(req) { return proxy("/api/ai-visibility/products")(req); },
-    },
-    "/api/agent-activity": {
-      async GET(req) { return proxy("/api/agent-activity")(req); },
-      async POST(req) { return proxy("/api/agent-activity")(req); },
-    },
-
-    "/api/subscribers": {
-      async POST(req) {
-        const path = new URL(req.url).pathname;
-        const clientIP = serverRef?.requestIP(req)?.address ?? "unknown";
-        const auth = await getAuthOptional(req);
-        return proxyToRustPublic(req, path, { clientIP, auth: auth ?? undefined });
-      },
-    },
-
-    "/api/user/complete-onboarding": {
-      async POST(req) {
-        try {
-          const auth = await requireAuth(req);
-          const { clerkClient } = await import("./lib/clerk.ts");
-          if (!clerkClient) {
-            return Response.json(
-              { error: "Clerk not configured" },
-              { status: 500 }
-            );
-          }
-          const body = (await req.json()) as {
-            firstName?: string;
-            lastName?: string;
-          };
-          if (
-            body.firstName != null ||
-            body.lastName != null
-          ) {
-            await clerkClient.users.updateUser(auth.userId, {
-              ...(body.firstName != null && { firstName: body.firstName }),
-              ...(body.lastName != null && { lastName: body.lastName }),
-            });
-          }
-          await clerkClient.users.updateUserMetadata(auth.userId, {
-            publicMetadata: { onboardingComplete: true },
-          });
-          return Response.json({ success: true });
-        } catch (e) {
-          if (e instanceof AuthError) {
-            return Response.json({ error: e.message }, { status: 401 });
-          }
-          throw e;
-        }
-      },
-    },
+    ...staticRoutes,
+    ...apiRoutes,
   },
 
   fetch(req) {
-    const pathname = new URL(req.url).pathname;
+    const pathname = pathnameOf(req);
     const asset = builtAssets.get(pathname);
     if (asset) {
       return new Response(asset, {
