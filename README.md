@@ -1,7 +1,7 @@
 # Clawpify
 
 [![CI](https://github.com/clawpify/clawpify/actions/workflows/ci.yml/badge.svg)](https://github.com/clawpify/clawpify/actions/workflows/ci.yml)
-[![Discord](https://img.shields.io/discord/1469593952330973227?label=discord&logo=discord)](https://discord.gg/HD6Tc56Z)
+[![Discord](https://img.shields.io/discord/1469593952330973227?label=discord&logo=discord)](https://discord.gg/Pqr6rk5HNg)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](http://makeapullrequest.com)
 [![GitHub stars](https://img.shields.io/github/stars/clawpify/clawpify)](https://github.com/clawpify/clawpify)

@@ -183,7 +183,7 @@ export const copy = {
         heading: "Connect",
         links: [
           { label: "Book a demo", href: "https://calendar.notion.so/meet/alhwyn/clawpify" },
-          { label: "Discord", href: "https://discord.gg/a2tRAjWV" },
+          { label: "Discord", href: "https://discord.gg/Pqr6rk5HNg" },
         ],
       },
     ],
