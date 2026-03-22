@@ -47,7 +47,12 @@ export async function getAuthOptional(req: Request): Promise<{
 
   if (!token) return null;
 
-  const payload = await verifyToken(token, { secretKey: CLERK_SECRET_KEY });
+  let payload: Awaited<ReturnType<typeof verifyToken>> | null = null;
+  try {
+    payload = await verifyToken(token, { secretKey: CLERK_SECRET_KEY });
+  } catch {
+    return null;
+  }
 
   if (!payload?.sub) return null;
 

@@ -143,14 +143,14 @@ function SidebarInner({
               </button>
             </SignInButton>
           </Show>
-          <Show when="signed-in">
+          {/* <Show when="signed-in">
             <Link
-              to="/app"
+              to="/sign-in"
               className="block w-full rounded-none border border-zinc-900 bg-zinc-900 px-3 py-2.5 text-center text-xs font-medium uppercase text-white transition hover:bg-zinc-800 hover:border-zinc-800"
             >
-              Open app
+              Sign in
             </Link>
-          </Show>
+          </Show> */}
           <button
             type="button"
             onClick={onOpenSubscribeModal}

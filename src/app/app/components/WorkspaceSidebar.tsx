@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { OrganizationSwitcher } from "@clerk/react";
+import { OrganizationSwitcher, Show } from "@clerk/react";
 import { HomeIcon } from "../../../icons/workspace-icons";
 import { copy } from "../utils/copy";
 
@@ -13,18 +13,28 @@ export function WorkspaceSidebar() {
       style={{ fontFamily: "var(--workspace-font)" }}
     >
       <div className="mb-4">
-        <OrganizationSwitcher
-          afterCreateOrganizationUrl="/app"
-          afterSelectOrganizationUrl="/app"
-          afterSelectPersonalUrl="/app"
-          appearance={{
-            elements: {
-              rootBox: "w-full",
-              organizationSwitcherTrigger:
-                "flex items-center gap-2 rounded px-2 py-1.5 w-full justify-start border-0 bg-transparent hover:bg-zinc-200/60 text-sm font-medium text-zinc-900",
-            },
-          }}
-        />
+        <Show when="signed-in">
+          <OrganizationSwitcher
+            afterCreateOrganizationUrl="/app"
+            afterSelectOrganizationUrl="/app"
+            afterSelectPersonalUrl="/app"
+            appearance={{
+              elements: {
+                rootBox: "w-full",
+                organizationSwitcherTrigger:
+                  "flex items-center gap-2 rounded px-2 py-1.5 w-full justify-start border-0 bg-transparent hover:bg-zinc-200/60 text-sm font-medium text-zinc-900",
+              },
+            }}
+          />
+        </Show>
+        <Show when="signed-out">
+          <Link
+            to="/sign-in"
+            className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-sm font-medium text-zinc-700 transition hover:bg-zinc-200/60 hover:text-zinc-900"
+          >
+            Sign in for organization features
+          </Link>
+        </Show>
       </div>
       <Link
         to="/app"

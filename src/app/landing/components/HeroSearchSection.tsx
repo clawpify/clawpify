@@ -167,7 +167,7 @@ export function HeroSearchSection({ progress, demo }: HeroSearchSectionProps) {
       <div className="sticky top-0 flex min-h-screen items-center justify-center">
         <div className="hero-grain-bg">
           <h1 className="hero-headline-title">
-            Make your product AI native
+            Get your product recommended in AI recommendations
           </h1>
 
           <span
