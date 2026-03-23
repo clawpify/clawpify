@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Show, SignInButton } from "@clerk/react";
 import { HeroModalShell } from "./HeroModalShell";
 import { subscribe } from "../../../lib/subscribe";
 
@@ -133,7 +132,7 @@ function SidebarInner({
       {isOpen && (
       <div className="border-t border-zinc-200 pt-5">
         <div className="flex flex-col gap-2">
-          <Show when="signed-out">
+          {/* <Show when="signed-out">
             <SignInButton mode="redirect" forceRedirectUrl="/app">
               <button
                 type="button"
@@ -142,7 +141,7 @@ function SidebarInner({
                 Sign in
               </button>
             </SignInButton>
-          </Show>
+          </Show> */}
           {/* <Show when="signed-in">
             <Link
               to="/sign-in"

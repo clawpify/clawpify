@@ -100,7 +100,18 @@ const handleHealth = (req: Request) => forwardPublic(req);
 const handleSubscribersPost = async (req: Request) => {
   const clientIP = serverRef?.requestIP(req)?.address ?? "unknown";
   const auth = await getAuthOptional(req);
-  return forwardPublic(req, { clientIP, auth: auth ?? undefined });
+  try {
+    return await forwardPublic(req, { clientIP, auth: auth ?? undefined });
+  } catch (e) {
+    console.error(
+      "POST /api/subscribers proxy failed (check RUST_API_URL reaches the Rust service, or set BUN_PUBLIC_API_BASE for direct browser calls):",
+      e
+    );
+    return Response.json(
+      { error: "Subscription service is temporarily unavailable." },
+      { status: 502 }
+    );
+  }
 };
 
 const handleCompleteOnboarding = async (req: Request) => {

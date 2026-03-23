@@ -1,4 +1,9 @@
-const API_BASE = "";
+/** No trailing slash. Empty = same origin (Bun proxy). Set when the API is on another origin. */
+const API_BASE = (
+  typeof process !== "undefined" && process.env.BUN_PUBLIC_API_BASE
+    ? String(process.env.BUN_PUBLIC_API_BASE).replace(/\/$/, "")
+    : ""
+);
 
 export type SubscribeRequest = {
   email: string;
