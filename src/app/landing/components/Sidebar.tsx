@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { Show, SignInButton, UserButton } from "@clerk/react";
 import { HeroModalShell } from "./HeroModalShell";
 import { subscribe } from "../../../lib/subscribe";
 
@@ -132,7 +133,7 @@ function SidebarInner({
       {isOpen && (
       <div className="border-t border-zinc-200 pt-5">
         <div className="flex flex-col gap-2">
-          {/* <Show when="signed-out">
+          <Show when="signed-out">
             <SignInButton mode="redirect" forceRedirectUrl="/app">
               <button
                 type="button"
@@ -141,15 +142,20 @@ function SidebarInner({
                 Sign in
               </button>
             </SignInButton>
-          </Show> */}
-          {/* <Show when="signed-in">
-            <Link
-              to="/sign-in"
-              className="block w-full rounded-none border border-zinc-900 bg-zinc-900 px-3 py-2.5 text-center text-xs font-medium uppercase text-white transition hover:bg-zinc-800 hover:border-zinc-800"
-            >
-              Sign in
-            </Link>
-          </Show> */}
+          </Show>
+          <Show when="signed-in">
+            <div className="flex flex-col gap-2">
+              <Link
+                to="/dashboard"
+                className="block w-full rounded-none border border-zinc-900 bg-zinc-900 px-3 py-2.5 text-center text-xs font-medium uppercase text-white transition hover:bg-zinc-800 hover:border-zinc-800"
+              >
+                Dashboard
+              </Link>
+              <div className="flex justify-center">
+                <UserButton />
+              </div>
+            </div>
+          </Show>
           <button
             type="button"
             onClick={onOpenSubscribeModal}
@@ -258,7 +264,7 @@ export function Sidebar() {
       {subscribeModalOpen && (
         <HeroModalShell onClose={() => setSubscribeModalOpen(false)}>
           <h2 className="font-serif text-xl italic leading-tight text-[#26251e]">
-            Join the wait list
+            Join the waitlist
           </h2>
           <p className="mt-2 font-mono text-[0.72rem] font-medium uppercase tracking-widest text-[#8a8378]">
             Drop your email and we&apos;ll keep you posted when new spots open
