@@ -1,0 +1,7 @@
+# Use when this service’s Railway **Root Directory** is `backend/` (repo layout has no `backend` folder inside the container).
+# Config-as-code overrides dashboard start/build commands.
+[build]
+buildCommand = "SQLX_OFFLINE=true cargo build --release"
+
+[deploy]
+startCommand = "./target/release/backend"
