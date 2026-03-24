@@ -1,7 +1,7 @@
-# Use when this service’s Railway **Root Directory** is `backend/` (repo layout has no `backend` folder inside the container).
-# Config-as-code overrides dashboard start/build commands.
+# Railway picks up Dockerfile when present. Service **Root Directory** should be `backend/`
+# (see https://docs.railway.com/guides/monorepo). Config-as-code overrides dashboard commands.
 [build]
-buildCommand = "SQLX_OFFLINE=true cargo build --release"
+builder = "DOCKERFILE"
 
 [deploy]
-startCommand = "./target/release/backend"
+startCommand = "/usr/local/bin/backend"
