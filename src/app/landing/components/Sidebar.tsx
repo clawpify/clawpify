@@ -146,10 +146,10 @@ function SidebarInner({
           <Show when="signed-in">
             <div className="flex flex-col gap-2">
               <Link
-                to="/dashboard"
+                to="/app"
                 className="block w-full rounded-none border border-zinc-900 bg-zinc-900 px-3 py-2.5 text-center text-xs font-medium uppercase text-white transition hover:bg-zinc-800 hover:border-zinc-800"
               >
-                Dashboard
+                App
               </Link>
               <div className="flex justify-center">
                 <UserButton />

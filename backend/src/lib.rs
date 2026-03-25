@@ -9,3 +9,5 @@ pub mod routes;
 pub mod services;
 pub mod http_client;
 pub mod llm;
+pub mod crypto;
+pub mod integrations;

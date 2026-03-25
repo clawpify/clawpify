@@ -4,7 +4,6 @@ import {
   SignInButton,
   SignUpButton,
   UserButton,
-  OrganizationSwitcher,
 } from "@clerk/react";
 
 export function AppTopNav() {
@@ -14,10 +13,7 @@ export function AppTopNav() {
         Home
       </Link>
       <Link to="/app" className="text-blue-500 hover:underline">
-        Dashboard
-      </Link>
-      <Link to="/settings" className="text-blue-500 hover:underline">
-        Settings
+        App
       </Link>
       <Show when="signed-out">
         <div style={{ marginLeft: "auto", display: "flex", gap: "0.5rem" }}>
@@ -34,8 +30,7 @@ export function AppTopNav() {
             alignItems: "center",
           }}
         >
-          <OrganizationSwitcher afterCreateOrganizationUrl="/app" />
-          <UserButton />
+          <UserButton afterSignOutUrl="/" />
         </div>
       </Show>
     </nav>
