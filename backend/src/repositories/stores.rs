@@ -144,14 +144,14 @@ mod tests {
       created.id,
       UpdateStoreRequest {
         base_url: Some("https://new.example.com/".to_string()),
-        platform: Some("shopify".to_string()),
+        platform: Some("url".to_string()),
       },
     )
     .await
     .expect("update store")
     .expect("store exists");
 
-    assert_eq!(updated.platform, "shopify");
+    assert_eq!(updated.platform, "url");
     assert_eq!(
       updated.config["baseUrl"],
       serde_json::json!("https://new.example.com")
@@ -185,7 +185,7 @@ mod tests {
       created.id,
       UpdateStoreRequest {
         base_url: Some("https://hijack.example.com".to_string()),
-        platform: Some("shopify".to_string()),
+        platform: Some("url".to_string()),
       },
     )
     .await

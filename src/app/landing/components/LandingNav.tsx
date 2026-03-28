@@ -44,10 +44,10 @@ export function LandingNav() {
           </Show>
           <Show when="signed-in">
             <Link
-              to="/dashboard"
+              to="/app"
               className="text-sm font-medium uppercase tracking-wide text-zinc-600 transition hover:text-zinc-900"
             >
-              Dashboard
+              App
             </Link>
             <UserButton afterSignOutUrl="/" />
           </Show>

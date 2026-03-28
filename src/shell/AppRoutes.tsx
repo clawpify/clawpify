@@ -3,7 +3,6 @@ import { SignIn, SignUp } from "@clerk/react";
 import { LandingPage } from "../app/landing";
 import { AboutPage } from "../app/about/page";
 import { WorkspaceLayout, HomePage } from "../app/app";
-import { SettingsPage } from "../app/settings/page";
 import { WritingPage } from "../app/writing";
 import { WritingPostPage } from "../app/writing/components/post";
 import { AuthPageLayout } from "./AuthPageLayout";
@@ -37,7 +36,6 @@ export function AppRoutes() {
           </AuthPageLayout>
         }
       />
-      <Route path="/settings" element={<SettingsPage />} />
     </Routes>
   );
 }

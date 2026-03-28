@@ -37,5 +37,8 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 .cursor
 .vscode
 
+# Vendored agent skills (nested clone); install separately to avoid dirty repo state
+.agents/skills/gstack/
+
 # Finder (MacOS) folder config
 .DS_Store

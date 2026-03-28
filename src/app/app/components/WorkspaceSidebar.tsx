@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { OrganizationSwitcher, Show } from "@clerk/react";
+import { Show, UserButton } from "@clerk/react";
 import { HomeIcon } from "../../../icons/workspace-icons";
 import { copy } from "../utils/copy";
 
@@ -12,30 +12,20 @@ export function WorkspaceSidebar() {
       className="sticky top-0 flex h-screen w-[250px] flex-col border-r border-zinc-200/50 bg-[#edeef0] px-3 py-3"
       style={{ fontFamily: "var(--workspace-font)" }}
     >
-      <div className="mb-4">
+      <div className="mb-4 flex items-center justify-between gap-2 px-2">
+        <span className="text-sm font-semibold text-zinc-900">Clawpify</span>
         <Show when="signed-in">
-          <OrganizationSwitcher
-            afterCreateOrganizationUrl="/app"
-            afterSelectOrganizationUrl="/app"
-            afterSelectPersonalUrl="/app"
-            appearance={{
-              elements: {
-                rootBox: "w-full",
-                organizationSwitcherTrigger:
-                  "flex items-center gap-2 rounded px-2 py-1.5 w-full justify-start border-0 bg-transparent hover:bg-zinc-200/60 text-sm font-medium text-zinc-900",
-              },
-            }}
-          />
-        </Show>
-        <Show when="signed-out">
-          <Link
-            to="/sign-in"
-            className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-sm font-medium text-zinc-700 transition hover:bg-zinc-200/60 hover:text-zinc-900"
-          >
-            Sign in for organization features
-          </Link>
+          <UserButton />
         </Show>
       </div>
+      <Show when="signed-out">
+        <Link
+          to="/sign-in"
+          className="mb-3 flex w-full items-center gap-2 rounded px-2 py-1.5 text-sm font-medium text-zinc-700 transition hover:bg-zinc-200/60 hover:text-zinc-900"
+        >
+          Sign in
+        </Link>
+      </Show>
       <Link
         to="/app"
         className={`flex items-center gap-2 rounded px-2 py-1.5 text-sm font-medium transition ${

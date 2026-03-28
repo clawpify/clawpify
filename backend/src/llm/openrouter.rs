@@ -42,6 +42,11 @@ impl OpenRouterClient {
     &self.model
   }
 
+  pub fn with_model(mut self, model: impl Into<String>) -> Self {
+    self.model = model.into();
+    self
+  }
+
   pub async fn chat_json(
     &self,
     system_prompt: &str,
@@ -59,27 +64,59 @@ impl OpenRouterClient {
 
     });
 
-    match self
-      .post_chat(system_prompt, user_prompt, schema_format.clone())
-      .await
-    {
+    let messages = json!([
+      { "role": "system", "content": system_prompt },
+      { "role": "user", "content": user_prompt }
+    ]);
+
+    match self.post_chat_messages(&messages, schema_format.clone()).await {
       Ok(v) => Ok(v),
       Err(schema_err) => {
         tracing::warn!(target: "llm.openrouter", "json_schema failed, retrying json_object: {}", schema_err);
         let fallback_format = json!({ "type": "json_object" });
-        self.post_chat(system_prompt, user_prompt, fallback_format).await
+        self.post_chat_messages(&messages, fallback_format).await
       }
     }
   }
 
-  async fn post_chat(
+  /// Multimodal user message: `user_content` is either a string or an OpenAI-style parts array
+  /// (e.g. text + `image_url` with a `data:image/...;base64,...` URL).
+  pub async fn chat_json_multimodal(
     &self,
     system_prompt: &str,
-    user_prompt: &str,
+    user_content: Value,
+    schema_name: &str,
+    json_schema: Value,
+  ) -> Result<Value, String> {
+    let schema_format = json!({
+      "type": "json_schema",
+      "json_schema": {
+        "name": schema_name,
+        "strict": true,
+        "schema": json_schema
+      }
+    });
+
+    let messages = json!([
+      { "role": "system", "content": system_prompt },
+      { "role": "user", "content": user_content }
+    ]);
+
+    match self.post_chat_messages(&messages, schema_format.clone()).await {
+      Ok(v) => Ok(v),
+      Err(schema_err) => {
+        tracing::warn!(target: "llm.openrouter", "intake json_schema failed, retrying json_object: {}", schema_err);
+        let fallback_format = json!({ "type": "json_object" });
+        self.post_chat_messages(&messages, fallback_format).await
+      }
+    }
+  }
+
+  async fn post_chat_messages(
+    &self,
+    messages: &Value,
     response_format: Value,
   ) -> Result<Value, String> {
-
-
     let mut headers = HeaderMap::new();
 
     headers.insert(
@@ -107,10 +144,7 @@ impl OpenRouterClient {
 
     let body = json!({
       "model": self.model,
-      "messages": [
-        { "role": "system", "content": system_prompt },
-        { "role": "user", "content": user_prompt }
-      ],
+      "messages": messages,
       "response_format": response_format
     });
 
@@ -123,7 +157,7 @@ impl OpenRouterClient {
       .map_err(|e| format!("OpenRouter HTTP error: {e}"))?;
 
     let status = resp.status();
-    
+
     let payload: Value = resp
       .json()
       .await
