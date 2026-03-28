@@ -31,6 +31,7 @@ subtle = "2.5"
 base64 = "0.22"
 hex = "0.4"
 
+# tower: integration tests only (tower::ServiceExt in tests/api_crud.rs); production uses tower-http.
 [dev-dependencies]
 tokio = { version = "1", features = ["rt", "macros"] }
 tower = { version = "0.5", features = ["util"] }

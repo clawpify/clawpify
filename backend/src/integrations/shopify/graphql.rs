@@ -1,7 +1,27 @@
 use reqwest::header::{HeaderMap, HeaderValue, CONTENT_TYPE};
 use serde_json::{json, Value};
+use url::Url;
 
 use crate::http_client;
+
+fn validate_twilio_media_fetch_url(url_str: &str) -> Result<Url, String> {
+  let u = Url::parse(url_str).map_err(|e| e.to_string())?;
+  if u.scheme() != "https" {
+    return Err("only https URLs are allowed".to_string());
+  }
+  let host = u
+    .host_str()
+    .ok_or_else(|| "URL host required".to_string())?;
+  if host.parse::<std::net::IpAddr>().is_ok() {
+    return Err("URL must use a hostname, not an IP address".to_string());
+  }
+  let host = host.to_ascii_lowercase();
+  let allowed = host == "api.twilio.com" || host.ends_with(".twilio.com");
+  if !allowed {
+    return Err("media URL host is not an allowed Twilio domain".to_string());
+  }
+  Ok(u)
+}
 
 fn api_version() -> String {
   std::env::var("SHOPIFY_API_VERSION").unwrap_or_else(|_| "2025-01".to_string())
@@ -295,8 +315,13 @@ pub async fn staged_uploads_create(
 }
 
 pub async fn fetch_url_bytes(url: &str) -> Result<Vec<u8>, String> {
+  let u = validate_twilio_media_fetch_url(url)?;
   let client = http_client::shared();
-  let res = client.get(url).send().await.map_err(|e| e.to_string())?;
+  let res = client
+    .get(u.as_str())
+    .send()
+    .await
+    .map_err(|e| e.to_string())?;
   if !res.status().is_success() {
     return Err(format!("fetch image {}", res.status()));
   }

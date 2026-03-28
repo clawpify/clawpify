@@ -6,3 +6,4 @@ pub mod intake_phone_bindings;
 pub mod listings;
 pub mod stores;
 pub mod subscribers;
+pub mod twilio_inbound;

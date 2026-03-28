@@ -10,6 +10,7 @@ use crate::dto::intake::{PhoneBindingResponse, UpsertPhoneBindingRequest};
 use crate::error::{self, ApiError};
 use crate::middleware as mw;
 use crate::repositories::intake_phone_bindings;
+use crate::util::phone::parse_e164;
 
 pub fn routes() -> Router {
   Router::new()
@@ -18,10 +19,6 @@ pub fn routes() -> Router {
       get(get_bindings).put(put_binding).delete(delete_binding),
     )
     .route_layer(middleware::from_fn(mw::require_internal_auth))
-}
-
-fn normalize_e164(raw: &str) -> String {
-  raw.trim().to_string()
 }
 
 async fn get_bindings(
@@ -42,10 +39,7 @@ async fn put_binding(
 ) -> Result<Json<PhoneBindingResponse>, ApiError> {
   let org_id = auth::get_org_id(&headers)?;
   let uid = auth::get_user_id(&headers)?;
-  let phone = normalize_e164(&body.phone_e164);
-  if phone.is_empty() {
-    return Err(error::bad_request("phone_e164 required"));
-  }
+  let phone = parse_e164(&body.phone_e164).map_err(error::bad_request)?;
 
   if intake_phone_bindings::phone_taken_by_other(&pool, &phone, &org_id, &uid)
     .await

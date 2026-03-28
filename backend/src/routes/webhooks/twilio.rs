@@ -1,3 +1,9 @@
+//! Twilio SMS/MMS webhooks for draft listings.
+//!
+//! Twilio signs requests with `X-Twilio-Signature`, but the scheme does **not** include a timestamp
+//! or nonce. A captured valid request can be replayed until the signature format changes. We mitigate
+//! duplicate **draft creates** by recording each inbound [`MessageSid`](https://www.twilio.com/docs/messaging/guides/webhook-request) in Postgres (`twilio_inbound_message_ids`); replays return the same user-facing success without a second listing insert.
+
 use std::collections::BTreeMap;
 
 use axum::{
@@ -13,6 +19,7 @@ use crate::dto::listings::CreateListingRequest;
 use crate::integrations::twilio::signature;
 use crate::repositories::intake_phone_bindings;
 use crate::repositories::listings;
+use crate::repositories::twilio_inbound;
 
 fn xml_escape(s: &str) -> String {
   s.replace('&', "&amp;")
@@ -115,6 +122,28 @@ pub async fn twilio_messaging(
 
   if media_urls.is_empty() {
     return twiml_response("Could not read the photo. Try sending the image again.");
+  }
+
+  let Some(message_sid) = params
+    .get("MessageSid")
+    .map(|s| s.trim())
+    .filter(|s| !s.is_empty())
+  else {
+    tracing::warn!(target: "twilio", "MMS inbound missing MessageSid");
+    return twiml_response("Could not process this message. Try sending the photo again.");
+  };
+
+  match twilio_inbound::try_record_message_sid(&pool, message_sid, &binding.org_id).await {
+    Ok(false) => {
+      return twiml_response(
+        "We already saved this photo from that message. Open Inventory in Clawpify to review.",
+      );
+    }
+    Ok(true) => {}
+    Err(e) => {
+      tracing::error!(target: "twilio", "message sid dedupe insert failed: {}", e);
+      return twiml_response("Temporary error. Try again shortly.");
+    }
   }
 
   let title = body_text
