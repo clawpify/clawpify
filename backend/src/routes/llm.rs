@@ -15,15 +15,8 @@ use futures_util::StreamExt;
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::ReceiverStream;
 
-use crate::dto::llm::{
-  CitationAnalyzeRequest, 
-  CitationAnalyzeResponse,
-  LlmAgentsRequest,
-  LlmAgentsResponse,
-  LlmStreamLine,
-};
+use crate::dto::llm::{LlmAgentsRequest, LlmAgentsResponse, LlmStreamLine};
 use crate::error::{self, ApiError};
-use crate::llm::citation_analysis;
 use crate::llm::config::load_registry;
 use crate::llm::orchestrator::Orchestrator;
 use crate::llm::types::{AgentRunConfig, ProviderId};
@@ -35,7 +28,6 @@ pub fn routes() -> Router<()> {
   Router::new()
     .route("/llm/agents", post(llm_agents))
     .route("/llm/agents/stream", post(llm_agents_stream))
-    .route("/llm/citations/analyze", post(citation_analyze))
     .route_layer(middleware::from_fn(mw::require_internal_auth))
 }
 
@@ -96,15 +88,4 @@ async fn llm_agents_stream(
     Body::from_stream(stream),
   )
     .into_response())
-}
-
-async fn citation_analyze(
-  Json(body): Json<CitationAnalyzeRequest>,
-) -> Result<Json<CitationAnalyzeResponse>, ApiError> {
-
-  let response = citation_analysis::analyze(body)
-    .await
-    .map_err(error::bad_gateway)?;
-    
-  Ok(Json(response))
 }

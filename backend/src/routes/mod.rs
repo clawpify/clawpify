@@ -1,11 +1,9 @@
 mod activity;
-mod citation_runs;
 mod intake;
 mod listings;
 mod llm;
 mod stores;
 mod subscribers;
-mod visibility;
 mod webhooks;
 
 use axum::{
@@ -21,9 +19,7 @@ pub fn api_router(pool: PgPool) -> Router {
     .merge(listings::routes())
     .merge(intake::routes())
     .merge(webhooks::routes())
-    .merge(visibility::routes())
     .merge(activity::routes())
-    .merge(citation_runs::routes())
     .merge(subscribers::routes())
     .merge(llm::routes());
 

@@ -159,8 +159,9 @@ const staticRoutes = {
 const shieldHandler = authProxyHandler("/api/shield");
 const storesHandler = authProxyHandler("/api/stores");
 const storeByIdHandler = authProxyHandler(pathnameOf);
-const aiVisibilityProductsHandler = authProxyHandler("/api/ai-visibility/products");
 const agentActivityHandler = authProxyHandler("/api/agent-activity");
+const llmAgentsHandler = authProxyHandler("/api/llm/agents");
+const llmAgentsStreamHandler = authProxyHandler("/api/llm/agents/stream");
 
 const apiRoutes = {
   "/api/health": {
@@ -192,9 +193,14 @@ const apiRoutes = {
       return storeByIdHandler(req);
     },
   },
-  "/api/ai-visibility/products": {
-    async GET(req: Request) {
-      return aiVisibilityProductsHandler(req);
+  "/api/llm/agents": {
+    async POST(req: Request) {
+      return llmAgentsHandler(req);
+    },
+  },
+  "/api/llm/agents/stream": {
+    async POST(req: Request) {
+      return llmAgentsStreamHandler(req);
     },
   },
   "/api/agent-activity": {

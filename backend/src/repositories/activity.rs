@@ -80,7 +80,7 @@ mod tests {
       "org-activity",
       None,
       "agent-a",
-      "citation_geo_sentiment",
+      "repo_test_action",
       Some(serde_json::json!({ "key": "value" })),
     )
     .await
@@ -122,7 +122,7 @@ mod tests {
       "org-right",
       None,
       "agent-a",
-      "citation_geo_sentiment",
+      "repo_test_action",
       None,
     )
     .await

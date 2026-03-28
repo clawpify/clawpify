@@ -7,15 +7,15 @@
 [![GitHub stars](https://img.shields.io/github/stars/clawpify/clawpify)](https://github.com/clawpify/clawpify)
 [![GitHub contributors](https://img.shields.io/github/contributors/clawpify/clawpify)](https://github.com/clawpify/clawpify/graphs/contributors)
 
-**Open-source SEO and AEO tool for commerce.**
+**Open-source consignment store inventory tracker.**
 
-AI is increasingly driving purchasing decisions and recommendations for people, as well as Agent-to-Agent commerce. Clawpify helps merchants prepare with SEO/AEO tooling, store connectivity, and exports aimed at AI discoverability.
+Clawpify helps consignment and resale shops track inventory, listings, and store connections in one workspace—with auth, a Rust API, and optional AI helpers for day-to-day ops.
 
 ## What Clawpify Does
 
-- **Connect your store** – Shopify (and more) with Clerk orgs and workspace tools
-- **AI visibility exports** – Structured product and people data for agents and search
-- **SEO / AEO** – Resources and workflows for commerce on the modern SERP
+- **Inventory & listings** – Draft and manage consignment listings, photos, and status across your workflow
+- **Connect your store** – Shopify and other platforms with Clerk organizations and workspace tools
+- **AI agents** – Optional multi-agent LLM tasks via OpenAI (e.g. drafts and assistance)
 
 ## Tech Stack
 

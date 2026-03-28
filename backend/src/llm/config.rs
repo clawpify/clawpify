@@ -6,6 +6,7 @@ pub fn load_registry() -> Result<ProviderRegistry, String> {
   let mut registry = ProviderRegistry::default();
 
   if let Ok(key) = std::env::var("OPENAI_API_KEY") {
+    let key = key.trim().to_string();
     if !key.is_empty() {
       let model =
         std::env::var("OPENAI_LLM_MODEL").unwrap_or_else(|_| "gpt-4o-mini".to_string());

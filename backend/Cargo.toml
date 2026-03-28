@@ -35,3 +35,6 @@ hex = "0.4"
 [dev-dependencies]
 tokio = { version = "1", features = ["rt", "macros"] }
 tower = { version = "0.5", features = ["util"] }
+base64 = "0.22"
+hmac = "0.12"
+sha1 = "0.10"
