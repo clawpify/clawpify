@@ -2,6 +2,7 @@ mod activity;
 mod intake;
 mod listings;
 mod llm;
+mod price_estimation;
 mod stores;
 mod subscribers;
 mod webhooks;
@@ -21,7 +22,8 @@ pub fn api_router(pool: PgPool) -> Router {
     .merge(webhooks::routes())
     .merge(activity::routes())
     .merge(subscribers::routes())
-    .merge(llm::routes());
+    .merge(llm::routes())
+    .merge(price_estimation::routes());
 
   Router::new()
     .nest("/api", api)

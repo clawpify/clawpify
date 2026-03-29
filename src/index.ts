@@ -162,6 +162,7 @@ const storeByIdHandler = authProxyHandler(pathnameOf);
 const agentActivityHandler = authProxyHandler("/api/agent-activity");
 const llmAgentsHandler = authProxyHandler("/api/llm/agents");
 const llmAgentsStreamHandler = authProxyHandler("/api/llm/agents/stream");
+const priceEstimationHandler = authProxyHandler("/api/price-estimation");
 
 const apiRoutes = {
   "/api/health": {
@@ -209,6 +210,11 @@ const apiRoutes = {
     },
     async POST(req: Request) {
       return agentActivityHandler(req);
+    },
+  },
+  "/api/price-estimation": {
+    async POST(req: Request) {
+      return priceEstimationHandler(req);
     },
   },
   "/api/subscribers": {
