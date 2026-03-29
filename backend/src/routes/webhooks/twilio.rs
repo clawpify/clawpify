@@ -8,18 +8,18 @@ use std::collections::BTreeMap;
 
 use axum::{
   body::Bytes,
+  extract::State,
   http::{HeaderMap, StatusCode},
   response::{IntoResponse, Response},
-  Extension,
 };
 use serde_json::json;
-use sqlx::PgPool;
 
 use crate::dto::listings::CreateListingRequest;
 use crate::integrations::twilio::signature;
 use crate::repositories::intake_phone_bindings;
 use crate::repositories::listings;
 use crate::repositories::twilio_inbound;
+use crate::routes::state::AppState;
 
 fn xml_escape(s: &str) -> String {
   s.replace('&', "&amp;")
@@ -49,10 +49,11 @@ fn intake_app_link() -> String {
 }
 
 pub async fn twilio_messaging(
+  State(state): State<AppState>,
   headers: HeaderMap,
-  Extension(pool): Extension<PgPool>,
   body: Bytes,
 ) -> Response {
+  let pool = &state.pool;
   let path = std::env::var("TWILIO_WEBHOOK_PATH").unwrap_or_else(|_| "/api/webhooks/twilio/messaging".to_string());
   let Ok(auth_token) = std::env::var("TWILIO_AUTH_TOKEN") else {
     tracing::error!(target: "twilio", "TWILIO_AUTH_TOKEN not set");
@@ -90,7 +91,7 @@ pub async fn twilio_messaging(
     return twiml_response("Missing caller phone.");
   }
 
-  let binding = match intake_phone_bindings::get_by_phone_e164(&pool, &from).await {
+  let binding = match intake_phone_bindings::get_by_phone_e164(pool, &from).await {
     Ok(Some(b)) => b,
     Ok(None) => {
       let link = intake_app_link();
@@ -133,7 +134,7 @@ pub async fn twilio_messaging(
     return twiml_response("Could not process this message. Try sending the photo again.");
   };
 
-  match twilio_inbound::try_record_message_sid(&pool, message_sid, &binding.org_id).await {
+  match twilio_inbound::try_record_message_sid(pool, message_sid, &binding.org_id).await {
     Ok(false) => {
       return twiml_response(
         "We already saved this photo from that message. Open Inventory in Clawpify to review.",
@@ -155,7 +156,7 @@ pub async fn twilio_messaging(
   let media_json = json!(media_urls.iter().map(|u| json!(u)).collect::<Vec<_>>());
 
   let created = match listings::create(
-    &pool,
+    pool,
     &binding.org_id,
     Some(&binding.clerk_user_id),
     CreateListingRequest {
@@ -172,6 +173,11 @@ pub async fn twilio_messaging(
       status: Some("draft".to_string()),
       ai_quality: None,
       ai_attributes: None,
+      consignor_id: None,
+      contract_id: None,
+      acceptance_status: None,
+      decline_reason: None,
+      post_contract_disposition: None,
     },
   )
   .await

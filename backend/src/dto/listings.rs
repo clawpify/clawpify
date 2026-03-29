@@ -1,4 +1,5 @@
 use serde::Deserialize;
+use uuid::Uuid;
 
 /// Shared optional fields for create and update listing APIs.
 #[derive(Debug, Deserialize)]
@@ -29,6 +30,11 @@ pub struct ListingRequestBody {
   pub ai_quality: Option<serde_json::Value>,
   /* ai_attributes: The AI attributes of the listing. */
   pub ai_attributes: Option<serde_json::Value>,
+  pub consignor_id: Option<Uuid>,
+  pub contract_id: Option<Uuid>,
+  pub acceptance_status: Option<String>,
+  pub decline_reason: Option<String>,
+  pub post_contract_disposition: Option<String>,
 }
 
 pub type CreateListingRequest = ListingRequestBody;

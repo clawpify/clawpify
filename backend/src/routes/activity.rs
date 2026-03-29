@@ -1,23 +1,22 @@
-use axum::{middleware, routing::get, Extension, Json, Router};
-use sqlx::PgPool;
+use axum::{extract::State, middleware, routing::get, Json, Router};
 
-use crate::auth;
+use super::extractors::ActivityOrgScope;
+use super::state::AppState;
 use crate::dto::activity::LogActivityRequest;
 use crate::error::{self, ApiError};
 use crate::middleware as mw;
 use crate::models::activity::AgentActivity;
 
-pub fn routes() -> Router<()> {
+pub fn routes() -> Router<AppState> {
   Router::new()
     .route("/agent-activity", get(list_activity).post(log_activity))
     .route_layer(middleware::from_fn(mw::require_internal_auth))
 }
 
 async fn list_activity(
-  Extension(pool): Extension<PgPool>,
-  headers: axum::http::HeaderMap,
+  State(state): State<AppState>,
+  ActivityOrgScope(org_id): ActivityOrgScope,
 ) -> Result<Json<Vec<AgentActivity>>, ApiError> {
-  let org_id = auth::org_scope_for_activity(&headers)?;
   let rows = sqlx::query_as::<_, AgentActivity>(
     r#"SELECT id, org_id, store_id, agent_name, action_type, payload, created_at
        FROM agent_activity
@@ -25,20 +24,18 @@ async fn list_activity(
        ORDER BY created_at DESC
        LIMIT 50"#,
   )
-  .bind(&org_id)
-  .fetch_all(&pool)
+  .bind(org_id.as_str())
+  .fetch_all(&state.pool)
   .await
   .map_err(error::db_error)?;
   Ok(Json(rows))
 }
 
 async fn log_activity(
-  Extension(pool): Extension<PgPool>,
-  headers: axum::http::HeaderMap,
+  State(state): State<AppState>,
+  ActivityOrgScope(org_id): ActivityOrgScope,
   Json(body): Json<LogActivityRequest>,
 ) -> Result<Json<AgentActivity>, ApiError> {
-  let org_id = auth::org_scope_for_activity(&headers)?;
-
   if body.agent_name.is_empty() || body.action_type.is_empty() {
     return Err(error::bad_request("agent_name and action_type required"));
   }
@@ -48,12 +45,12 @@ async fn log_activity(
        VALUES ($1, $2, $3, $4, $5)
        RETURNING id, org_id, store_id, agent_name, action_type, payload, created_at"#,
   )
-  .bind(&org_id)
+  .bind(org_id.as_str())
   .bind(body.store_id)
   .bind(&body.agent_name)
   .bind(&body.action_type)
   .bind(body.payload)
-  .fetch_one(&pool)
+  .fetch_one(&state.pool)
   .await
   .map_err(error::db_error)?;
   Ok(Json(row))

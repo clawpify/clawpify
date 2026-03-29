@@ -41,3 +41,10 @@ pub fn service_unavailable(msg: &str) -> ApiError {
 pub fn db_error(e: sqlx::Error) -> ApiError {
   internal(e)
 }
+
+pub fn conflict(msg: &str) -> ApiError {
+  (
+    StatusCode::CONFLICT,
+    Json(serde_json::json!({ "error": msg })),
+  )
+}

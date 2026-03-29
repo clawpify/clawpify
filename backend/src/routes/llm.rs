@@ -22,9 +22,11 @@ use crate::llm::orchestrator::Orchestrator;
 use crate::llm::types::{AgentRunConfig, ProviderId};
 use crate::middleware as mw;
 
+use super::state::AppState;
+
 const MAX_AGENTS: usize = 50;
 
-pub fn routes() -> Router<()> {
+pub fn routes() -> Router<AppState> {
   Router::new()
     .route("/llm/agents", post(llm_agents))
     .route("/llm/agents/stream", post(llm_agents_stream))

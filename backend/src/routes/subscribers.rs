@@ -1,15 +1,15 @@
-use axum::{routing::post, Extension, Json, Router};
-use sqlx::PgPool;
+use axum::{extract::State, routing::post, Json, Router};
 
+use super::state::AppState;
 use crate::dto::subscribers::{SubscriberRequest, SubscriberResponse};
 use crate::error::{self, ApiError};
 
-pub fn routes() -> Router<()> {
+pub fn routes() -> Router<AppState> {
   Router::new().route("/subscribers", post(subscribe))
 }
 
 async fn subscribe(
-  Extension(pool): Extension<PgPool>,
+  State(state): State<AppState>,
   Json(body): Json<SubscriberRequest>,
 ) -> Result<Json<SubscriberResponse>, ApiError> {
   let email = body.email.trim().to_lowercase();
@@ -27,7 +27,7 @@ async fn subscribe(
        RETURNING id"#,
   )
   .bind(&email)
-  .fetch_optional(&pool)
+  .fetch_optional(&state.pool)
   .await
   .map_err(error::db_error)?;
 

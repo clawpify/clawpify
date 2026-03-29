@@ -1,6 +1,6 @@
 # Clawpify Backend
 
-Rust API for the Clawpify consignment inventory tracker: stores, listings, intake, LLM agents, activity logging, and subscribers.
+Rust API for the Clawpify consignment inventory tracker: listings, intake, LLM agents, activity logging, and subscribers.
 
 ## Setup
 

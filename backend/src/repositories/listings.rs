@@ -5,19 +5,20 @@ use crate::dto::listings::{CreateListingRequest, UpdateListingRequest};
 use crate::models::consignment_listing::ConsignmentListing;
 use super::pagination::Pagination;
 
+const SELECT_LISTING: &str = r#"SELECT id, org_id, created_by_user_id, status, title, description_html, product_type, vendor,
+              tags, price_cents, currency_code, sku, media_urls, ai_quality, ai_attributes,
+              suggested_price_cents, created_at, updated_at,
+              consignor_id, contract_id, acceptance_status, decline_reason, post_contract_disposition
+       FROM consignment_listings"#;
+
 pub async fn list_by_org(
   pool: &PgPool,
   org_id: &str,
   status: Option<&str>,
   page: Pagination,
 ) -> Result<Vec<ConsignmentListing>, sqlx::Error> {
-  let mut qb: QueryBuilder<Postgres> = QueryBuilder::new(
-    r#"SELECT id, org_id, created_by_user_id, status, title, description_html, product_type, vendor,
-              tags, price_cents, currency_code, sku, media_urls, ai_quality, ai_attributes,
-              suggested_price_cents, created_at, updated_at
-       FROM consignment_listings
-       WHERE org_id ="#,
-  );
+  let mut qb: QueryBuilder<Postgres> = QueryBuilder::new(SELECT_LISTING);
+  qb.push(" WHERE org_id = ");
   qb.push_bind(org_id);
   if let Some(s) = status {
     qb.push(" AND status = ");
@@ -36,11 +37,7 @@ pub async fn get_by_id(
   id: Uuid,
 ) -> Result<Option<ConsignmentListing>, sqlx::Error> {
   sqlx::query_as::<_, ConsignmentListing>(
-    r#"SELECT id, org_id, created_by_user_id, status, title, description_html, product_type, vendor,
-              tags, price_cents, currency_code, sku, media_urls, ai_quality, ai_attributes,
-              suggested_price_cents, created_at, updated_at
-       FROM consignment_listings
-       WHERE id = $1 AND org_id = $2"#,
+    &(SELECT_LISTING.to_string() + " WHERE id = $1 AND org_id = $2"),
   )
   .bind(id)
   .bind(org_id)
@@ -77,12 +74,14 @@ pub async fn create(
   sqlx::query_as::<_, ConsignmentListing>(
     r#"INSERT INTO consignment_listings (
          org_id, created_by_user_id, status, title, description_html, product_type, vendor, tags,
-         price_cents, currency_code, sku, media_urls, ai_quality, ai_attributes, suggested_price_cents
+         price_cents, currency_code, sku, media_urls, ai_quality, ai_attributes, suggested_price_cents,
+         consignor_id, contract_id, acceptance_status, decline_reason, post_contract_disposition
        )
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)
        RETURNING id, org_id, created_by_user_id, status, title, description_html, product_type, vendor,
                  tags, price_cents, currency_code, sku, media_urls, ai_quality, ai_attributes,
-                 suggested_price_cents, created_at, updated_at"#,
+                 suggested_price_cents, created_at, updated_at,
+                 consignor_id, contract_id, acceptance_status, decline_reason, post_contract_disposition"#,
   )
   .bind(org_id)
   .bind(created_by_user_id)
@@ -99,6 +98,11 @@ pub async fn create(
   .bind(&body.ai_quality)
   .bind(&body.ai_attributes)
   .bind(body.suggested_price_cents)
+  .bind(body.consignor_id)
+  .bind(body.contract_id)
+  .bind(body.acceptance_status.as_deref())
+  .bind(body.decline_reason.as_deref())
+  .bind(body.post_contract_disposition.as_deref())
   .fetch_one(pool)
   .await
 }
@@ -124,11 +128,17 @@ pub async fn update(
          ai_quality = COALESCE($13, ai_quality),
          ai_attributes = COALESCE($14, ai_attributes),
          suggested_price_cents = COALESCE($15, suggested_price_cents),
+         consignor_id = COALESCE($16, consignor_id),
+         contract_id = COALESCE($17, contract_id),
+         acceptance_status = COALESCE($18, acceptance_status),
+         decline_reason = COALESCE($19, decline_reason),
+         post_contract_disposition = COALESCE($20, post_contract_disposition),
          updated_at = NOW()
        WHERE id = $1 AND org_id = $2
        RETURNING id, org_id, created_by_user_id, status, title, description_html, product_type, vendor,
                  tags, price_cents, currency_code, sku, media_urls, ai_quality, ai_attributes,
-                 suggested_price_cents, created_at, updated_at"#,
+                 suggested_price_cents, created_at, updated_at,
+                 consignor_id, contract_id, acceptance_status, decline_reason, post_contract_disposition"#,
   )
   .bind(id)
   .bind(org_id)
@@ -145,6 +155,11 @@ pub async fn update(
   .bind(patch.ai_quality)
   .bind(patch.ai_attributes)
   .bind(patch.suggested_price_cents)
+  .bind(patch.consignor_id)
+  .bind(patch.contract_id)
+  .bind(patch.acceptance_status)
+  .bind(patch.decline_reason)
+  .bind(patch.post_contract_disposition)
   .fetch_optional(pool)
   .await?;
 
@@ -194,6 +209,11 @@ mod tests {
         status: None,
         ai_quality: None,
         ai_attributes: None,
+        consignor_id: None,
+        contract_id: None,
+        acceptance_status: None,
+        decline_reason: None,
+        post_contract_disposition: None,
       },
     )
     .await

@@ -1,34 +1,40 @@
 mod activity;
+mod consignors;
+mod contracts;
+pub mod extractors;
 mod intake;
 mod listings;
 mod llm;
-mod stores;
+mod state;
 mod subscribers;
 mod webhooks;
 
-use axum::{
-  routing::get,
-  Extension, Json, Router,
-};
+pub use state::AppState;
+
+use axum::{routing::get, Json, Router};
 use sqlx::PgPool;
 
-pub fn api_router(pool: PgPool) -> Router {
-  let api = Router::new()
-    .merge(health_routes())
-    .merge(stores::routes())
-    .merge(listings::routes())
-    .merge(intake::routes())
-    .merge(webhooks::routes())
-    .merge(activity::routes())
-    .merge(subscribers::routes())
-    .merge(llm::routes());
-
+/// API tree with [`AppState`] (database pool + future shared deps).
+pub fn api_router(pool: PgPool) -> Router<AppState> {
+  let state = AppState::new(pool);
   Router::new()
-    .nest("/api", api)
-    .layer(Extension(pool))
+    .nest(
+      "/api",
+      Router::new()
+        .merge(health_routes())
+        .merge(listings::routes())
+        .merge(consignors::routes())
+        .merge(contracts::routes())
+        .merge(intake::routes())
+        .merge(webhooks::routes())
+        .merge(activity::routes())
+        .merge(subscribers::routes())
+        .merge(llm::routes())
+        .with_state(state),
+    )
 }
 
-fn health_routes() -> Router<()> {
+fn health_routes() -> Router<AppState> {
   Router::new().route(
     "/health",
     get(|| async { Json(serde_json::json!({ "ok": true, "service": "clawpify-backend" })) }),
