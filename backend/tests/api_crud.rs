@@ -1,6 +1,8 @@
 //! HTTP integration tests for API routes (listings, intake, health, subscribers,
 //! activity, LLM validation, Twilio webhook edge cases).
 
+mod common;
+
 use std::collections::BTreeMap;
 use std::sync::Mutex;
 
@@ -17,44 +19,27 @@ use tower::ServiceExt;
 use uuid::Uuid;
 
 use backend::routes::api_router;
+use common::{ensure_org, json_from_body};
 
 type HmacSha1 = Hmac<Sha1>;
 
 /// Serialize Twilio env mutations — integration tests may run in parallel by default.
 static TWILIO_TEST_LOCK: Mutex<()> = Mutex::new(());
 
-async fn ensure_org(pool: &PgPool, org_id: &str) {
-  sqlx::query("INSERT INTO organizations (id) VALUES ($1) ON CONFLICT (id) DO NOTHING")
-    .bind(org_id)
-    .execute(pool)
-    .await
-    .expect("ensure org");
-}
-
 fn listings_uri(path_and_query: &str) -> String {
-  format!("/api/listings{path_and_query}")
+  format!("/api/v1/listings{path_and_query}")
 }
 
 fn intake_uri(path_and_query: &str) -> String {
-  format!("/api/intake{path_and_query}")
+  format!("/api/v1/intake{path_and_query}")
 }
 
 fn consignors_uri(path_and_query: &str) -> String {
-  format!("/api/consignors{path_and_query}")
+  format!("/api/v1/consignors{path_and_query}")
 }
 
 fn contracts_uri(path_and_query: &str) -> String {
-  format!("/api/contracts{path_and_query}")
-}
-
-async fn json_from_body(body: Body) -> Value {
-  let bytes = axum::body::to_bytes(body, usize::MAX)
-    .await
-    .expect("read body");
-  if bytes.is_empty() {
-    return Value::Null;
-  }
-  serde_json::from_slice(&bytes).expect("parse json body")
+  format!("/api/v1/contracts{path_and_query}")
 }
 
 #[sqlx::test(migrations = "../migrations")]
@@ -317,19 +302,23 @@ fn twilio_sign_url_params(auth_token: &str, url: &str, params: &BTreeMap<String,
 #[sqlx::test(migrations = "../migrations")]
 async fn health_ok(_pool: PgPool) {
   let app = api_router(_pool);
-  let res = app
-    .oneshot(
-      Request::builder()
-        .uri("/api/health")
-        .body(Body::empty())
-        .unwrap(),
-    )
-    .await
-    .expect("health");
-  assert_eq!(res.status(), StatusCode::OK);
-  let v: Value = json_from_body(res.into_body()).await;
-  assert_eq!(v["ok"], true);
-  assert_eq!(v["service"], "clawpify-backend");
+  for path in ["/api/v1/health", "/api/health"] {
+    let res = app
+      .clone()
+      .oneshot(
+        Request::builder()
+          .uri(path)
+          .body(Body::empty())
+          .unwrap(),
+      )
+      .await
+      .expect("health");
+    assert_eq!(res.status(), StatusCode::OK, "path {path}");
+    let v: Value = json_from_body(res.into_body()).await;
+    assert_eq!(v["ok"], true);
+    assert_eq!(v["service"], "clawpify-backend");
+    assert_eq!(v["database"], "up");
+  }
 }
 
 #[sqlx::test(migrations = "../migrations")]
@@ -341,7 +330,7 @@ async fn subscribers_validation_and_subscribe(pool: PgPool) {
     .oneshot(
       Request::builder()
         .method("POST")
-        .uri("/api/subscribers")
+        .uri("/api/v1/subscribers")
         .header(header::CONTENT_TYPE, "application/json")
         .body(Body::from(json!({ "email": "" }).to_string()))
         .unwrap(),
@@ -355,7 +344,7 @@ async fn subscribers_validation_and_subscribe(pool: PgPool) {
     .oneshot(
       Request::builder()
         .method("POST")
-        .uri("/api/subscribers")
+        .uri("/api/v1/subscribers")
         .header(header::CONTENT_TYPE, "application/json")
         .body(Body::from(json!({ "email": "not-an-email" }).to_string()))
         .unwrap(),
@@ -370,7 +359,7 @@ async fn subscribers_validation_and_subscribe(pool: PgPool) {
     .oneshot(
       Request::builder()
         .method("POST")
-        .uri("/api/subscribers")
+        .uri("/api/v1/subscribers")
         .header(header::CONTENT_TYPE, "application/json")
         .body(Body::from(json!({ "email": email }).to_string()))
         .unwrap(),
@@ -386,7 +375,7 @@ async fn subscribers_validation_and_subscribe(pool: PgPool) {
     .oneshot(
       Request::builder()
         .method("POST")
-        .uri("/api/subscribers")
+        .uri("/api/v1/subscribers")
         .header(header::CONTENT_TYPE, "application/json")
         .body(Body::from(json!({ "email": email }).to_string()))
         .unwrap(),
@@ -405,7 +394,7 @@ async fn agent_activity_unauthorized_without_user_header(pool: PgPool) {
   let res = app
     .oneshot(
       Request::builder()
-        .uri("/api/agent-activity")
+        .uri("/api/v1/agent-activity")
         .body(Body::empty())
         .unwrap(),
     )
@@ -426,7 +415,7 @@ async fn agent_activity_log_and_list(pool: PgPool) {
     .clone()
     .oneshot(
       Request::builder()
-        .uri("/api/agent-activity")
+        .uri("/api/v1/agent-activity")
         .header("X-Internal-User-Id", user)
         .header("X-Internal-Org-Id", org)
         .body(Body::empty())
@@ -443,7 +432,7 @@ async fn agent_activity_log_and_list(pool: PgPool) {
     .oneshot(
       Request::builder()
         .method("POST")
-        .uri("/api/agent-activity")
+        .uri("/api/v1/agent-activity")
         .header(header::CONTENT_TYPE, "application/json")
         .header("X-Internal-User-Id", user)
         .header("X-Internal-Org-Id", org)
@@ -470,7 +459,7 @@ async fn agent_activity_log_and_list(pool: PgPool) {
     .oneshot(
       Request::builder()
         .method("POST")
-        .uri("/api/agent-activity")
+        .uri("/api/v1/agent-activity")
         .header(header::CONTENT_TYPE, "application/json")
         .header("X-Internal-User-Id", user)
         .header("X-Internal-Org-Id", org)
@@ -488,7 +477,7 @@ async fn agent_activity_log_and_list(pool: PgPool) {
   let res = app
     .oneshot(
       Request::builder()
-        .uri("/api/agent-activity")
+        .uri("/api/v1/agent-activity")
         .header("X-Internal-User-Id", user)
         .header("X-Internal-Org-Id", org)
         .body(Body::empty())
@@ -508,7 +497,7 @@ async fn llm_agents_unauthorized_without_user_header(pool: PgPool) {
     .oneshot(
       Request::builder()
         .method("POST")
-        .uri("/api/llm/agents")
+        .uri("/api/v1/llm/agents")
         .header(header::CONTENT_TYPE, "application/json")
         .body(Body::from(
           json!({
@@ -530,7 +519,7 @@ async fn llm_agents_rejects_empty_agents(pool: PgPool) {
     .oneshot(
       Request::builder()
         .method("POST")
-        .uri("/api/llm/agents")
+        .uri("/api/v1/llm/agents")
         .header(header::CONTENT_TYPE, "application/json")
         .header("X-Internal-User-Id", "u-llm-1")
         .header("X-Internal-Org-Id", "org-llm-1")
@@ -548,7 +537,7 @@ async fn twilio_webhook_requires_signature_when_configured(pool: PgPool) {
   std::env::set_var("TWILIO_AUTH_TOKEN", "test_auth_token_for_integration");
   std::env::set_var(
     "TWILIO_WEBHOOK_URL",
-    "https://twilio.test/api/webhooks/twilio/messaging",
+    "https://twilio.test/api/v1/webhooks/twilio/messaging",
   );
   std::env::remove_var("TWILIO_WEBHOOK_PATH");
 
@@ -559,7 +548,7 @@ async fn twilio_webhook_requires_signature_when_configured(pool: PgPool) {
     .oneshot(
       Request::builder()
         .method("POST")
-        .uri("/api/webhooks/twilio/messaging")
+        .uri("/api/v1/webhooks/twilio/messaging")
         .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
         .body(Body::from(body))
         .unwrap(),
@@ -580,7 +569,7 @@ async fn twilio_webhook_rejects_bad_signature(pool: PgPool) {
   std::env::set_var("TWILIO_AUTH_TOKEN", "test_auth_token_for_integration");
   std::env::set_var(
     "TWILIO_WEBHOOK_URL",
-    "https://twilio.test/api/webhooks/twilio/messaging",
+    "https://twilio.test/api/v1/webhooks/twilio/messaging",
   );
 
   let app = api_router(pool);
@@ -590,7 +579,7 @@ async fn twilio_webhook_rejects_bad_signature(pool: PgPool) {
     .oneshot(
       Request::builder()
         .method("POST")
-        .uri("/api/webhooks/twilio/messaging")
+        .uri("/api/v1/webhooks/twilio/messaging")
         .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
         .header("X-Twilio-Signature", "AAAA")
         .body(Body::from(body))
@@ -608,7 +597,7 @@ async fn twilio_webhook_rejects_bad_signature(pool: PgPool) {
 async fn twilio_webhook_bound_phone_num_media_zero_asks_for_photo(pool: PgPool) {
   let _lock = TWILIO_TEST_LOCK.lock().expect("twilio lock");
   std::env::set_var("TWILIO_AUTH_TOKEN", "test_auth_token_for_integration");
-  let webhook_url = "https://twilio.test/api/webhooks/twilio/messaging";
+  let webhook_url = "https://twilio.test/api/v1/webhooks/twilio/messaging";
   std::env::set_var("TWILIO_WEBHOOK_URL", webhook_url);
 
   ensure_org(&pool, "org-twilio-api").await;
@@ -639,7 +628,7 @@ async fn twilio_webhook_bound_phone_num_media_zero_asks_for_photo(pool: PgPool) 
     .oneshot(
       Request::builder()
         .method("POST")
-        .uri("/api/webhooks/twilio/messaging")
+        .uri("/api/v1/webhooks/twilio/messaging")
         .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
         .header("X-Twilio-Signature", &sig)
         .body(Body::from(body_str))

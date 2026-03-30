@@ -1,17 +1,20 @@
 use chrono::{DateTime, Duration, Utc};
 use serde::Serialize;
-use sqlx::{PgPool, Postgres, QueryBuilder};
+use sqlx::{Executor, PgPool, Postgres, QueryBuilder};
 use uuid::Uuid;
 
 use crate::dto::contracts::{ContractCreateRequest, ContractPatchRequest};
 use crate::models::contracts::Contract;
 use super::pagination::Pagination;
 
-pub async fn consignor_in_org(
-  pool: &PgPool,
+pub async fn consignor_in_org<'e, E>(
+  executor: E,
   org_id: &str,
   consignor_id: Uuid,
-) -> Result<bool, sqlx::Error> {
+) -> Result<bool, sqlx::Error>
+where
+  E: Executor<'e, Database = Postgres>,
+{
   let ok: bool = sqlx::query_scalar(
     r#"SELECT EXISTS(
          SELECT 1 FROM consignors WHERE id = $1 AND org_id = $2
@@ -19,7 +22,7 @@ pub async fn consignor_in_org(
   )
   .bind(consignor_id)
   .bind(org_id)
-  .fetch_one(pool)
+  .fetch_one(executor)
   .await?;
   Ok(ok)
 }
@@ -86,11 +89,14 @@ pub async fn get_by_id(
   .await
 }
 
-pub async fn create(
-  pool: &PgPool,
+pub async fn create<'e, E>(
+  executor: E,
   org_id: &str,
   body: ContractCreateRequest,
-) -> Result<Contract, sqlx::Error> {
+) -> Result<Contract, sqlx::Error>
+where
+  E: Executor<'e, Database = Postgres>,
+{
   sqlx::query_as::<_, Contract>(
     r#"INSERT INTO contracts (
          org_id, consignor_id, contract_type, status, start_at, end_at,
@@ -113,7 +119,7 @@ pub async fn create(
   .bind(body.opt_out_under_threshold_donation)
   .bind(body.terms_version.as_deref())
   .bind(body.notes.as_deref())
-  .fetch_one(pool)
+  .fetch_one(executor)
   .await
 }
 

@@ -54,7 +54,9 @@ pub async fn twilio_messaging(
   body: Bytes,
 ) -> Response {
   let pool = &state.pool;
-  let path = std::env::var("TWILIO_WEBHOOK_PATH").unwrap_or_else(|_| "/api/webhooks/twilio/messaging".to_string());
+  let path = std::env::var("TWILIO_WEBHOOK_PATH").unwrap_or_else(|_| {
+    "/api/v1/webhooks/twilio/messaging".to_string()
+  });
   let Ok(auth_token) = std::env::var("TWILIO_AUTH_TOKEN") else {
     tracing::error!(target: "twilio", "TWILIO_AUTH_TOKEN not set");
     return (StatusCode::SERVICE_UNAVAILABLE, "Twilio not configured").into_response();

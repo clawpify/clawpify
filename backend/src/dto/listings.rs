@@ -30,10 +30,15 @@ pub struct ListingRequestBody {
   pub ai_quality: Option<serde_json::Value>,
   /* ai_attributes: The AI attributes of the listing. */
   pub ai_attributes: Option<serde_json::Value>,
+  /* consignor_id: The ID of the consignor. */
   pub consignor_id: Option<Uuid>,
+  /* contract_id: The ID of the contract. */
   pub contract_id: Option<Uuid>,
+  /* acceptance_status: The acceptance status of the listing. */
   pub acceptance_status: Option<String>,
+  /* decline_reason: The reason the listing was declined. */
   pub decline_reason: Option<String>,
+  /* post_contract_disposition: The disposition of the listing after the contract. */
   pub post_contract_disposition: Option<String>,
 }
 

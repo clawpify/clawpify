@@ -1,16 +1,12 @@
 use axum::{
   extract::Request,
+  http::{HeaderName, HeaderValue},
   middleware::Next,
   response::{IntoResponse, Response},
-  Json,
 };
-use serde::Serialize;
 use tower_http::cors::{AllowOrigin, Any, CorsLayer};
 
-#[derive(Serialize)]
-struct ErrorResponse {
-  error: &'static str,
-}
+static X_REQUEST_ID: HeaderName = HeaderName::from_static("x-request-id");
 
 pub async fn require_internal_auth(request: Request, next: Next) -> Response {
   let has_user = request
@@ -20,24 +16,41 @@ pub async fn require_internal_auth(request: Request, next: Next) -> Response {
     .is_some();
 
   if !has_user {
-    return (
-      axum::http::StatusCode::UNAUTHORIZED,
-      Json(ErrorResponse {
-        error: "Missing internal auth header",
-      }),
-    )
-      .into_response();
+    return crate::error::ApiError::unauthorized("Missing internal auth header").into_response();
   }
 
   next.run(request).await
 }
 
+pub async fn request_id(mut request: Request, next: Next) -> Response {
+  let id = request
+    .headers()
+    .get(&X_REQUEST_ID)
+    .and_then(|v| v.to_str().ok())
+    .filter(|s| !s.is_empty())
+    .map(String::from)
+    .unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
+
+  let hv = HeaderValue::from_str(&id).unwrap_or_else(|_| HeaderValue::from_static("invalid-id"));
+  request.headers_mut().insert(&X_REQUEST_ID, hv.clone());
+
+  let mut response = next.run(request).await;
+  response.headers_mut().insert(&X_REQUEST_ID, hv);
+  response
+}
+
 pub async fn log_requests(request: Request, next: Next) -> Response {
   let method = request.method().clone();
   let path = request.uri().path().to_owned();
+  let rid = request
+    .headers()
+    .get(&X_REQUEST_ID)
+    .and_then(|v| v.to_str().ok())
+    .unwrap_or("-")
+    .to_owned();
   let response = next.run(request).await;
   let status = response.status();
-  println!("[{}] {} -> {}", method, path, status);
+  println!("[{}] {} {} -> {}", rid, method, path, status);
   response
 }
 

@@ -106,10 +106,7 @@ async fn put_binding(
   .map_err(|e| {
     if let sqlx::Error::Database(ref d) = e {
       if d.is_unique_violation() {
-        return (
-          axum::http::StatusCode::CONFLICT,
-          axum::Json(serde_json::json!({ "error": "Phone conflict" })),
-        );
+        return error::conflict("Phone conflict");
       }
     }
     error::db_error(e)

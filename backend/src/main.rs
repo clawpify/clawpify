@@ -21,6 +21,7 @@ async fn main() {
 
   let app = routes::api_router(pool)
     .layer(from_fn(middleware::log_requests))
+    .layer(from_fn(middleware::request_id))
     .layer(middleware::cors_layer());
 
   let port: u16 = std::env::var("PORT")
@@ -31,7 +32,11 @@ async fn main() {
   let addr = SocketAddr::from(([0, 0, 0, 0], port));
   
   println!("Server is running on {}", addr);
-  axum::serve(tokio::net::TcpListener::bind(addr).await.unwrap(), app)
-    .await
-    .unwrap();
+  let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
+  axum::serve(
+    listener,
+    app.into_make_service_with_connect_info::<SocketAddr>(),
+  )
+  .await
+  .unwrap();
 }
