@@ -39,4 +39,9 @@ pub struct ConsignmentListing {
   pub created_at: chrono::DateTime<chrono::Utc>,
   /* updated_at: The date and time the listing was last updated. */
   pub updated_at: chrono::DateTime<chrono::Utc>,
+  pub consignor_id: Option<Uuid>,
+  pub contract_id: Option<Uuid>,
+  pub acceptance_status: Option<String>,
+  pub decline_reason: Option<String>,
+  pub post_contract_disposition: Option<String>,
 }

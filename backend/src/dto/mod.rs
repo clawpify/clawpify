@@ -1,7 +1,9 @@
 pub mod activity;
+pub mod consignors;
+pub mod contracts;
 pub mod intake;
+pub mod intake_batches;
 pub mod listings;
 pub mod llm;
 pub mod shopify;
-pub mod stores;
 pub mod subscribers;

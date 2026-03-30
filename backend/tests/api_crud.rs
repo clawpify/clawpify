@@ -1,5 +1,7 @@
-//! HTTP integration tests for API routes (listings, intake, stores, health, subscribers,
+//! HTTP integration tests for API routes (listings, intake, health, subscribers,
 //! activity, LLM validation, Twilio webhook edge cases).
+
+mod common;
 
 use std::collections::BTreeMap;
 use std::sync::Mutex;
@@ -17,40 +19,27 @@ use tower::ServiceExt;
 use uuid::Uuid;
 
 use backend::routes::api_router;
+use common::{ensure_org, json_from_body};
 
 type HmacSha1 = Hmac<Sha1>;
 
 /// Serialize Twilio env mutations — integration tests may run in parallel by default.
 static TWILIO_TEST_LOCK: Mutex<()> = Mutex::new(());
 
-async fn ensure_org(pool: &PgPool, org_id: &str) {
-  sqlx::query("INSERT INTO organizations (id) VALUES ($1) ON CONFLICT (id) DO NOTHING")
-    .bind(org_id)
-    .execute(pool)
-    .await
-    .expect("ensure org");
-}
-
 fn listings_uri(path_and_query: &str) -> String {
-  format!("/api/listings{path_and_query}")
-}
-
-fn stores_uri(path_and_query: &str) -> String {
-  format!("/api/stores{path_and_query}")
+  format!("/api/v1/listings{path_and_query}")
 }
 
 fn intake_uri(path_and_query: &str) -> String {
-  format!("/api/intake{path_and_query}")
+  format!("/api/v1/intake{path_and_query}")
 }
 
-async fn json_from_body(body: Body) -> Value {
-  let bytes = axum::body::to_bytes(body, usize::MAX)
-    .await
-    .expect("read body");
-  if bytes.is_empty() {
-    return Value::Null;
-  }
-  serde_json::from_slice(&bytes).expect("parse json body")
+fn consignors_uri(path_and_query: &str) -> String {
+  format!("/api/v1/consignors{path_and_query}")
+}
+
+fn contracts_uri(path_and_query: &str) -> String {
+  format!("/api/v1/contracts{path_and_query}")
 }
 
 #[sqlx::test(migrations = "../migrations")]
@@ -91,7 +80,7 @@ async fn listings_crud_and_list_filter(pool: PgPool) {
     )
     .await
     .expect("post listing");
-  assert_eq!(res.status(), StatusCode::OK);
+  assert_eq!(res.status(), StatusCode::CREATED);
   let created: Value = json_from_body(res.into_body()).await;
   let id_str = created["id"].as_str().expect("listing id");
   let id = Uuid::parse_str(id_str).unwrap();
@@ -205,7 +194,7 @@ async fn listings_wrong_org_returns_not_found(pool: PgPool) {
     )
     .await
     .expect("post");
-  assert_eq!(res.status(), StatusCode::OK);
+  assert_eq!(res.status(), StatusCode::CREATED);
   let created: Value = json_from_body(res.into_body()).await;
   let id = created["id"].as_str().unwrap();
 
@@ -298,104 +287,6 @@ async fn intake_phone_binding_put_get_delete(pool: PgPool) {
   assert_eq!(res.status(), StatusCode::NOT_FOUND);
 }
 
-#[sqlx::test(migrations = "../migrations")]
-async fn stores_crud(pool: PgPool) {
-  ensure_org(&pool, "org-stores-api").await;
-
-  let app = api_router(pool.clone());
-  let org = "org-stores-api";
-  let user = "user-stores-1";
-
-  let create_body = json!({
-    "base_url": "https://example.com",
-    "platform": "url"
-  });
-  let res = app
-    .clone()
-    .oneshot(
-      Request::builder()
-        .method("POST")
-        .uri(stores_uri(""))
-        /* stores::create inserts org if missing; use consistent org */
-        .header(header::CONTENT_TYPE, "application/json")
-        .header("X-Internal-User-Id", user)
-        .header("X-Internal-Org-Id", org)
-        .body(Body::from(create_body.to_string()))
-        .unwrap(),
-    )
-    .await
-    .expect("post store");
-  assert_eq!(res.status(), StatusCode::OK);
-  let created: Value = json_from_body(res.into_body()).await;
-  let id_str = created["id"].as_str().expect("store id");
-  let id = Uuid::parse_str(id_str).unwrap();
-
-  let res = app
-    .clone()
-    .oneshot(
-      Request::builder()
-        .uri(stores_uri(&format!("/{id}")))
-        .header("X-Internal-User-Id", user)
-        .header("X-Internal-Org-Id", org)
-        .body(Body::empty())
-        .unwrap(),
-    )
-    .await
-    .expect("get store");
-  assert_eq!(res.status(), StatusCode::OK);
-
-  let patch = json!({
-    "base_url": "https://updated.example.com",
-    "platform": "url"
-  });
-  let res = app
-    .clone()
-    .oneshot(
-      Request::builder()
-        .method("PATCH")
-        .uri(stores_uri(&format!("/{id}")))
-        .header(header::CONTENT_TYPE, "application/json")
-        .header("X-Internal-User-Id", user)
-        .header("X-Internal-Org-Id", org)
-        .body(Body::from(patch.to_string()))
-        .unwrap(),
-    )
-    .await
-    .expect("patch store");
-  assert_eq!(res.status(), StatusCode::OK);
-  let updated: Value = json_from_body(res.into_body()).await;
-  assert_eq!(updated["platform"], "url");
-
-  let res = app
-    .clone()
-    .oneshot(
-      Request::builder()
-        .method("DELETE")
-        .uri(stores_uri(&format!("/{id}")))
-        .header("X-Internal-User-Id", user)
-        .header("X-Internal-Org-Id", org)
-        .body(Body::empty())
-        .unwrap(),
-    )
-    .await
-    .expect("delete store");
-  assert_eq!(res.status(), StatusCode::OK);
-
-  let res = app
-    .clone()
-    .oneshot(
-      Request::builder()
-        .uri(stores_uri(&format!("/{id}")))
-        .header("X-Internal-User-Id", user)
-        .header("X-Internal-Org-Id", org)
-        .body(Body::empty())
-        .unwrap(),
-    )
-    .await
-    .expect("get deleted store");
-  assert_eq!(res.status(), StatusCode::NOT_FOUND);
-}
-
 fn twilio_sign_url_params(auth_token: &str, url: &str, params: &BTreeMap<String, String>) -> String {
   let mut payload = String::with_capacity(url.len() + params.len() * 32);
   payload.push_str(url);
@@ -411,19 +302,23 @@ fn twilio_sign_url_params(auth_token: &str, url: &str, params: &BTreeMap<String,
 #[sqlx::test(migrations = "../migrations")]
 async fn health_ok(_pool: PgPool) {
   let app = api_router(_pool);
-  let res = app
-    .oneshot(
-      Request::builder()
-        .uri("/api/health")
-        .body(Body::empty())
-        .unwrap(),
-    )
-    .await
-    .expect("health");
-  assert_eq!(res.status(), StatusCode::OK);
-  let v: Value = json_from_body(res.into_body()).await;
-  assert_eq!(v["ok"], true);
-  assert_eq!(v["service"], "clawpify-backend");
+  for path in ["/api/v1/health", "/api/health"] {
+    let res = app
+      .clone()
+      .oneshot(
+        Request::builder()
+          .uri(path)
+          .body(Body::empty())
+          .unwrap(),
+      )
+      .await
+      .expect("health");
+    assert_eq!(res.status(), StatusCode::OK, "path {path}");
+    let v: Value = json_from_body(res.into_body()).await;
+    assert_eq!(v["ok"], true);
+    assert_eq!(v["service"], "clawpify-backend");
+    assert_eq!(v["database"], "up");
+  }
 }
 
 #[sqlx::test(migrations = "../migrations")]
@@ -435,7 +330,7 @@ async fn subscribers_validation_and_subscribe(pool: PgPool) {
     .oneshot(
       Request::builder()
         .method("POST")
-        .uri("/api/subscribers")
+        .uri("/api/v1/subscribers")
         .header(header::CONTENT_TYPE, "application/json")
         .body(Body::from(json!({ "email": "" }).to_string()))
         .unwrap(),
@@ -449,7 +344,7 @@ async fn subscribers_validation_and_subscribe(pool: PgPool) {
     .oneshot(
       Request::builder()
         .method("POST")
-        .uri("/api/subscribers")
+        .uri("/api/v1/subscribers")
         .header(header::CONTENT_TYPE, "application/json")
         .body(Body::from(json!({ "email": "not-an-email" }).to_string()))
         .unwrap(),
@@ -464,7 +359,7 @@ async fn subscribers_validation_and_subscribe(pool: PgPool) {
     .oneshot(
       Request::builder()
         .method("POST")
-        .uri("/api/subscribers")
+        .uri("/api/v1/subscribers")
         .header(header::CONTENT_TYPE, "application/json")
         .body(Body::from(json!({ "email": email }).to_string()))
         .unwrap(),
@@ -480,7 +375,7 @@ async fn subscribers_validation_and_subscribe(pool: PgPool) {
     .oneshot(
       Request::builder()
         .method("POST")
-        .uri("/api/subscribers")
+        .uri("/api/v1/subscribers")
         .header(header::CONTENT_TYPE, "application/json")
         .body(Body::from(json!({ "email": email }).to_string()))
         .unwrap(),
@@ -499,7 +394,7 @@ async fn agent_activity_unauthorized_without_user_header(pool: PgPool) {
   let res = app
     .oneshot(
       Request::builder()
-        .uri("/api/agent-activity")
+        .uri("/api/v1/agent-activity")
         .body(Body::empty())
         .unwrap(),
     )
@@ -520,7 +415,7 @@ async fn agent_activity_log_and_list(pool: PgPool) {
     .clone()
     .oneshot(
       Request::builder()
-        .uri("/api/agent-activity")
+        .uri("/api/v1/agent-activity")
         .header("X-Internal-User-Id", user)
         .header("X-Internal-Org-Id", org)
         .body(Body::empty())
@@ -537,7 +432,7 @@ async fn agent_activity_log_and_list(pool: PgPool) {
     .oneshot(
       Request::builder()
         .method("POST")
-        .uri("/api/agent-activity")
+        .uri("/api/v1/agent-activity")
         .header(header::CONTENT_TYPE, "application/json")
         .header("X-Internal-User-Id", user)
         .header("X-Internal-Org-Id", org)
@@ -564,7 +459,7 @@ async fn agent_activity_log_and_list(pool: PgPool) {
     .oneshot(
       Request::builder()
         .method("POST")
-        .uri("/api/agent-activity")
+        .uri("/api/v1/agent-activity")
         .header(header::CONTENT_TYPE, "application/json")
         .header("X-Internal-User-Id", user)
         .header("X-Internal-Org-Id", org)
@@ -582,7 +477,7 @@ async fn agent_activity_log_and_list(pool: PgPool) {
   let res = app
     .oneshot(
       Request::builder()
-        .uri("/api/agent-activity")
+        .uri("/api/v1/agent-activity")
         .header("X-Internal-User-Id", user)
         .header("X-Internal-Org-Id", org)
         .body(Body::empty())
@@ -602,7 +497,7 @@ async fn llm_agents_unauthorized_without_user_header(pool: PgPool) {
     .oneshot(
       Request::builder()
         .method("POST")
-        .uri("/api/llm/agents")
+        .uri("/api/v1/llm/agents")
         .header(header::CONTENT_TYPE, "application/json")
         .body(Body::from(
           json!({
@@ -624,7 +519,7 @@ async fn llm_agents_rejects_empty_agents(pool: PgPool) {
     .oneshot(
       Request::builder()
         .method("POST")
-        .uri("/api/llm/agents")
+        .uri("/api/v1/llm/agents")
         .header(header::CONTENT_TYPE, "application/json")
         .header("X-Internal-User-Id", "u-llm-1")
         .header("X-Internal-Org-Id", "org-llm-1")
@@ -642,7 +537,7 @@ async fn twilio_webhook_requires_signature_when_configured(pool: PgPool) {
   std::env::set_var("TWILIO_AUTH_TOKEN", "test_auth_token_for_integration");
   std::env::set_var(
     "TWILIO_WEBHOOK_URL",
-    "https://twilio.test/api/webhooks/twilio/messaging",
+    "https://twilio.test/api/v1/webhooks/twilio/messaging",
   );
   std::env::remove_var("TWILIO_WEBHOOK_PATH");
 
@@ -653,7 +548,7 @@ async fn twilio_webhook_requires_signature_when_configured(pool: PgPool) {
     .oneshot(
       Request::builder()
         .method("POST")
-        .uri("/api/webhooks/twilio/messaging")
+        .uri("/api/v1/webhooks/twilio/messaging")
         .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
         .body(Body::from(body))
         .unwrap(),
@@ -674,7 +569,7 @@ async fn twilio_webhook_rejects_bad_signature(pool: PgPool) {
   std::env::set_var("TWILIO_AUTH_TOKEN", "test_auth_token_for_integration");
   std::env::set_var(
     "TWILIO_WEBHOOK_URL",
-    "https://twilio.test/api/webhooks/twilio/messaging",
+    "https://twilio.test/api/v1/webhooks/twilio/messaging",
   );
 
   let app = api_router(pool);
@@ -684,7 +579,7 @@ async fn twilio_webhook_rejects_bad_signature(pool: PgPool) {
     .oneshot(
       Request::builder()
         .method("POST")
-        .uri("/api/webhooks/twilio/messaging")
+        .uri("/api/v1/webhooks/twilio/messaging")
         .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
         .header("X-Twilio-Signature", "AAAA")
         .body(Body::from(body))
@@ -702,7 +597,7 @@ async fn twilio_webhook_rejects_bad_signature(pool: PgPool) {
 async fn twilio_webhook_bound_phone_num_media_zero_asks_for_photo(pool: PgPool) {
   let _lock = TWILIO_TEST_LOCK.lock().expect("twilio lock");
   std::env::set_var("TWILIO_AUTH_TOKEN", "test_auth_token_for_integration");
-  let webhook_url = "https://twilio.test/api/webhooks/twilio/messaging";
+  let webhook_url = "https://twilio.test/api/v1/webhooks/twilio/messaging";
   std::env::set_var("TWILIO_WEBHOOK_URL", webhook_url);
 
   ensure_org(&pool, "org-twilio-api").await;
@@ -733,7 +628,7 @@ async fn twilio_webhook_bound_phone_num_media_zero_asks_for_photo(pool: PgPool) 
     .oneshot(
       Request::builder()
         .method("POST")
-        .uri("/api/webhooks/twilio/messaging")
+        .uri("/api/v1/webhooks/twilio/messaging")
         .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
         .header("X-Twilio-Signature", &sig)
         .body(Body::from(body_str))
@@ -750,4 +645,275 @@ async fn twilio_webhook_bound_phone_num_media_zero_asks_for_photo(pool: PgPool) 
 
   std::env::remove_var("TWILIO_AUTH_TOKEN");
   std::env::remove_var("TWILIO_WEBHOOK_URL");
+}
+
+#[sqlx::test(migrations = "../migrations")]
+async fn consignment_consignor_contract_payout_listing_flow(pool: PgPool) {
+  ensure_org(&pool, "org-consign").await;
+  let org = "org-consign";
+  let user = "user-consign-1";
+  let app = api_router(pool.clone());
+
+  let res = app
+    .clone()
+    .oneshot(
+      Request::builder()
+        .method("POST")
+        .uri(consignors_uri(""))
+        .header(header::CONTENT_TYPE, "application/json")
+        .header("X-Internal-User-Id", user)
+        .header("X-Internal-Org-Id", org)
+        .body(Body::from(
+          json!({ "display_name": "Alice Vintage" }).to_string(),
+        ))
+        .unwrap(),
+    )
+    .await
+    .expect("create consignor");
+  assert_eq!(res.status(), StatusCode::CREATED);
+  let cons: Value = json_from_body(res.into_body()).await;
+  let consignor_id = cons["id"].as_str().expect("consignor id");
+
+  let start = "2026-01-01T00:00:00Z";
+  let end = "2026-03-01T00:00:00Z";
+  let contract_body = json!({
+    "consignor_id": consignor_id,
+    "contract_type": "donate_on",
+    "start_at": start,
+    "end_at": end,
+    "consignor_split_bps": 4000,
+    "store_split_bps": 6000
+  });
+  let res = app
+    .clone()
+    .oneshot(
+      Request::builder()
+        .method("POST")
+        .uri(contracts_uri(""))
+        .header(header::CONTENT_TYPE, "application/json")
+        .header("X-Internal-User-Id", user)
+        .header("X-Internal-Org-Id", org)
+        .body(Body::from(contract_body.to_string()))
+        .unwrap(),
+    )
+    .await
+    .expect("create contract");
+  assert_eq!(res.status(), StatusCode::CREATED);
+  let ctr: Value = json_from_body(res.into_body()).await;
+  let contract_id = ctr["id"].as_str().expect("contract id");
+
+  let res = app
+    .clone()
+    .oneshot(
+      Request::builder()
+        .method("DELETE")
+        .uri(consignors_uri(&format!("/{consignor_id}")))
+        .header("X-Internal-User-Id", user)
+        .header("X-Internal-Org-Id", org)
+        .body(Body::empty())
+        .unwrap(),
+    )
+    .await
+    .expect("delete consignor blocked");
+  assert_eq!(res.status(), StatusCode::CONFLICT);
+
+  let res = app
+    .clone()
+    .oneshot(
+      Request::builder()
+        .uri(contracts_uri(&format!(
+          "?consignor_id={consignor_id}&status=active"
+        )))
+        .header("X-Internal-User-Id", user)
+        .header("X-Internal-Org-Id", org)
+        .body(Body::empty())
+        .unwrap(),
+    )
+    .await
+    .expect("list contracts");
+  assert_eq!(res.status(), StatusCode::OK);
+  let ctr_list: Vec<Value> = serde_json::from_value(json_from_body(res.into_body()).await).unwrap();
+  assert!(ctr_list.iter().any(|r| r["id"].as_str() == Some(contract_id)));
+
+  let res = app
+    .clone()
+    .oneshot(
+      Request::builder()
+        .method("POST")
+        .uri(contracts_uri(&format!("/{contract_id}/payouts")))
+        .header(header::CONTENT_TYPE, "application/json")
+        .header("X-Internal-User-Id", user)
+        .header("X-Internal-Org-Id", org)
+        .body(Body::from(
+          json!({ "amount_cents": 500, "method": "cash", "payout_index": 1 }).to_string(),
+        ))
+        .unwrap(),
+    )
+    .await
+    .expect("payout too small");
+  assert_eq!(res.status(), StatusCode::BAD_REQUEST);
+
+  let res = app
+    .clone()
+    .oneshot(
+      Request::builder()
+        .method("POST")
+        .uri(contracts_uri(&format!("/{contract_id}/payouts")))
+        .header(header::CONTENT_TYPE, "application/json")
+        .header("X-Internal-User-Id", user)
+        .header("X-Internal-Org-Id", org)
+        .body(Body::from(
+          json!({ "amount_cents": 1500, "method": "e_transfer", "payout_index": 1 }).to_string(),
+        ))
+        .unwrap(),
+    )
+    .await
+    .expect("payout 1");
+  assert_eq!(res.status(), StatusCode::CREATED);
+
+  let res = app
+    .clone()
+    .oneshot(
+      Request::builder()
+        .method("POST")
+        .uri(contracts_uri(&format!("/{contract_id}/payouts")))
+        .header(header::CONTENT_TYPE, "application/json")
+        .header("X-Internal-User-Id", user)
+        .header("X-Internal-Org-Id", org)
+        .body(Body::from(
+          json!({ "amount_cents": 2000, "method": "cash", "payout_index": 2 }).to_string(),
+        ))
+        .unwrap(),
+    )
+    .await
+    .expect("payout 2");
+  assert_eq!(res.status(), StatusCode::CREATED);
+
+  let res = app
+    .clone()
+    .oneshot(
+      Request::builder()
+        .method("POST")
+        .uri(contracts_uri(&format!("/{contract_id}/payouts")))
+        .header(header::CONTENT_TYPE, "application/json")
+        .header("X-Internal-User-Id", user)
+        .header("X-Internal-Org-Id", org)
+        .body(Body::from(
+          json!({ "amount_cents": 3000, "method": "cash", "payout_index": 1 }).to_string(),
+        ))
+        .unwrap(),
+    )
+    .await
+    .expect("third payout");
+  assert_eq!(res.status(), StatusCode::BAD_REQUEST);
+
+  let create_listing = json!({ "title": "Coat", "price_cents": 8000, "contract_id": contract_id });
+  let res = app
+    .clone()
+    .oneshot(
+      Request::builder()
+        .method("POST")
+        .uri(listings_uri(""))
+        .header(header::CONTENT_TYPE, "application/json")
+        .header("X-Internal-User-Id", user)
+        .header("X-Internal-Org-Id", org)
+        .body(Body::from(create_listing.to_string()))
+        .unwrap(),
+    )
+    .await
+    .expect("listing with contract");
+  assert_eq!(res.status(), StatusCode::CREATED);
+  let listing: Value = json_from_body(res.into_body()).await;
+  assert_eq!(listing["consignor_id"].as_str(), Some(consignor_id));
+
+  let listing_id = listing["id"].as_str().unwrap();
+  let bad_patch = json!({
+    "contract_id": contract_id,
+    "consignor_id": "00000000-0000-0000-0000-000000000001"
+  });
+  let res = app
+    .clone()
+    .oneshot(
+      Request::builder()
+        .method("PATCH")
+        .uri(listings_uri(&format!("/{listing_id}")))
+        .header(header::CONTENT_TYPE, "application/json")
+        .header("X-Internal-User-Id", user)
+        .header("X-Internal-Org-Id", org)
+        .body(Body::from(bad_patch.to_string()))
+        .unwrap(),
+    )
+    .await
+    .expect("bad consignor");
+  assert_eq!(res.status(), StatusCode::BAD_REQUEST);
+
+  let res = app
+    .clone()
+    .oneshot(
+      Request::builder()
+        .method("POST")
+        .uri(contracts_uri(&format!("/{contract_id}/run-expiry-rules")))
+        .header(header::CONTENT_TYPE, "application/json")
+        .header("X-Internal-User-Id", user)
+        .header("X-Internal-Org-Id", org)
+        .body(Body::from(
+          json!({ "as_of": "2026-02-01T00:00:00Z" }).to_string(),
+        ))
+        .unwrap(),
+    )
+    .await
+    .expect("run expiry early");
+  assert_eq!(res.status(), StatusCode::BAD_REQUEST);
+
+  let res = app
+    .clone()
+    .oneshot(
+      Request::builder()
+        .method("POST")
+        .uri(contracts_uri(&format!("/{contract_id}/run-expiry-rules")))
+        .header(header::CONTENT_TYPE, "application/json")
+        .header("X-Internal-User-Id", user)
+        .header("X-Internal-Org-Id", org)
+        .body(Body::from(
+          json!({ "as_of": "2026-04-01T00:00:00Z" }).to_string(),
+        ))
+        .unwrap(),
+    )
+    .await
+    .expect("run expiry");
+  assert_eq!(res.status(), StatusCode::OK);
+  let exp: Value = json_from_body(res.into_body()).await;
+  assert!(exp["updated"].as_u64().unwrap_or(0) >= 1);
+
+  let res = app
+    .clone()
+    .oneshot(
+      Request::builder()
+        .uri(intake_uri("/batches"))
+        .header("X-Internal-User-Id", user)
+        .header("X-Internal-Org-Id", org)
+        .body(Body::empty())
+        .unwrap(),
+    )
+    .await
+    .expect("list batches");
+  assert_eq!(res.status(), StatusCode::OK);
+
+  let res = app
+    .clone()
+    .oneshot(
+      Request::builder()
+        .method("POST")
+        .uri(intake_uri("/batches"))
+        .header(header::CONTENT_TYPE, "application/json")
+        .header("X-Internal-User-Id", user)
+        .header("X-Internal-Org-Id", org)
+        .body(Body::from(
+          json!({ "box_count": 2, "consignor_id": consignor_id }).to_string(),
+        ))
+        .unwrap(),
+    )
+    .await
+    .expect("create batch");
+  assert_eq!(res.status(), StatusCode::CREATED);
 }

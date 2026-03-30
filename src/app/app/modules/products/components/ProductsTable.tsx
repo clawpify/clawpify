@@ -1,0 +1,36 @@
+import { copy } from "../../../utils/copy";
+import type { ConsignmentListingDto } from "../types";
+import { formatListingPrice } from "../utils/formatListingPrice";
+
+export function ProductsTable({ listings }: { listings: ConsignmentListingDto[] }) {
+  return (
+    <div className="mt-6 overflow-x-auto rounded-lg border border-zinc-200/80">
+      <table className="w-full min-w-[640px] text-left text-sm">
+        <thead className="border-b border-zinc-200/80 bg-zinc-50/80 text-xs font-medium uppercase tracking-wide text-zinc-500">
+          <tr>
+            <th className="px-4 py-3">{copy.products.colSku}</th>
+            <th className="px-4 py-3">{copy.products.colTitle}</th>
+            <th className="px-4 py-3">{copy.products.colStatus}</th>
+            <th className="px-4 py-3 text-right">{copy.products.colPrice}</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-zinc-100 bg-white">
+          {listings.map((row) => (
+            <tr key={row.id} className="text-zinc-800">
+              <td className="max-w-[120px] truncate px-4 py-3 font-mono text-xs text-zinc-600">
+                {row.sku || "—"}
+              </td>
+              <td className="max-w-[280px] truncate px-4 py-3 font-medium text-zinc-900">{row.title}</td>
+              <td className="px-4 py-3">
+                <span className="rounded-md bg-zinc-100 px-2 py-0.5 text-xs text-zinc-700">{row.status}</span>
+              </td>
+              <td className="px-4 py-3 text-right tabular-nums text-zinc-700">
+                {formatListingPrice(row.price_cents, row.currency_code)}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}

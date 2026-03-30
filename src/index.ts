@@ -157,8 +157,6 @@ const staticRoutes = {
 };
 
 const shieldHandler = authProxyHandler("/api/shield");
-const storesHandler = authProxyHandler("/api/stores");
-const storeByIdHandler = authProxyHandler(pathnameOf);
 const agentActivityHandler = authProxyHandler("/api/agent-activity");
 const llmAgentsHandler = authProxyHandler("/api/llm/agents");
 const llmAgentsStreamHandler = authProxyHandler("/api/llm/agents/stream");
@@ -172,25 +170,6 @@ const apiRoutes = {
   "/api/shield": {
     async PUT(req: Request) {
       return shieldHandler(req);
-    },
-  },
-  "/api/stores": {
-    async GET(req: Request) {
-      return storesHandler(req);
-    },
-    async POST(req: Request) {
-      return storesHandler(req);
-    },
-  },
-  "/api/stores/:id": {
-    async GET(req: Request) {
-      return storeByIdHandler(req);
-    },
-    async PATCH(req: Request) {
-      return storeByIdHandler(req);
-    },
-    async DELETE(req: Request) {
-      return storeByIdHandler(req);
     },
   },
   "/api/llm/agents": {
@@ -232,6 +211,14 @@ const server = serve({
 
   fetch(req) {
     const pathname = pathnameOf(req);
+    if (
+      pathname.startsWith("/api/consignors") ||
+      pathname.startsWith("/api/contracts") ||
+      pathname.startsWith("/api/listings") ||
+      pathname.startsWith("/api/intake")
+    ) {
+      return authProxyHandler(pathnameOf)(req);
+    }
     const asset = builtAssets.get(pathname);
     if (asset) {
       return new Response(asset, {

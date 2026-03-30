@@ -63,7 +63,19 @@ export { ChartBarIcon };
 export function InboxIcon({ className = "shrink-0 text-zinc-500", size = 20 }: IconProps) {
   return (
     <svg width={size} height={size} {...iconProps} className={className}>
-      <path d="M22 12h-6l-2 3h-4l-2-3H2" />
+      <polyline points="22 12 16 12 14 15 10 15 8 12 2 12" />
+      <path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z" />
+    </svg>
+  );
+}
+
+/** Product catalog / inventory (boxed items). */
+export function PackageIcon({ className = "shrink-0 text-zinc-500", size = 20 }: IconProps) {
+  return (
+    <svg width={size} height={size} {...iconProps} className={className}>
+      <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+      <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
+      <line x1="12" y1="22.08" x2="12" y2="12" />
     </svg>
   );
 }
