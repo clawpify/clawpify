@@ -3,6 +3,7 @@ use uuid::Uuid;
 
 use crate::dto::listings::{CreateListingRequest, UpdateListingRequest};
 use crate::models::consignment_listing::ConsignmentListing;
+use super::organizations;
 use super::pagination::Pagination;
 
 const SELECT_LISTING: &str = r#"SELECT id, org_id, created_by_user_id, status, title, description_html, product_type, vendor,
@@ -71,7 +72,9 @@ pub async fn create(
     .status
     .unwrap_or_else(|| "draft".to_string());
 
-  sqlx::query_as::<_, ConsignmentListing>(
+  let mut tx = pool.begin().await?;
+  organizations::ensure_id(&mut *tx, org_id).await?;
+  let row = sqlx::query_as::<_, ConsignmentListing>(
     r#"INSERT INTO consignment_listings (
          org_id, created_by_user_id, status, title, description_html, product_type, vendor, tags,
          price_cents, currency_code, sku, media_urls, ai_quality, ai_attributes, suggested_price_cents,
@@ -103,8 +106,10 @@ pub async fn create(
   .bind(body.acceptance_status.as_deref())
   .bind(body.decline_reason.as_deref())
   .bind(body.post_contract_disposition.as_deref())
-  .fetch_one(pool)
-  .await
+  .fetch_one(&mut *tx)
+  .await?;
+  tx.commit().await?;
+  Ok(row)
 }
 
 pub async fn update(

@@ -6,6 +6,13 @@ export type AuthPayload = {
   orgRole?: string;
 };
 
+/** Clerk active org id, or synthetic `user:<clerk_sub>` when signed in without an organization. */
+export function internalOrgScope(auth: AuthPayload): string {
+  const org = auth.orgId?.trim();
+  if (org) return org;
+  return `user:${auth.userId.trim()}`;
+}
+
 /**
  * Proxy an authenticated request to the Rust API.
  *
@@ -24,7 +31,7 @@ export async function proxyToRust(
   const headers = new Headers(req.headers);
 
   headers.set("X-Internal-User-Id", auth.userId);
-  if (auth.orgId) headers.set("X-Internal-Org-Id", auth.orgId);
+  headers.set("X-Internal-Org-Id", internalOrgScope(auth));
   if (auth.orgRole) headers.set("X-Internal-Org-Role", auth.orgRole);
 
   const res = await fetch(backendUrl, {
@@ -61,7 +68,8 @@ export async function proxyToRustPublic(
 
   if (opts?.auth) {
     headers.set("X-Internal-User-Id", opts.auth.userId);
-    if (opts.auth.orgId) headers.set("X-Internal-Org-Id", opts.auth.orgId);
+    headers.set("X-Internal-Org-Id", internalOrgScope(opts.auth));
+    
     if (opts.auth.orgRole) headers.set("X-Internal-Org-Role", opts.auth.orgRole);
   }
 

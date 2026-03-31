@@ -84,8 +84,8 @@ nav a {
   margin-right: 1rem;
 }
 
-/* Workspace sidebar: force Linear-style overrides (beats cached Tailwind) */
-.workspace aside {
+/* Workspace nav sidebar only — not other asides (e.g. product detail metadata rail). */
+.workspace > aside {
   background-color: #edeef0 !important;
 }
 

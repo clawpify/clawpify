@@ -1,6 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 import { Show, UserButton, useOrganization, useUser } from "@clerk/react";
-import { FolderIcon, InboxIcon, PackageIcon, UsersIcon } from "../../../icons/workspace-icons";
+import { InboxIcon, PackageIcon } from "../../../icons/workspace-icons";
 import { copy } from "../utils/copy";
 
 function WorkspaceUserHeader() {
@@ -10,7 +10,7 @@ function WorkspaceUserHeader() {
   if (!isLoaded || !user) {
     return (
       <div className="mb-4 flex items-center gap-2 px-2">
-        <div className="h-8 w-8 shrink-0 rounded-full bg-zinc-200/80" />
+        <div className="h-6 w-6 shrink-0 rounded-full bg-zinc-200/80" />
         <div className="min-w-0 flex-1 space-y-1">
           <div className="h-3.5 w-24 rounded bg-zinc-200/80" />
           <div className="h-3 w-16 rounded bg-zinc-200/60" />
@@ -27,7 +27,18 @@ function WorkspaceUserHeader() {
 
   return (
     <div className="mb-4 flex items-center gap-2 px-2">
-      <UserButton />
+      <UserButton
+        appearance={{
+          elements: {
+            rootBox: "w-auto shrink-0",
+            userButtonBox: "flex items-center justify-start",
+            userButtonTrigger: "h-6 w-6 rounded-full focus:shadow-none",
+            userButtonAvatarBox: "h-6 w-6",
+            avatarBox: "h-6 w-6",
+            userButtonAvatarImage: "h-6 w-6",
+          },
+        }}
+      />
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-semibold text-zinc-900">{displayName}</p>
         {organization?.name ? (
@@ -43,8 +54,6 @@ export function WorkspaceSidebar() {
   const pathname = location.pathname;
   const isInbox = pathname === "/app" || pathname === "/app/";
   const isProducts = pathname.startsWith("/app/products");
-  const isConsignors = pathname.startsWith("/app/consignors");
-  const isContracts = pathname.startsWith("/app/contracts");
 
   return (
     <aside
@@ -81,6 +90,8 @@ export function WorkspaceSidebar() {
           <PackageIcon size={18} className={isProducts ? "text-zinc-900" : "text-zinc-600"} />
           {copy.sidebar.products}
         </Link>
+        {/* Hidden: consignors / contracts nav (routes still exist at /app/consignors, /app/contracts) */}
+        {/*
         <Link
           to="/app/consignors"
           className={`flex items-center gap-2 rounded px-2 py-1.5 text-sm font-medium transition ${
@@ -99,6 +110,7 @@ export function WorkspaceSidebar() {
           <FolderIcon size={18} className={isContracts ? "text-zinc-900" : "text-zinc-600"} />
           {copy.sidebar.contracts}
         </Link>
+        */}
       </div>
     </aside>
   );
