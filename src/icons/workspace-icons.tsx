@@ -97,6 +97,41 @@ export function PlusIcon({ className = "shrink-0 text-zinc-500", size = 20 }: Ic
   );
 }
 
+export function TrashIcon({ className = "shrink-0 text-zinc-500", size = 20 }: IconProps) {
+  return (
+    <svg width={size} height={size} {...iconProps} className={className}>
+      <path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14zM10 11v6M14 11v6" />
+    </svg>
+  );
+}
+
+export function XMarkIcon({ className = "shrink-0 text-zinc-500", size = 20 }: IconProps) {
+  return (
+    <svg width={size} height={size} {...iconProps} className={className}>
+      <path d="M18 6 6 18M6 6l12 12" />
+    </svg>
+  );
+}
+
+export function PaperclipIcon({ className = "shrink-0 text-zinc-500", size = 20 }: IconProps) {
+  return (
+    <svg width={size} height={size} {...iconProps} className={className}>
+      <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.6 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+    </svg>
+  );
+}
+
+/** Photo / gallery attach (landscape frame + sun + mountains). */
+export function ImageIcon({ className = "shrink-0 text-zinc-500", size = 20 }: IconProps) {
+  return (
+    <svg width={size} height={size} {...iconProps} className={className}>
+      <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+      <circle cx="9" cy="9" r="2" />
+      <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
+    </svg>
+  );
+}
+
 export function FilterIcon({ className = "shrink-0 text-zinc-500", size = 20 }: IconProps) {
   return (
     <svg width={size} height={size} {...iconProps} className={className}>
@@ -206,6 +241,70 @@ export function BugIcon({ className = "shrink-0 text-zinc-500", size = 20 }: Ico
       <path d="M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6" />
       <path d="M12 20v-9" />
       <path d="M6 13h12" />
+    </svg>
+  );
+}
+
+export function LayoutRowsIcon({ className = "shrink-0 text-zinc-500", size = 20 }: IconProps) {
+  return (
+    <svg width={size} height={size} {...iconProps} className={className}>
+      <line x1="8" y1="6" x2="21" y2="6" />
+      <line x1="8" y1="12" x2="21" y2="12" />
+      <line x1="8" y1="18" x2="21" y2="18" />
+      <line x1="3" y1="6" x2="3.01" y2="6" />
+      <line x1="3" y1="12" x2="3.01" y2="12" />
+      <line x1="3" y1="18" x2="3.01" y2="18" />
+    </svg>
+  );
+}
+
+export function LayoutGridIcon({ className = "shrink-0 text-zinc-500", size = 20 }: IconProps) {
+  return (
+    <svg width={size} height={size} {...iconProps} className={className}>
+      <rect x="3" y="3" width="7" height="7" rx="1" />
+      <rect x="14" y="3" width="7" height="7" rx="1" />
+      <rect x="14" y="14" width="7" height="7" rx="1" />
+      <rect x="3" y="14" width="7" height="7" rx="1" />
+    </svg>
+  );
+}
+
+/** Stacked layers (saved view / layout). */
+export function LayersIcon({ className = "shrink-0 text-zinc-500", size = 20 }: IconProps) {
+  return (
+    <svg width={size} height={size} {...iconProps} className={className}>
+      <path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z" />
+      <path d="M2 12a1 1 0 0 0 .6.92l8.57 3.9a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12" />
+      <path d="M2 17a1 1 0 0 0 .6.92l8.57 3.9a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17" />
+    </svg>
+  );
+}
+
+export function FilterLinesIcon({ className = "shrink-0 text-zinc-500", size = 20 }: IconProps) {
+  return (
+    <svg width={size} height={size} {...iconProps} className={className}>
+      <path d="M10 5h10M4 9h16M7 13h13M11 17h9" />
+    </svg>
+  );
+}
+
+export function SlidersHorizontalIcon({ className = "shrink-0 text-zinc-500", size = 20 }: IconProps) {
+  return (
+    <svg width={size} height={size} {...iconProps} className={className}>
+      <line x1="4" y1="7" x2="20" y2="7" />
+      <line x1="4" y1="17" x2="16" y2="17" />
+      <circle cx="9" cy="7" r="2" />
+      <circle cx="15" cy="17" r="2" />
+    </svg>
+  );
+}
+
+/** Sidebar / split panel toggle. */
+export function PanelRightIcon({ className = "shrink-0 text-zinc-500", size = 20 }: IconProps) {
+  return (
+    <svg width={size} height={size} {...iconProps} className={className}>
+      <rect x="3" y="3" width="18" height="18" rx="2" />
+      <line x1="15" y1="3" x2="15" y2="21" />
     </svg>
   );
 }

@@ -1,6 +1,18 @@
-use sqlx::PgPool;
+use sqlx::{Executor, PgPool, Postgres};
 
 use crate::models::organization::Organization;
+
+/// Stub row for lazy onboarding: real Clerk org ids or synthetic `user:<clerk_sub>` from the Bun proxy.
+pub async fn ensure_id<'e, E>(executor: E, id: &str) -> Result<(), sqlx::Error>
+where
+  E: Executor<'e, Database = Postgres>,
+{
+  sqlx::query(r#"INSERT INTO organizations (id) VALUES ($1) ON CONFLICT (id) DO NOTHING"#)
+    .bind(id)
+    .execute(executor)
+    .await?;
+  Ok(())
+}
 
 pub async fn create(
   pool: &PgPool,

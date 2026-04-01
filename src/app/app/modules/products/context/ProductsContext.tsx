@@ -10,41 +10,15 @@ import {
 } from "react";
 import { useAuth, useOrganization } from "@clerk/react";
 import { useAuthenticatedFetch } from "../../../../../lib/api";
-import type { ConsignmentListingDto, ProductIntakeDraft, ProductProcessResult } from "../types";
+import type { ConsignmentListingDto, CreateListingBody, ProductsContextValue } from "../types";
 import {
-  listingByIdPath,
+  ensureListingMutationOk,
+  listingsCreatePath,
+  listingsDetailPath,
   listingsListPath,
-  parseDeleteListingResponse,
+  parseListingResponse,
   parseListingsResponse,
-  parseUpdateListingResponse,
-  processProductsRequestBody,
-  processProductsResponse,
-  type UpdateListingPayload,
 } from "../utils/listingsApi";
-
-type ProductsContextValue = {
-  listings: ConsignmentListingDto[];
-  loading: boolean;
-  error: string | null;
-  refetch: () => Promise<void>;
-  drafts: ProductIntakeDraft[];
-  processing: boolean;
-  processError: string | null;
-  processResults: ProductProcessResult[];
-  createDraft: () => string;
-  addFilesToDraft: (clientId: string, files: FileList | File[]) => void;
-  removeDraftImage: (clientId: string, imageId: string) => void;
-  updateDraft: (clientId: string, patch: Partial<Omit<ProductIntakeDraft, "clientId" | "images">>) => void;
-  removeDraft: (clientId: string) => void;
-  clearDrafts: () => void;
-  processDrafts: () => Promise<void>;
-  updateListing: (
-    listingId: string,
-    payload: UpdateListingPayload
-  ) => Promise<ConsignmentListingDto>;
-  approveListing: (listingId: string) => Promise<ConsignmentListingDto>;
-  deleteListing: (listingId: string) => Promise<void>;
-};
 
 const ProductsContext = createContext<ProductsContextValue | null>(null);
 
@@ -55,36 +29,68 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
   const [listings, setListings] = useState<ConsignmentListingDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [drafts, setDrafts] = useState<ProductIntakeDraft[]>([]);
-  const [processing, setProcessing] = useState(false);
-  const [processError, setProcessError] = useState<string | null>(null);
-  const [processResults, setProcessResults] = useState<ProductProcessResult[]>([]);
-  const idRef = useRef(0);
-  const imageIdRef = useRef(0);
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
-  const effectiveOrgId = organization?.id ?? authOrgId ?? undefined;
+  const refetch = useCallback(
+    async (opts?: { quiet?: boolean }) => {
+      const quiet = opts?.quiet === true;
+      if (!quiet) {
+        setLoading(true);
+        setError(null);
+      }
+      try {
+        const res = await fetchAuth(listingsListPath({ limit: 100, offset: 0 }));
+        setListings(await parseListingsResponse(res));
+        if (!quiet) setError(null);
+      } catch (e) {
+        setListings([]);
+        setError(e instanceof Error ? e.message : "Unknown error");
+      } finally {
+        if (!quiet) setLoading(false);
+      }
+    },
+    [fetchAuth]
+  );
 
-  const refetch = useCallback(async () => {
-    if (!effectiveOrgId) {
-      setLoading(false);
-      setError(null);
-      setListings([]);
-      return;
-    }
-    setLoading(true);
-    setError(null);
-    try {
-      const headers = new Headers();
-      headers.set("X-Selected-Org-Id", effectiveOrgId);
-      const res = await fetchAuth(listingsListPath({ limit: 100, offset: 0 }), { headers });
-      setListings(await parseListingsResponse(res));
-    } catch (e) {
-      setListings([]);
-      setError(e instanceof Error ? e.message : "Unknown error");
-    } finally {
-      setLoading(false);
-    }
-  }, [effectiveOrgId, fetchAuth]);
+  const createListing = useCallback(
+    async (body: CreateListingBody = {}) => {
+      setCreating(true);
+      setCreateError(null);
+      try {
+        const res = await fetchAuth(listingsCreatePath, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        const created = await parseListingResponse(res);
+        await refetch({ quiet: true });
+        return created;
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : "Unknown error";
+        setCreateError(msg);
+        throw e;
+      } finally {
+        setCreating(false);
+      }
+    },
+    [fetchAuth, refetch]
+  );
+
+  const deleteListing = useCallback(
+    async (id: string) => {
+      setDeleting(true);
+      try {
+        const res = await fetchAuth(listingsDetailPath(id), { method: "DELETE" });
+        await ensureListingMutationOk(res);
+        await refetch({ quiet: true });
+      } finally {
+        setDeleting(false);
+      }
+    },
+    [fetchAuth, refetch]
+  );
 
   useEffect(() => {
     void refetch();
@@ -260,42 +266,14 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
       listings,
       loading,
       error,
-      refetch,
-      drafts,
-      processing,
-      processError,
-      processResults,
-      createDraft,
-      addFilesToDraft,
-      removeDraftImage,
-      updateDraft,
-      removeDraft,
-      clearDrafts,
-      processDrafts,
-      updateListing,
-      approveListing,
+      refetch: () => refetch(),
+      createListing,
+      creating,
+      createError,
       deleteListing,
+      deleting,
     }),
-    [
-      listings,
-      loading,
-      error,
-      refetch,
-      drafts,
-      processing,
-      processError,
-      processResults,
-      createDraft,
-      addFilesToDraft,
-      removeDraftImage,
-      updateDraft,
-      removeDraft,
-      clearDrafts,
-      processDrafts,
-      updateListing,
-      approveListing,
-      deleteListing,
-    ]
+    [listings, loading, error, refetch, createListing, creating, createError, deleteListing, deleting]
   );
 
   return <ProductsContext.Provider value={value}>{children}</ProductsContext.Provider>;

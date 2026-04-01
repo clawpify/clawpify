@@ -9,5 +9,6 @@ pub mod contracts;
 pub mod intake_batches;
 pub mod intake_phone_bindings;
 pub mod listings;
+pub mod stored_images;
 pub mod subscribers;
 pub mod twilio_inbound;
