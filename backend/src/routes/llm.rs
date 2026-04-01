@@ -3,6 +3,7 @@ use std::sync::atomic::AtomicU64;
 use std::sync::Arc;
 
 use axum::{
+  extract::DefaultBodyLimit,
   body::Body,
   http::{header, StatusCode},
   middleware,
@@ -30,6 +31,7 @@ pub fn routes() -> Router<AppState> {
   Router::new()
     .route("/llm/agents", post(llm_agents))
     .route("/llm/agents/stream", post(llm_agents_stream))
+    .layer(DefaultBodyLimit::disable())
     .route_layer(middleware::from_fn(mw::require_internal_auth))
 }
 

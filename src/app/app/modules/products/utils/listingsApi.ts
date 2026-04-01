@@ -11,6 +11,10 @@ export function listingsListPath(query?: ListListingsQuery): string {
   return `/api/listings${qs ? `?${qs}` : ""}`;
 }
 
+export function listingByIdPath(id: string): string {
+  return `/api/listings/${encodeURIComponent(id)}`;
+}
+
 export const listingsCreatePath = "/api/listings";
 
 export function listingsDetailPath(id: string): string {

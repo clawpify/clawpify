@@ -1,5 +1,5 @@
 use axum::{
-  extract::{Path, Query, State},
+  extract::{DefaultBodyLimit, Path, Query, State},
   http::StatusCode,
   middleware,
   routing::get,
@@ -37,6 +37,7 @@ pub fn routes() -> Router<AppState> {
         .patch(update_listing)
         .delete(delete_listing),
     )
+    .layer(DefaultBodyLimit::disable())
     .route_layer(middleware::from_fn(mw::require_internal_auth))
 }
 

@@ -1,5 +1,11 @@
 import { Link, useLocation } from "react-router-dom";
-import { Show, UserButton, useOrganization, useUser } from "@clerk/react";
+import {
+  OrganizationSwitcher,
+  Show,
+  UserButton,
+  useOrganization,
+  useUser,
+} from "@clerk/react";
 import { InboxIcon, PackageIcon } from "../../../icons/workspace-icons";
 import { copy } from "../utils/copy";
 
@@ -49,7 +55,12 @@ function WorkspaceUserHeader() {
   );
 }
 
-export function WorkspaceSidebar() {
+type WorkspaceSidebarProps = {
+  className?: string;
+  onNavigate?: () => void;
+};
+
+export function WorkspaceSidebar({ className, onNavigate }: WorkspaceSidebarProps = {}) {
   const location = useLocation();
   const pathname = location.pathname;
   const isInbox = pathname === "/app" || pathname === "/app/";
@@ -57,11 +68,19 @@ export function WorkspaceSidebar() {
 
   return (
     <aside
-      className="sticky top-0 flex h-screen w-[250px] flex-col border-r border-zinc-200/50 bg-[#edeef0] px-3 py-3"
+      className={`flex h-full w-[250px] flex-col overflow-y-auto border-r border-zinc-200/50 bg-[#edeef0] px-3 py-3 ${className ?? ""}`}
       style={{ fontFamily: "var(--workspace-font)" }}
     >
       <Show when="signed-in">
         <WorkspaceUserHeader />
+        <div className="mb-3 px-2">
+          <OrganizationSwitcher
+            hidePersonal
+            afterCreateOrganizationUrl="/app"
+            afterSelectOrganizationUrl="/app"
+            afterLeaveOrganizationUrl="/app"
+          />
+        </div>
       </Show>
       <Show when="signed-out">
         <Link
@@ -74,6 +93,7 @@ export function WorkspaceSidebar() {
       <div className="flex flex-col gap-0.5">
         <Link
           to="/app"
+          onClick={onNavigate}
           className={`flex items-center gap-2 rounded px-2 py-1.5 text-sm font-medium transition ${
             isInbox ? "bg-zinc-200/60 text-zinc-900" : "text-zinc-700 hover:bg-zinc-200/60 hover:text-zinc-900"
           }`}
@@ -83,6 +103,7 @@ export function WorkspaceSidebar() {
         </Link>
         <Link
           to="/app/products"
+          onClick={onNavigate}
           className={`flex items-center gap-2 rounded px-2 py-1.5 text-sm font-medium transition ${
             isProducts ? "bg-zinc-200/60 text-zinc-900" : "text-zinc-700 hover:bg-zinc-200/60 hover:text-zinc-900"
           }`}
@@ -94,6 +115,7 @@ export function WorkspaceSidebar() {
         {/*
         <Link
           to="/app/consignors"
+          onClick={onNavigate}
           className={`flex items-center gap-2 rounded px-2 py-1.5 text-sm font-medium transition ${
             isConsignors ? "bg-zinc-200/60 text-zinc-900" : "text-zinc-700 hover:bg-zinc-200/60 hover:text-zinc-900"
           }`}
@@ -103,6 +125,7 @@ export function WorkspaceSidebar() {
         </Link>
         <Link
           to="/app/contracts"
+          onClick={onNavigate}
           className={`flex items-center gap-2 rounded px-2 py-1.5 text-sm font-medium transition ${
             isContracts ? "bg-zinc-200/60 text-zinc-900" : "text-zinc-700 hover:bg-zinc-200/60 hover:text-zinc-900"
           }`}

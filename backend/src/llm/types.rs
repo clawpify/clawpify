@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -43,6 +44,9 @@ pub struct SubAgentSpec {
   /* agent name (for debugging) */
   pub id: String,
   pub prompt: String,
+  /// Optional raw Responses API `input` payload (supports multimodal content).
+  #[serde(default)]
+  pub input: Option<Value>,
   pub provider: Option<ProviderId>,
   pub model: Option<String>,
   pub web_search: bool,

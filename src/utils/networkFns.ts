@@ -6,6 +6,11 @@ export type AuthPayload = {
   orgRole?: string;
 };
 
+function normalizeOrgId(value: string | undefined | null): string | undefined {
+  const t = typeof value === "string" ? value.trim() : "";
+  return t.length > 0 ? t : undefined;
+}
+
 /** Clerk active org id, or synthetic `user:<clerk_sub>` when signed in without an organization. */
 export function internalOrgScope(auth: AuthPayload): string {
   const org = auth.orgId?.trim();
@@ -30,8 +35,21 @@ export async function proxyToRust(
   const backendUrl = `${RUST_API_URL}${path}${url.search}`;
   const headers = new Headers(req.headers);
 
+  const selectedOrgId = normalizeOrgId(req.headers.get("X-Selected-Org-Id"));
+  const tokenOrgId = normalizeOrgId(auth.orgId);
+  const resolvedOrgId =
+    tokenOrgId ??
+    (process.env.NODE_ENV !== "production" && selectedOrgId?.startsWith("org_")
+      ? selectedOrgId
+      : undefined);
+
+  const authForProxy: AuthPayload = {
+    ...auth,
+    orgId: resolvedOrgId ?? auth.orgId,
+  };
+
   headers.set("X-Internal-User-Id", auth.userId);
-  headers.set("X-Internal-Org-Id", internalOrgScope(auth));
+  headers.set("X-Internal-Org-Id", internalOrgScope(authForProxy));
   if (auth.orgRole) headers.set("X-Internal-Org-Role", auth.orgRole);
 
   const res = await fetch(backendUrl, {

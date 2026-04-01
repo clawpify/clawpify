@@ -47,6 +47,11 @@ pub async fn create(
   org_id: &str,
   body: CreateConsignorRequest,
 ) -> Result<Consignor, sqlx::Error> {
+  sqlx::query("INSERT INTO organizations (id) VALUES ($1) ON CONFLICT (id) DO NOTHING")
+    .bind(org_id)
+    .execute(pool)
+    .await?;
+
   sqlx::query_as::<_, Consignor>(
     r#"INSERT INTO consignors (
          org_id, display_name, email, phone_e164, notes, default_payout_method

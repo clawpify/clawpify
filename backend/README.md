@@ -20,6 +20,41 @@ Rust API for the Clawpify consignment inventory tracker: listings, intake, LLM a
    cargo sqlx prepare
    ```
 
+## OpenAI API Setup
+
+`POST /api/llm/agents` and `POST /api/llm/agents/stream` require an OpenAI API key.
+
+1. Set these in `backend/.env`:
+   ```bash
+   OPENAI_API_KEY=sk-...
+   OPENAI_LLM_MODEL=gpt-5.2
+   ```
+   Notes:
+   - `OPENAI_API_KEY` is required for LLM routes.
+   - `OPENAI_LLM_MODEL` is optional; default is `gpt-5.2`.
+
+2. Restart the backend after updating env vars.
+
+3. Test the non-streaming endpoint:
+   ```bash
+   curl -s -X POST http://127.0.0.1:3000/api/llm/agents \
+     -H 'Content-Type: application/json' \
+     -H 'X-Internal-User-Id: cli-test' \
+     -d '{
+       "agents": [
+         {
+           "id": "a1",
+           "provider": "openai",
+           "prompt": "Say hi in one sentence.",
+           "web_search": false
+         }
+       ]
+     }'
+   ```
+
+If the key is missing/empty, the backend returns an error similar to:
+`No LLM providers configured (set OPENAI_API_KEY)`.
+
 ## Tests
 
 ```bash

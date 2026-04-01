@@ -63,7 +63,7 @@ impl OpenAiProvider {
 
     let mut body = json!({
       "model": model,
-      "input": spec.prompt,
+      "input": spec.input.clone().unwrap_or_else(|| json!(spec.prompt)),
     });
 
     if spec.web_search {
@@ -78,6 +78,25 @@ impl OpenAiProvider {
     body
   }
 
+  fn collect_urls_from_source_value(value: &serde_json::Value, out: &mut Vec<String>) {
+    match value {
+      serde_json::Value::Array(items) => {
+        for item in items {
+          Self::collect_urls_from_source_value(item, out);
+        }
+      }
+      serde_json::Value::Object(map) => {
+        if let Some(url) = map.get("url").and_then(|v| v.as_str()) {
+          out.push(url.to_string());
+        }
+        for nested in map.values() {
+          Self::collect_urls_from_source_value(nested, out);
+        }
+      }
+      _ => {}
+    }
+  }
+
   fn extract_completion(v: &serde_json::Value) -> ProviderCompletion {
     let mut text_parts: Vec<String> = Vec::new();
     let mut sources: Vec<String> = Vec::new();
@@ -90,6 +109,11 @@ impl OpenAiProvider {
     };
 
     for item in output {
+      if item.get("type").and_then(|t| t.as_str()) == Some("web_search_call") {
+        if let Some(sources_val) = item.get("action").and_then(|a| a.get("sources")) {
+          Self::collect_urls_from_source_value(sources_val, &mut sources);
+        }
+      }
       if item.get("type").and_then(|t| t.as_str()) != Some("message") {
         continue;
       }
