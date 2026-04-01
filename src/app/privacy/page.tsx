@@ -159,14 +159,7 @@ const sections: { id: string; title: string; body: ReactNode }[] = [
     title: "Contact",
     body: (
       <>
-        Questions about this Privacy Policy? Contact us at{" "}
-        <a
-          href="mailto:privacy@clawpify.com"
-          className="underline transition hover:text-zinc-900"
-        >
-          privacy@clawpify.com
-        </a>
-        .
+        Questions about this Privacy Policy? Contact us at alhwyn@clawpify.com.
       </>
     ),
   },
