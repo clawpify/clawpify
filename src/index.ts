@@ -215,7 +215,8 @@ const server = serve({
       pathname.startsWith("/api/consignors") ||
       pathname.startsWith("/api/contracts") ||
       pathname.startsWith("/api/listings") ||
-      pathname.startsWith("/api/intake")
+      pathname.startsWith("/api/intake") ||
+      pathname.startsWith("/api/s3")
     ) {
       return authProxyHandler(pathnameOf)(req);
     }

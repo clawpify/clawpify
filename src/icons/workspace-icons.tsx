@@ -176,6 +176,22 @@ export function ChevronDownIcon({ className = "shrink-0 text-zinc-500", size = 2
   );
 }
 
+export function ChevronLeftIcon({ className = "shrink-0 text-zinc-500", size = 20 }: IconProps) {
+  return (
+    <svg width={size} height={size} {...iconProps} className={className}>
+      <path d="m15 18-6-6 6-6" />
+    </svg>
+  );
+}
+
+export function ChevronRightIcon({ className = "shrink-0 text-zinc-500", size = 20 }: IconProps) {
+  return (
+    <svg width={size} height={size} {...iconProps} className={className}>
+      <path d="m9 18 6-6-6-6" />
+    </svg>
+  );
+}
+
 export function FolderIcon({ className = "shrink-0 text-zinc-500", size = 20 }: IconProps) {
   return (
     <svg width={size} height={size} {...iconProps} className={className}>

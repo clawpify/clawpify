@@ -12,15 +12,6 @@ const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 /** Sentinel `<select>` value when category is free-form. */
 const CATEGORY_CUSTOM = "__custom__";
 
-function readFileAsDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const r = new FileReader();
-    r.onload = () => resolve(String(r.result ?? ""));
-    r.onerror = () => reject(new Error("read failed"));
-    r.readAsDataURL(file);
-  });
-}
-
 function initialForm(): ProductCreateFormState {
   return {
     title: "",
@@ -29,7 +20,7 @@ function initialForm(): ProductCreateFormState {
     sku: "",
     priceDollars: "",
     status: "draft",
-    images: [],
+    imageSlots: [],
   };
 }
 
@@ -49,7 +40,7 @@ function categorySelectValue(productType: string, presetValues: readonly string[
 }
 
 export function ProductsCreateModal({ open, onClose, onCreated }: ProductsCreateModalProps) {
-  const { createListing, creating } = useProducts();
+  const { createListingWithImageFiles, creating } = useProducts();
   const [form, setForm] = useState(() => initialForm());
   const titleRef = useRef<HTMLInputElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -71,7 +62,12 @@ export function ProductsCreateModal({ open, onClose, onCreated }: ProductsCreate
     [categoryPresets]
   );
 
-  const resetForm = useCallback(() => setForm(initialForm()), []);
+  const resetForm = useCallback(() => {
+    setForm((f) => {
+      for (const s of f.imageSlots) URL.revokeObjectURL(s.previewUrl);
+      return initialForm();
+    });
+  }, []);
 
   useEffect(() => {
     if (open && !prevOpen.current) {
@@ -108,36 +104,36 @@ export function ProductsCreateModal({ open, onClose, onCreated }: ProductsCreate
     setForm((f) => ({ ...f, [key]: value }));
   };
 
-  const onPickFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const onPickFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
     const list = e.target.files;
     e.target.value = "";
     if (!list?.length) return;
-    const urls: string[] = [];
+    const additions: ProductCreateFormState["imageSlots"] = [];
     for (const file of Array.from(list)) {
       if (!file.type.startsWith("image/")) continue;
       if (file.size > MAX_IMAGE_BYTES) {
         window.alert(copy.products.createModalImageTooLarge);
         continue;
       }
-      if (form.images.length + urls.length >= MAX_IMAGES) {
+      if (form.imageSlots.length + additions.length >= MAX_IMAGES) {
         window.alert(copy.products.createModalMaxImages);
         break;
       }
-      try {
-        urls.push(await readFileAsDataUrl(file));
-      } catch {
-        /* ignore */
-      }
+      additions.push({ file, previewUrl: URL.createObjectURL(file) });
     }
-    if (!urls.length) return;
+    if (!additions.length) return;
     setForm((f) => ({
       ...f,
-      images: [...f.images, ...urls].slice(0, MAX_IMAGES),
+      imageSlots: [...f.imageSlots, ...additions].slice(0, MAX_IMAGES),
     }));
   };
 
   const removeImage = (idx: number) => {
-    setForm((f) => ({ ...f, images: f.images.filter((_, i) => i !== idx) }));
+    setForm((f) => {
+      const removed = f.imageSlots[idx];
+      if (removed) URL.revokeObjectURL(removed.previewUrl);
+      return { ...f, imageSlots: f.imageSlots.filter((_, i) => i !== idx) };
+    });
   };
 
   const onCategorySelectChange = (value: string) => {
@@ -159,16 +155,19 @@ export function ProductsCreateModal({ open, onClose, onCreated }: ProductsCreate
     const priceCents = Math.max(0, Math.round((parseFloat(form.priceDollars) || 0) * 100));
     const html = plainTextToDescriptionHtml(form.description);
     try {
-      const created = await createListing({
-        title: form.title.trim() || undefined,
-        description_html: html || undefined,
-        product_type: form.productType.trim() || undefined,
-        sku: form.sku.trim() || undefined,
-        price_cents: priceCents,
-        currency_code: "USD",
-        status: form.status,
-        ...(form.images.length ? { media_urls: form.images } : {}),
-      });
+      const files = form.imageSlots.map((s) => s.file);
+      const created = await createListingWithImageFiles(
+        {
+          title: form.title.trim() || undefined,
+          description_html: html || undefined,
+          product_type: form.productType.trim() || undefined,
+          sku: form.sku.trim() || undefined,
+          price_cents: priceCents,
+          currency_code: "USD",
+          status: form.status,
+        },
+        files
+      );
       onCreated(created.id);
       onClose();
     } catch {
@@ -179,7 +178,7 @@ export function ProductsCreateModal({ open, onClose, onCreated }: ProductsCreate
   const catSelectVal = categorySelectValue(form.productType, presetValues);
   const showCustomCategory = catSelectVal === CATEGORY_CUSTOM;
 
-  const attachDisabled = creating || form.images.length >= MAX_IMAGES;
+  const attachDisabled = creating || form.imageSlots.length >= MAX_IMAGES;
 
   if (!open) return null;
 
@@ -241,14 +240,14 @@ export function ProductsCreateModal({ open, onClose, onCreated }: ProductsCreate
             />
           </div>
 
-          {form.images.length > 0 ? (
+          {form.imageSlots.length > 0 ? (
             <div className="mt-4 flex flex-wrap items-center gap-1.5">
-              {form.images.map((url, i) => (
+              {form.imageSlots.map((slot, i) => (
                 <div
-                  key={`${i}-${url.slice(0, 24)}`}
+                  key={`${i}-${slot.previewUrl.slice(0, 24)}`}
                   className="relative h-9 w-9 shrink-0 overflow-hidden rounded-md border border-zinc-200/90 bg-zinc-50"
                 >
-                  <img src={url} alt="" className="h-full w-full object-cover" />
+                  <img src={slot.previewUrl} alt="" className="h-full w-full object-cover" />
                   <button
                     type="button"
                     onClick={() => removeImage(i)}
@@ -260,7 +259,7 @@ export function ProductsCreateModal({ open, onClose, onCreated }: ProductsCreate
                 </div>
               ))}
               <span className="text-[10px] font-medium tabular-nums text-zinc-400">
-                {form.images.length}/{MAX_IMAGES}
+                {form.imageSlots.length}/{MAX_IMAGES}
               </span>
             </div>
           ) : null}

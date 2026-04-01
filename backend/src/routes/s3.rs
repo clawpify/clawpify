@@ -11,6 +11,7 @@ use axum::{
 };
 use aws_sdk_s3::primitives::ByteStream;
 use serde::{Deserialize, Serialize};
+use url::form_urlencoded::Serializer;
 use uuid::Uuid;
 
 use super::extractors::{OrgId, UserId};
@@ -25,6 +26,7 @@ const PRESIGN_SECS: u64 = 3600;
 #[derive(Deserialize)]
 pub struct UploadQuery {
   pub file_name: Option<String>,
+  pub listing_id: Option<Uuid>,
 }
 
 #[derive(Serialize)]
@@ -55,6 +57,19 @@ fn prefix(org: &str, user: &str) -> String {
 
 fn owns_key(key: &str, org: &str, user: &str) -> bool {
   key.starts_with(&prefix(org, user))
+}
+
+/// Whether `storage_key` belongs to this org/user prefix (same rules as upload GET/DELETE).
+pub(crate) fn storage_key_owned_by_user(key: &str, org: &str, user: &str) -> bool {
+  owns_key(key, org, user)
+}
+
+/// Same-origin path for cookie-auth BFF clients (`GET` returns object bytes).
+pub(crate) fn stored_image_proxy_path(storage_key: &str) -> String {
+  let q = Serializer::new(String::new())
+    .append_pair("key", storage_key)
+    .finish();
+  format!("/api/s3/objects?{q}")
 }
 
 fn validate_key<'a>(raw: &'a str, org: &str, user: &str) -> Result<&'a str, ApiError> {
@@ -110,6 +125,14 @@ async fn upload_object(
   body: Bytes,
 ) -> Result<Json<UploadResult>, ApiError> {
   let (client, bucket) = s3(&state)?;
+
+  if let Some(lid) = q.listing_id {
+    let _listing = crate::repositories::listings::get_by_id(&state.pool, org_id.as_ref(), lid)
+      .await
+      .map_err(error::db_error)?
+      .ok_or_else(|| error::not_found("Listing not found"))?;
+  }
+
   let byte_size = body.len() as u64;
   if byte_size == 0 || byte_size > MAX_BYTES {
     return Err(error::bad_request("body size out of range"));
@@ -141,6 +164,7 @@ async fn upload_object(
     content_type,
     len_i64,
     &safe_name,
+    q.listing_id,
   )
   .await
   .map_err(|e| {

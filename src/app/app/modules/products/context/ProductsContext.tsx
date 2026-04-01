@@ -16,6 +16,7 @@ import {
   listingsListPath,
   parseListingResponse,
   parseListingsResponse,
+  uploadListingObject,
 } from "../utils/listingsApi";
 
 const ProductsContext = createContext<ProductsContextValue | null>(null);
@@ -74,6 +75,34 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
     [fetchAuth, refetch]
   );
 
+  const createListingWithImageFiles = useCallback(
+    async (body: CreateListingBody, imageFiles: File[]) => {
+      setCreating(true);
+      setCreateError(null);
+      try {
+        const payload = { ...body, media_urls: [] as unknown[] };
+        const res = await fetchAuth(listingsCreatePath, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const created = await parseListingResponse(res);
+        for (const file of imageFiles) {
+          await uploadListingObject(fetchAuth, created.id, file);
+        }
+        await refetch({ quiet: true });
+        return created;
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : "Unknown error";
+        setCreateError(msg);
+        throw e;
+      } finally {
+        setCreating(false);
+      }
+    },
+    [fetchAuth, refetch]
+  );
+
   const deleteListing = useCallback(
     async (id: string) => {
       setDeleting(true);
@@ -99,12 +128,24 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
       error,
       refetch: () => refetch(),
       createListing,
+      createListingWithImageFiles,
       creating,
       createError,
       deleteListing,
       deleting,
     }),
-    [listings, loading, error, refetch, createListing, creating, createError, deleteListing, deleting]
+    [
+      listings,
+      loading,
+      error,
+      refetch,
+      createListing,
+      createListingWithImageFiles,
+      creating,
+      createError,
+      deleteListing,
+      deleting,
+    ]
   );
 
   return <ProductsContext.Provider value={value}>{children}</ProductsContext.Provider>;

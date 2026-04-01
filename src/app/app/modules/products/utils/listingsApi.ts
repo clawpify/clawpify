@@ -17,7 +17,24 @@ export function listingsDetailPath(id: string): string {
   return `/api/listings/${encodeURIComponent(id)}`;
 }
 
-async function parseErrorJson(res: Response): Promise<string> {
+export function listingImagesPath(listingId: string): string {
+  return `/api/listings/${encodeURIComponent(listingId)}/images`;
+}
+
+/** Row from `GET .../listings/:id/images` (backend adds `url` when available). */
+export type ListingImageApiRow = {
+  storage_key: string;
+  url?: string;
+};
+
+/** Same-origin `<img src>` path: prefer API `url`, else build from `storage_key`. */
+export function listingImageSrc(row: ListingImageApiRow): string {
+  const u = row.url?.trim();
+  if (u) return u;
+  return `/api/s3/objects?key=${encodeURIComponent(row.storage_key)}`;
+}
+
+export async function parseApiErrorJson(res: Response): Promise<string> {
   let detail = res.statusText;
   try {
     const body = (await res.json()) as { error?: string };
@@ -30,20 +47,43 @@ async function parseErrorJson(res: Response): Promise<string> {
 
 export async function parseListingsResponse(res: Response): Promise<ConsignmentListingDto[]> {
   if (!res.ok) {
-    throw new Error(await parseErrorJson(res));
+    throw new Error(await parseApiErrorJson(res));
   }
   return res.json() as Promise<ConsignmentListingDto[]>;
 }
 
 export async function parseListingResponse(res: Response): Promise<ConsignmentListingDto> {
   if (!res.ok) {
-    throw new Error(await parseErrorJson(res));
+    throw new Error(await parseApiErrorJson(res));
   }
   return res.json() as Promise<ConsignmentListingDto>;
 }
 
 export async function ensureListingMutationOk(res: Response): Promise<void> {
   if (!res.ok) {
-    throw new Error(await parseErrorJson(res));
+    throw new Error(await parseApiErrorJson(res));
+  }
+}
+
+/** Proxied to Rust `POST /api/s3/objects` with optional `listing_id` + `file_name` query. */
+export function s3ObjectsUploadPath(listingId: string, fileName: string): string {
+  const p = new URLSearchParams();
+  p.set("listing_id", listingId);
+  p.set("file_name", fileName);
+  return `/api/s3/objects?${p.toString()}`;
+}
+
+export async function uploadListingObject(
+  fetchAuth: (path: string, init?: RequestInit) => Promise<Response>,
+  listingId: string,
+  file: File
+): Promise<void> {
+  const res = await fetchAuth(s3ObjectsUploadPath(listingId, file.name), {
+    method: "POST",
+    headers: { "Content-Type": file.type || "application/octet-stream" },
+    body: file,
+  });
+  if (!res.ok) {
+    throw new Error(await parseApiErrorJson(res));
   }
 }

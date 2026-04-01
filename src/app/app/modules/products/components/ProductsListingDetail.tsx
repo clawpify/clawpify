@@ -1,18 +1,16 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useMemo, type ReactNode } from "react";
 import { copy } from "../../../utils/copy";
 import type { ConsignmentListingDto } from "../types";
 import { buildListingTimelineEvents } from "../utils/buildListingTimelineEvents";
 import { formatListingPrice } from "../utils/formatListingPrice";
-import { listingImageUrls } from "../utils/listingMedia";
 import { statusDotClass } from "../utils/productStatusTab";
 import { PlusIcon } from "../../../../../icons/workspace-icons";
+import { ListingMediaSection } from "./listing-media";
+import { RAIL_CARD_SHADOW } from "./listing-media/listingMediaChrome";
 
 type Props = {
   listing: ConsignmentListingDto;
 };
-
-const RAIL_CARD_SHADOW =
-  "shadow-[0_1px_3px_rgba(15,23,42,0.08),0_1px_2px_-1px_rgba(15,23,42,0.06)]";
 
 const TAG_DOT_CLASSES = [
   "bg-amber-500",
@@ -26,13 +24,6 @@ function tagDotClass(tag: string): string {
   let h = 0;
   for (let i = 0; i < tag.length; i++) h = (h + tag.charCodeAt(i) * (i + 1)) % 1000;
   return TAG_DOT_CLASSES[h % TAG_DOT_CLASSES.length] ?? "bg-zinc-400";
-}
-
-function categoryLabel(listing: ConsignmentListingDto): string {
-  const t = listing.product_type?.trim();
-  if (t) return t;
-  if (listing.tags?.length) return listing.tags[0] ?? "";
-  return copy.products.categoryUncategorized;
 }
 
 function vendorLabel(listing: ConsignmentListingDto): string {
@@ -93,155 +84,15 @@ function DetailRailCard({ title, children }: { title: string; children: ReactNod
   );
 }
 
-/** Design-only: file/drop handlers reset input; persistence comes in phase 2. */
-function noopFiles(e: React.ChangeEvent<HTMLInputElement>) {
-  e.target.value = "";
-}
-
-function ListingMediaDropzoneEmpty({ fileInputRef }: { fileInputRef: React.RefObject<HTMLInputElement | null> }) {
-  const [dragOver, setDragOver] = useState(false);
-
-  return (
-    <div
-      className={`flex min-h-[11rem] w-full flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-zinc-200/90 bg-zinc-50/60 px-4 py-8 transition-colors sm:min-h-[12.5rem] ${
-        dragOver ? "border-zinc-300 bg-zinc-100/80" : ""
-      }`}
-      onDragEnter={(e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        setDragOver(true);
-      }}
-      onDragLeave={(e) => {
-        e.preventDefault();
-        if (!e.currentTarget.contains(e.relatedTarget as Node)) setDragOver(false);
-      }}
-      onDragOver={(e) => {
-        e.preventDefault();
-        e.stopPropagation();
-      }}
-      onDrop={(e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        setDragOver(false);
-      }}
-    >
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*"
-        multiple
-        className="hidden"
-        aria-hidden
-        tabIndex={-1}
-        onChange={noopFiles}
-      />
-      <button
-        type="button"
-        onClick={() => fileInputRef.current?.click()}
-        aria-label={copy.products.detailMediaAddAria}
-        className="text-sm font-medium text-zinc-700 underline-offset-4 transition hover:text-zinc-900 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-400"
-      >
-        {copy.products.detailMediaAdd}
-      </button>
-      <p className="text-xs text-zinc-400">{copy.products.detailMediaDropHint}</p>
-    </div>
-  );
-}
-
-type ListingMediaGalleryProps = {
-  images: string[];
-  heroIndex: number;
-  heroSrc: string | null;
-  onSelectHero: (i: number) => void;
-  fileInputRef: React.RefObject<HTMLInputElement | null>;
-};
-
-function ListingMediaGallery({ images, heroIndex, heroSrc, onSelectHero, fileInputRef }: ListingMediaGalleryProps) {
-  return (
-    <div className="space-y-3">
-      <div
-        className="flex min-h-[12rem] max-h-[min(22rem,56vw)] w-full items-center justify-center overflow-hidden rounded-lg border border-zinc-200/80 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
-        onDragOver={(e) => e.preventDefault()}
-        onDrop={(e) => e.preventDefault()}
-      >
-        {heroSrc ? (
-          <img
-            src={heroSrc}
-            alt=""
-            className="max-h-[22rem] w-full max-w-full object-contain"
-            loading="lazy"
-          />
-        ) : null}
-      </div>
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*"
-        multiple
-        className="hidden"
-        aria-hidden
-        tabIndex={-1}
-        onChange={noopFiles}
-      />
-      <div className="flex flex-wrap items-center gap-1.5">
-        {images.map((url, i) => (
-          <button
-            key={url}
-            type="button"
-            onClick={() => onSelectHero(i)}
-            aria-current={i === heroIndex ? "true" : undefined}
-            aria-label={`${copy.products.detailSectionMedia} ${i + 1}`}
-            className={`relative overflow-hidden rounded-md ring-1 ring-inset transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-400 ${
-              i === heroIndex
-                ? "ring-2 ring-zinc-900 ring-offset-1 ring-offset-white"
-                : "ring-black/[0.06] hover:ring-zinc-300"
-            }`}
-          >
-            <span className="block h-11 w-11 bg-zinc-100">
-              <img src={url} alt="" className="h-full w-full object-cover" loading="lazy" />
-            </span>
-          </button>
-        ))}
-        <button
-          type="button"
-          onClick={() => fileInputRef.current?.click()}
-          aria-label={copy.products.detailMediaAddAria}
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-dashed border-zinc-200/80 bg-white text-zinc-400 transition hover:border-zinc-300 hover:text-zinc-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-400"
-        >
-          <PlusIcon size={18} className="text-current" />
-        </button>
-      </div>
-    </div>
-  );
-}
-
 export function ProductsListingDetail({ listing }: Props) {
-  const images = useMemo(() => listingImageUrls(listing), [listing]);
-  const [heroIndex, setHeroIndex] = useState(0);
   const timeline = useMemo(() => buildListingTimelineEvents(listing), [listing]);
   const tags = listing.tags ?? [];
-  const detailFileInputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    setHeroIndex(0);
-  }, [listing.id]);
-  const heroSrc = images[heroIndex] ?? null;
 
   return (
     <div className="flex min-h-0 flex-col gap-8 lg:grid lg:grid-cols-[minmax(0,1fr)_17.5rem] lg:items-start lg:gap-6 lg:pl-0">
       <div className="min-w-0">
         <section aria-label={copy.products.detailSectionMedia}>
-          {images.length === 0 ? (
-            <ListingMediaDropzoneEmpty fileInputRef={detailFileInputRef} />
-          ) : (
-            <ListingMediaGallery
-              images={images}
-              heroIndex={heroIndex}
-              heroSrc={heroSrc}
-              onSelectHero={setHeroIndex}
-              fileInputRef={detailFileInputRef}
-            />
-          )}
+          <ListingMediaSection listing={listing} />
         </section>
 
         <h1 className="mt-7 text-xl font-semibold tracking-[-0.02em] text-zinc-900 sm:text-2xl">{listing.title}</h1>
@@ -299,7 +150,6 @@ export function ProductsListingDetail({ listing }: Props) {
               </span>
             </PropertyRow>
             <PropertyRow label={copy.products.detailSidebarSku}>{skuLabel(listing)}</PropertyRow>
-            <PropertyRow label={copy.products.detailSidebarCategory}>{categoryLabel(listing)}</PropertyRow>
             <PropertyRow label={copy.products.detailSidebarVendor}>{vendorLabel(listing)}</PropertyRow>
             <PropertyRow label={copy.products.detailSidebarChannels}>
               <span className="text-zinc-500">{copy.products.detailNone}</span>
