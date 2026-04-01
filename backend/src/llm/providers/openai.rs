@@ -63,7 +63,7 @@ impl OpenAiProvider {
 
     let mut body = json!({
       "model": model,
-      "input": spec.prompt,
+      "input": spec.input.clone().unwrap_or_else(|| json!(spec.prompt)),
     });
 
     if spec.web_search {

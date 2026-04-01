@@ -6,6 +6,13 @@ export type AuthPayload = {
   orgRole?: string;
 };
 
+const normalizeOrgId = (value?: string | null): string | undefined => {
+  if (!value) return undefined;
+  const trimmed = value.trim();
+  if (!trimmed) return undefined;
+  return trimmed;
+};
+
 /**
  * Proxy an authenticated request to the Rust API.
  *
@@ -23,8 +30,16 @@ export async function proxyToRust(
   const backendUrl = `${RUST_API_URL}${path}${url.search}`;
   const headers = new Headers(req.headers);
 
+  const selectedOrgId = normalizeOrgId(req.headers.get("X-Selected-Org-Id"));
+  const tokenOrgId = normalizeOrgId(auth.orgId);
+  const resolvedOrgId =
+    tokenOrgId ??
+    (process.env.NODE_ENV !== "production" && selectedOrgId?.startsWith("org_")
+      ? selectedOrgId
+      : undefined);
+
   headers.set("X-Internal-User-Id", auth.userId);
-  if (auth.orgId) headers.set("X-Internal-Org-Id", auth.orgId);
+  if (resolvedOrgId) headers.set("X-Internal-Org-Id", resolvedOrgId);
   if (auth.orgRole) headers.set("X-Internal-Org-Role", auth.orgRole);
 
   const res = await fetch(backendUrl, {
@@ -61,7 +76,8 @@ export async function proxyToRustPublic(
 
   if (opts?.auth) {
     headers.set("X-Internal-User-Id", opts.auth.userId);
-    if (opts.auth.orgId) headers.set("X-Internal-Org-Id", opts.auth.orgId);
+    const orgId = normalizeOrgId(opts.auth.orgId);
+    if (orgId) headers.set("X-Internal-Org-Id", orgId);
     if (opts.auth.orgRole) headers.set("X-Internal-Org-Role", opts.auth.orgRole);
   }
 

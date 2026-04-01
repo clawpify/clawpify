@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { Show, UserButton, useOrganization, useUser } from "@clerk/react";
+import { OrganizationSwitcher, Show, UserButton, useOrganization, useUser } from "@clerk/react";
 import { FolderIcon, InboxIcon, PackageIcon, UsersIcon } from "../../../icons/workspace-icons";
 import { copy } from "../utils/copy";
 
@@ -53,6 +53,14 @@ export function WorkspaceSidebar() {
     >
       <Show when="signed-in">
         <WorkspaceUserHeader />
+        <div className="mb-3 px-2">
+          <OrganizationSwitcher
+            hidePersonal
+            afterCreateOrganizationUrl="/app"
+            afterSelectOrganizationUrl="/app"
+            afterLeaveOrganizationUrl="/app"
+          />
+        </div>
       </Show>
       <Show when="signed-out">
         <Link

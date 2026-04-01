@@ -58,6 +58,20 @@ export function useAuthenticatedFetch() {
 
       // Retry once with a fresh token if the cached one was expired
       if (res.status === 401) return request(true);
+      if (res.status === 400) {
+        try {
+          const body = (await res.clone().json()) as {
+            error?: string | { message?: string };
+          };
+          const message =
+            typeof body?.error === "string" ? body.error : body?.error?.message;
+          if (message?.toLowerCase().includes("org required")) {
+            return request(true);
+          }
+        } catch {
+          // ignored
+        }
+      }
 
       return res;
     },

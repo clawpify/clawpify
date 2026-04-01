@@ -24,3 +24,41 @@ export type ConsignmentListingDto = {
   decline_reason: string | null;
   post_contract_disposition: string | null;
 };
+
+export type ProductIntakeDraft = {
+  clientId: string;
+  images: ProductIntakeImage[];
+  model: string;
+  originalPrice: string;
+  isUsed: boolean;
+  notes: string;
+};
+
+export type ProductIntakeImage = {
+  imageId: string;
+  file: File;
+  previewUrl: string;
+};
+
+export type ProductAiParsed = {
+  suggestedPrice?: number;
+  floorPrice?: number;
+  consignorCashBuyPrice?: number;
+  consignmentRangeLow?: number;
+  consignmentRangeHigh?: number;
+  suggestedDescription?: string;
+  brandDescription?: string;
+  pricingReasoning?: string;
+  itemDescriptionChips?: string[];
+  pricingChips?: string[];
+  title?: string;
+  sourcesSearched?: string[];
+};
+
+export type ProductProcessResult = {
+  clientId: string;
+  status: "created" | "failed";
+  listingId?: string | null;
+  parsed?: ProductAiParsed;
+  error?: string;
+};

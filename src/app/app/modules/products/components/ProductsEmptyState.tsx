@@ -23,10 +23,8 @@ export function ProductsEmptyState() {
             2
           </span>
           <div>
-            <Link to="/app/contracts" className="font-medium text-zinc-900 underline decoration-zinc-300 underline-offset-2 hover:decoration-zinc-600">
-              {copy.products.setupStepContracts}
-            </Link>
-            <p className="text-zinc-500">{copy.products.setupStepContractsDesc}</p>
+            <p className="font-medium text-zinc-900">{copy.products.setupStepListing}</p>
+            <p className="text-zinc-500">{copy.products.setupStepListingDesc}</p>
           </div>
         </li>
         <li className="flex gap-3">
@@ -34,8 +32,10 @@ export function ProductsEmptyState() {
             3
           </span>
           <div>
-            <p className="font-medium text-zinc-900">{copy.products.setupStepListing}</p>
-            <p className="text-zinc-500">{copy.products.setupStepListingDesc}</p>
+            <Link to="/app/contracts" className="font-medium text-zinc-900 underline decoration-zinc-300 underline-offset-2 hover:decoration-zinc-600">
+              {copy.products.setupStepContracts}
+            </Link>
+            <p className="text-zinc-500">{copy.products.setupStepContractsDesc}</p>
           </div>
         </li>
       </ol>
