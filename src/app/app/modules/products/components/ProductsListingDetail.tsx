@@ -1,6 +1,9 @@
-import { useMemo, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useToast } from "../../../../../lib/toast";
 import { copy } from "../../../utils/copy";
+import { useProducts } from "../context/ProductsContext";
 import type { ConsignmentListingDto } from "../types";
+import { htmlToMarkdown, markdownToSafeHtml } from "../utils/listingMarkdown";
 import { buildListingTimelineEvents } from "../utils/buildListingTimelineEvents";
 import { formatListingPrice } from "../utils/formatListingPrice";
 import { statusDotClass } from "../utils/productStatusTab";
@@ -85,8 +88,79 @@ function DetailRailCard({ title, children }: { title: string; children: ReactNod
 }
 
 export function ProductsListingDetail({ listing }: Props) {
+  const { updateListing, updatingListing } = useProducts();
+  const { showToast, setActionToast } = useToast();
+  const [titleDraft, setTitleDraft] = useState(listing.title);
+  const [mdDraft, setMdDraft] = useState(() => htmlToMarkdown(listing.description_html ?? ""));
+  const [lastSavedTitle, setLastSavedTitle] = useState(listing.title);
+  const [lastSavedMarkdown, setLastSavedMarkdown] = useState(() =>
+    htmlToMarkdown(listing.description_html ?? "")
+  );
   const timeline = useMemo(() => buildListingTimelineEvents(listing), [listing]);
   const tags = listing.tags ?? [];
+
+  useEffect(() => {
+    const md = htmlToMarkdown(listing.description_html ?? "");
+    setTitleDraft(listing.title);
+    setMdDraft(md);
+    setLastSavedTitle(listing.title);
+    setLastSavedMarkdown(md);
+  }, [listing.id]);
+
+  useEffect(() => () => setActionToast(null), [setActionToast]);
+
+  const hasUnsavedEdits =
+    titleDraft.trim() !== lastSavedTitle.trim() || mdDraft !== lastSavedMarkdown;
+
+  const onCancelEdits = useCallback(() => {
+    setTitleDraft(lastSavedTitle);
+    setMdDraft(lastSavedMarkdown);
+  }, [lastSavedTitle, lastSavedMarkdown]);
+
+  const onSaveEdits = useCallback(async () => {
+    try {
+      const updated = await updateListing(listing.id, {
+        title: titleDraft.trim(),
+        description_html: markdownToSafeHtml(mdDraft),
+      });
+      const md = htmlToMarkdown(updated.description_html ?? "");
+      setTitleDraft(updated.title);
+      setMdDraft(md);
+      setLastSavedTitle(updated.title);
+      setLastSavedMarkdown(md);
+      showToast(copy.products.detailListingSaved);
+    } catch (e) {
+      showToast(
+        `${copy.products.detailListingSaveFailed} ${e instanceof Error ? e.message : "Unknown error"}`
+      );
+    }
+  }, [updateListing, listing.id, titleDraft, mdDraft, showToast]);
+
+  const saveDisabled = updatingListing || !hasUnsavedEdits;
+
+  useEffect(() => {
+    if (!hasUnsavedEdits) {
+      setActionToast(null);
+      return;
+    }
+    setActionToast({
+      message: copy.products.detailUnsavedChangesBar,
+      primaryLabel: copy.products.detailDescriptionSave,
+      secondaryLabel: copy.products.detailDescriptionCancel,
+      ariaLabel: copy.products.detailUnsavedChangesAria,
+      onPrimary: () => void onSaveEdits(),
+      onSecondary: onCancelEdits,
+      primaryDisabled: saveDisabled,
+      secondaryDisabled: updatingListing,
+    });
+  }, [
+    hasUnsavedEdits,
+    setActionToast,
+    onSaveEdits,
+    onCancelEdits,
+    saveDisabled,
+    updatingListing,
+  ]);
 
   return (
     <div className="flex min-h-0 flex-col gap-8 lg:grid lg:grid-cols-[minmax(0,1fr)_17.5rem] lg:items-start lg:gap-6 lg:pl-0">
@@ -95,17 +169,30 @@ export function ProductsListingDetail({ listing }: Props) {
           <ListingMediaSection listing={listing} />
         </section>
 
-        <h1 className="mt-7 text-xl font-semibold tracking-[-0.02em] text-zinc-900 sm:text-2xl">{listing.title}</h1>
+        <div className="mt-7 flex flex-col gap-1">
+          <label className="sr-only" htmlFor="listing-detail-title">
+            {copy.products.createModalTitlePlaceholder}
+          </label>
+          <input
+            id="listing-detail-title"
+            type="text"
+            value={titleDraft}
+            onChange={(e) => setTitleDraft(e.target.value)}
+            className="w-full border-0 bg-transparent p-0 text-2xl font-bold tracking-tight text-zinc-900 shadow-none outline-none ring-0 transition placeholder:text-zinc-400 focus-visible:outline-none focus-visible:ring-0"
+            placeholder={copy.products.createModalTitlePlaceholder}
+            autoComplete="off"
+          />
+        </div>
 
         <section className="mt-7" aria-label={copy.products.detailSectionDescription}>
-          {listing.description_html?.trim() ? (
-            <div
-              className="max-w-none text-[14px] leading-[1.65] text-zinc-600 [&_a]:font-medium [&_a]:text-zinc-900 [&_a]:underline [&_a]:decoration-zinc-300 [&_a]:underline-offset-2 [&_h1]:text-lg [&_h2]:text-base [&_h3]:text-sm [&_li]:ml-4 [&_ol]:list-decimal [&_ol]:pl-4 [&_p]:mb-3 [&_p:last-child]:mb-0 [&_strong]:font-medium [&_strong]:text-zinc-800 [&_ul]:list-disc [&_ul]:pl-4"
-              dangerouslySetInnerHTML={{ __html: listing.description_html }}
-            />
-          ) : (
-            <p className="text-sm italic text-zinc-500">{copy.products.detailNoDescription}</p>
-          )}
+          <textarea
+            value={mdDraft}
+            onChange={(e) => setMdDraft(e.target.value)}
+            rows={8}
+            className="w-full min-h-[10rem] resize-y border-0 bg-transparent px-0 py-2 text-base leading-[1.65] text-zinc-600 shadow-none outline-none ring-0 transition placeholder:text-zinc-400 focus-visible:outline-none focus-visible:ring-0"
+            placeholder={copy.products.createModalDescriptionPlaceholder}
+            aria-label={copy.products.createModalDescriptionPlaceholder}
+          />
         </section>
 
         <section className="mt-14 border-t border-zinc-100 pt-8" aria-label={copy.products.detailSectionActivity}>
@@ -117,7 +204,6 @@ export function ProductsListingDetail({ listing }: Props) {
               const isLast = i === timeline.length - 1;
               return (
                 <li key={ev.id} className="flex gap-3 pb-5 last:pb-0">
-                  {/* Rail stretches to text height; line extends through row gap (pb-5) so it meets the next dot */}
                   <div className="relative flex w-[18px] shrink-0 justify-center self-stretch">
                     {!isLast ? (
                       <span

@@ -236,17 +236,12 @@ export function ProductsPage() {
           style={{ fontFamily: "var(--workspace-font)" }}
         >
           <header className="flex shrink-0 flex-wrap items-center gap-x-2 gap-y-1 border-b border-zinc-100 py-3">
-            <button
-              type="button"
-              onClick={() => navigate("/app/products")}
-              className="text-sm font-medium text-zinc-600 underline-offset-4 transition hover:text-zinc-900 hover:underline"
+            <Link
+              to="/app/products"
+              className="text-sm font-medium text-zinc-500 underline-offset-4 transition hover:text-zinc-900 hover:underline"
             >
-              {copy.products.detailBackToProducts}
-            </button>
-            <span className="text-zinc-300" aria-hidden>
-              ·
-            </span>
-            <span className="text-sm text-zinc-500">{copy.products.pageHeading}</span>
+              {copy.products.pageHeading}
+            </Link>
             <span className="text-zinc-300" aria-hidden>
               /
             </span>

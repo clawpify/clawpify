@@ -2,6 +2,7 @@ import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { SignIn, SignUp } from "@clerk/react";
 import { LandingPage } from "../app/landing";
 import { AboutPage } from "../app/about/page";
+import { PrivacyPage } from "../app/privacy/page";
 import {
   WorkspaceLayout,
   HomePage,
@@ -50,6 +51,7 @@ export function AppRoutes() {
     <Routes>
       <Route path="/" element={<LandingPage />} />
       <Route path="/about" element={<AboutPage />} />
+      <Route path="/privacy" element={<PrivacyPage />} />
       <Route path="/blog" element={<WritingPage />} />
       <Route path="/blog/:slug" element={<WritingPostPage />} />
       <Route path="/writing" element={<Navigate to="/blog" replace />} />

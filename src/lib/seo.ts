@@ -19,6 +19,11 @@ const routeMeta: Record<string, RouteMeta> = {
     description:
       "Learn how Clawpify helps e-commerce brands optimize for AI-driven commerce and get discovered by AI agents.",
   },
+  "/privacy": {
+    title: "Privacy Policy - Clawpify",
+    description:
+      "How Clawpify collects, uses, and shares personal information when you use our product and website.",
+  },
   "/blog": {
     title: "Blog - Clawpify",
     description:
@@ -225,6 +230,7 @@ export function generateSitemapXml(): string {
   const publicPaths: { path: string; lastmod: string; changefreq: string; priority: string }[] = [
     { path: "/",                lastmod: "2026-03-15", changefreq: "monthly", priority: "1.0" },
     { path: "/about",           lastmod: "2026-03-10", changefreq: "monthly", priority: "0.8" },
+    { path: "/privacy",         lastmod: "2026-04-01", changefreq: "yearly",  priority: "0.5" },
     { path: "/blog",            lastmod: "2026-03-10", changefreq: "weekly",  priority: "0.7" },
   ];
 

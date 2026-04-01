@@ -9,7 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import { useAuthenticatedFetch } from "../../../../../lib/api";
-import type { ConsignmentListingDto, CreateListingBody, ProductsContextValue } from "../types";
+import type { ConsignmentListingDto, CreateListingBody, ProductsContextValue, UpdateListingBody } from "../types";
 import {
   ensureListingMutationOk,
   listingsCreatePath,
@@ -31,6 +31,7 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+  const [updatingListing, setUpdatingListing] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
   const refetch = useCallback(
@@ -106,6 +107,25 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
     [fetchAuth, refetch]
   );
 
+  const updateListing = useCallback(
+    async (id: string, body: UpdateListingBody) => {
+      setUpdatingListing(true);
+      try {
+        const res = await fetchAuth(listingsDetailPath(id), {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        const updated = await parseListingResponse(res);
+        setListings((prev) => prev.map((l) => (l.id === id ? updated : l)));
+        return updated;
+      } finally {
+        setUpdatingListing(false);
+      }
+    },
+    [fetchAuth]
+  );
+
   const deleteListing = useCallback(
     async (id: string) => {
       setDeleting(true);
@@ -136,6 +156,8 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
       createListingWithImageFiles,
       creating,
       createError,
+      updateListing,
+      updatingListing,
       deleteListing,
       deleting,
     }),
@@ -148,6 +170,8 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
       createListingWithImageFiles,
       creating,
       createError,
+      updateListing,
+      updatingListing,
       deleteListing,
       deleting,
     ]

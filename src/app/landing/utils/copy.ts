@@ -177,7 +177,7 @@ export const copy = {
       },
       {
         heading: "Legal",
-        links: [{ label: "Privacy Policy", href: "#" }],
+        links: [{ label: "Privacy Policy", href: "/privacy" }],
       },
       {
         heading: "Connect",

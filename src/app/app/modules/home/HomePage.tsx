@@ -11,7 +11,10 @@ export function HomePage() {
   }, [setConfig]);
 
   return (
-    <main className="flex-1 overflow-y-auto">
+    <main
+      className="flex min-h-0 flex-1 flex-col overflow-hidden bg-white"
+      style={{ fontFamily: "var(--workspace-font)" }}
+    >
       <HomeContent />
     </main>
   );

@@ -24,7 +24,7 @@ export default App;
  * @returns 
  */
 function isFullBleedShell(p: string): boolean {
-  if (p === "/" || p === "/about") return true;
+  if (p === "/" || p === "/about" || p === "/privacy") return true;
   if (p === "/sign-in" || p === "/sign-up") return true;
   if (p === "/blog" || p.startsWith("/blog/")) return true;
   if (p === "/writing" || p.startsWith("/writing/")) return true;

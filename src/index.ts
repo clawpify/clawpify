@@ -93,6 +93,23 @@ type ProxyPath = string | ((req: Request) => string);
 const pathnameOf = (req: Request) => new URL(req.url).pathname;
 const toPublicAssetPath = (req: Request) => `public${pathnameOf(req)}`;
 
+/** Files in `/public` linked at site root (favicon, Clerk `logoImageUrl`, legacy mark). */
+const PUBLIC_ROOT_NAMES = new Set([
+  "favicon-32.png",
+  "apple-touch-icon.png",
+  "clawpify-mark.svg",
+]);
+
+async function servePublicRoot(pathname: string): Promise<Response | null> {
+  const name = pathname.startsWith("/") ? pathname.slice(1) : pathname;
+  if (!PUBLIC_ROOT_NAMES.has(name)) return null;
+  const file = Bun.file(path.join(import.meta.dir, "../public", name));
+  if (!(await file.exists())) return null;
+  return new Response(file, {
+    headers: { "Content-Type": file.type || "application/octet-stream" },
+  });
+}
+
 const proxy = (path: ProxyPath) =>
   createProxyHandler(path, AuthError, requireAuth);
 
@@ -242,7 +259,7 @@ const server = serve({
     ...apiRoutes,
   },
 
-  fetch(req) {
+  async fetch(req) {
     const pathname = pathnameOf(req);
     if (
       pathname.startsWith("/api/consignors") ||
@@ -259,6 +276,8 @@ const server = serve({
         headers: { "Content-Type": asset.type || "application/octet-stream" },
       });
     }
+    const publicRoot = await servePublicRoot(pathname);
+    if (publicRoot) return publicRoot;
     if (pathname.includes(".")) {
       return new Response("Not found", { status: 404 });
     }
