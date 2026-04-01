@@ -1,5 +1,11 @@
 import { Link, useLocation } from "react-router-dom";
-import { Show, UserButton, useOrganization, useUser } from "@clerk/react";
+import {
+  OrganizationSwitcher,
+  Show,
+  UserButton,
+  useOrganization,
+  useUser,
+} from "@clerk/react";
 import { InboxIcon, PackageIcon } from "../../../icons/workspace-icons";
 import { copy } from "../utils/copy";
 
