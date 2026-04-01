@@ -96,6 +96,13 @@ export type ProcessProductsRequest = {
 const MAX_IMAGE_EDGE_PX = 1600;
 const MAX_IMAGE_BYTES = 1_000_000;
 const MIN_JPEG_QUALITY = 0.55;
+const PASSTHROUGH_IMAGE_TYPES = new Set([
+  "image/jpeg",
+  "image/jpg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+]);
 
 async function fileToDataUrl(file: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -117,8 +124,14 @@ async function loadImageElement(file: File): Promise<HTMLImageElement> {
 }
 
 async function compressImageFile(file: File): Promise<Blob> {
-  const bitmap =
-    "createImageBitmap" in window ? await createImageBitmap(file) : null;
+  let bitmap: ImageBitmap | null = null;
+  if ("createImageBitmap" in window) {
+    try {
+      bitmap = await createImageBitmap(file);
+    } catch {
+      bitmap = null;
+    }
+  }
   const imageEl = bitmap ? null : await loadImageElement(file);
   const source = bitmap ?? imageEl;
   if (!source) return file;
@@ -172,6 +185,10 @@ export async function processProductsRequestBody(
       const imageDataUrls = await Promise.all(
         item.images.map(async (image) => {
           try {
+            const mimeType = image.file.type.toLowerCase();
+            if (PASSTHROUGH_IMAGE_TYPES.has(mimeType)) {
+              return fileToDataUrl(image.file);
+            }
             const compressed = await compressImageFile(image.file);
             return fileToDataUrl(compressed);
           } catch {

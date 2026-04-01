@@ -26,13 +26,12 @@ use crate::middleware as mw;
 use super::state::AppState;
 
 const MAX_AGENTS: usize = 50;
-const LLM_BODY_LIMIT_BYTES: usize = 20 * 1024 * 1024;
 
 pub fn routes() -> Router<AppState> {
   Router::new()
     .route("/llm/agents", post(llm_agents))
     .route("/llm/agents/stream", post(llm_agents_stream))
-    .layer(DefaultBodyLimit::max(LLM_BODY_LIMIT_BYTES))
+    .layer(DefaultBodyLimit::disable())
     .route_layer(middleware::from_fn(mw::require_internal_auth))
 }
 

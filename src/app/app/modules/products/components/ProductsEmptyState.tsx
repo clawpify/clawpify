@@ -1,10 +1,29 @@
 import { Link } from "react-router-dom";
 import { copy } from "../../../utils/copy";
 
-export function ProductsEmptyState() {
+type ProductsEmptyStateProps = {
+  className?: string;
+  onClose?: () => void;
+};
+
+export function ProductsEmptyState({ className, onClose }: ProductsEmptyStateProps = {}) {
   return (
-    <div className="mt-8 rounded-xl border border-dashed border-zinc-200 bg-zinc-50/50 px-5 py-6">
-      <h3 className="text-sm font-semibold text-zinc-900">{copy.products.setupTitle}</h3>
+    <div
+      className={`rounded-xl border border-dashed border-zinc-200 bg-zinc-50/50 px-5 py-6 ${className ?? ""}`}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <h3 className="text-sm font-semibold text-zinc-900">{copy.products.setupTitle}</h3>
+        {onClose ? (
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-md border border-zinc-200 bg-white px-2 py-1 text-xs text-zinc-600 transition hover:bg-zinc-50 hover:text-zinc-900"
+            aria-label="Close setup overview"
+          >
+            Close
+          </button>
+        ) : null}
+      </div>
       <p className="mt-1 text-sm text-zinc-500">{copy.products.emptyHint}</p>
       <ol className="mt-4 flex flex-col gap-3 text-sm">
         <li className="flex gap-3">

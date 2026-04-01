@@ -147,13 +147,17 @@ function ProductsPageInner() {
     deleteListing,
   } = useProducts();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const draftCardRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const draftModelInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const [targetDraftId, setTargetDraftId] = useState<string | null>(null);
+  const [pendingScrollDraftId, setPendingScrollDraftId] = useState<string | null>(null);
   const [selectedListing, setSelectedListing] = useState<ConsignmentListingDto | null>(null);
   const [modalError, setModalError] = useState<string | null>(null);
   const [savingListing, setSavingListing] = useState(false);
   const [approvingListing, setApprovingListing] = useState(false);
   const [deletingListing, setDeletingListing] = useState(false);
   const [aiResultsHidden, setAiResultsHidden] = useState(false);
+  const [overviewHidden, setOverviewHidden] = useState(false);
 
   const onPickImages = (clientId: string) => {
     setTargetDraftId(clientId);
@@ -162,7 +166,7 @@ function ProductsPageInner() {
 
   const onCreateProduct = () => {
     const clientId = createDraft();
-    onPickImages(clientId);
+    setPendingScrollDraftId(clientId);
   };
 
   useEffect(() => {
@@ -174,6 +178,18 @@ function ProductsPageInner() {
   useEffect(() => {
     if (processResults.length > 0) setAiResultsHidden(false);
   }, [processResults]);
+
+  useEffect(() => {
+    if (!pendingScrollDraftId) return;
+    const card = draftCardRefs.current[pendingScrollDraftId];
+    if (!card) return;
+
+    card.scrollIntoView({ behavior: "smooth", block: "center" });
+    window.requestAnimationFrame(() => {
+      draftModelInputRefs.current[pendingScrollDraftId]?.focus();
+    });
+    setPendingScrollDraftId(null);
+  }, [drafts, pendingScrollDraftId]);
 
   const onCloseModal = () => {
     setSelectedListing(null);
@@ -255,47 +271,51 @@ function ProductsPageInner() {
 
   return (
     <main className="flex-1 overflow-y-auto">
-      <div className="flex-1 overflow-auto px-6 py-8">
+      <div className="flex-1 overflow-auto px-3 py-4 sm:px-6 sm:py-8">
         <div className="mx-auto max-w-4xl">
-          <div className="flex flex-wrap items-end justify-between gap-3">
-            <div>
-              <h2 className="text-xl font-semibold text-zinc-900">{copy.products.title}</h2>
-              <p className="mt-2 text-sm text-zinc-500">{copy.products.subtitle}</p>
-            </div>
-            <div className="flex gap-2">
+          <div>
+            <h2 className="text-xl font-semibold text-zinc-900">{copy.products.title}</h2>
+            <p className="mt-2 text-sm text-zinc-500">{copy.products.subtitle}</p>
+          </div>
+
+          {listings.length === 0 && !overviewHidden ? (
+            <ProductsEmptyState className="mt-5" onClose={() => setOverviewHidden(true)} />
+          ) : null}
+
+          <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-end">
+            <button
+              type="button"
+              onClick={onCreateProduct}
+              className="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm font-medium text-zinc-800 shadow-sm transition hover:bg-zinc-50 sm:order-last sm:w-auto sm:py-1.5"
+            >
+              New product
+            </button>
+            {error ? (
               <button
                 type="button"
-                onClick={onCreateProduct}
-                className="rounded-md border border-zinc-200 bg-white px-3 py-1.5 text-sm font-medium text-zinc-800 shadow-sm transition hover:bg-zinc-50"
+                onClick={() => void refetch()}
+                className="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm font-medium text-zinc-800 shadow-sm transition hover:bg-zinc-50 sm:w-auto sm:py-1.5"
               >
-                New product
+                {copy.products.retry}
               </button>
-              {error ? (
-                <button
-                  type="button"
-                  onClick={() => void refetch()}
-                  className="rounded-md border border-zinc-200 bg-white px-3 py-1.5 text-sm font-medium text-zinc-800 shadow-sm transition hover:bg-zinc-50"
-                >
-                  {copy.products.retry}
-                </button>
-              ) : null}
-            </div>
+            ) : null}
           </div>
           <input
             ref={fileInputRef}
             type="file"
             accept="image/*"
-            capture="environment"
             multiple
             className="hidden"
-            onChange={(e) => {
-              if (e.target.files && targetDraftId) addFilesToDraft(targetDraftId, e.target.files);
-              setTargetDraftId(null);
-              e.currentTarget.value = "";
+            onChange={async (e) => {
+              if (e.target.files && targetDraftId) {
+                await Promise.resolve(addFilesToDraft(targetDraftId, e.target.files));
+                setTargetDraftId(null);
+                e.currentTarget.value = "";
+              }
             }}
           />
 
-          <section className="mt-5 rounded-xl border border-zinc-200 bg-white p-4">
+          <section className="mt-5 rounded-xl border border-zinc-200 bg-white p-3 sm:p-4">
             <h3 className="text-sm font-semibold text-zinc-900">AI Intake</h3>
             <p className="mt-1 text-xs text-zinc-500">
               Add products one at a time, upload multiple images for each, then process in parallel.
@@ -303,32 +323,31 @@ function ProductsPageInner() {
             {drafts.length > 0 ? (
               <div className="mt-4 space-y-3">
                 {drafts.map((draft, index) => (
-                  <div key={draft.clientId} className="rounded-lg border border-zinc-200 p-3">
-                    <div className="flex items-center justify-between gap-2">
+                  <div
+                    key={draft.clientId}
+                    ref={(el) => {
+                      draftCardRefs.current[draft.clientId] = el;
+                    }}
+                    className="rounded-lg border border-zinc-200 p-2.5 sm:p-3"
+                  >
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                       <p className="text-sm font-medium text-zinc-900">Product {index + 1}</p>
-                      <div className="flex gap-2">
-                        <button
-                          type="button"
-                          onClick={() => removeDraft(draft.clientId)}
-                          className="rounded-md border border-rose-200 px-2 py-1 text-[11px] font-medium text-rose-700 hover:bg-rose-50"
-                          aria-label={`Remove product ${index + 1}`}
-                          title="Remove product"
-                        >
-                          Remove
-                        </button>
+                      <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:justify-end">
                         <button
                           type="button"
                           onClick={() => onPickImages(draft.clientId)}
-                          className="rounded-md border border-zinc-300 px-3 py-1.5 text-xs text-zinc-700"
+                          className="flex-1 rounded-md border border-zinc-300 px-3 py-1.5 text-xs text-zinc-700 sm:flex-none"
                         >
                           Add images
                         </button>
                         <button
                           type="button"
-                          onClick={() => onPickImages(draft.clientId)}
-                          className="rounded-md border border-zinc-300 px-3 py-1.5 text-xs text-zinc-700"
+                          onClick={() => removeDraft(draft.clientId)}
+                          className="order-last w-full rounded-md border border-rose-200 px-3 py-1.5 text-xs font-medium text-rose-700 hover:bg-rose-50 sm:order-none sm:w-auto sm:py-1"
+                          aria-label={`Remove product ${index + 1}`}
+                          title="Remove product"
                         >
-                          Take picture
+                          Remove
                         </button>
                       </div>
                     </div>
@@ -356,6 +375,9 @@ function ProductsPageInner() {
                     )}
                     <div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-2">
                       <input
+                        ref={(el) => {
+                          draftModelInputRefs.current[draft.clientId] = el;
+                        }}
                         placeholder="Model"
                         value={draft.model}
                         onChange={(e) => updateDraft(draft.clientId, { model: e.target.value })}
@@ -399,19 +421,19 @@ function ProductsPageInner() {
               </p>
             )}
 
-            <div className="mt-4 flex flex-wrap gap-2">
+            <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
               <button
                 type="button"
                 disabled={processing || drafts.length === 0}
                 onClick={() => void processDrafts()}
-                className="rounded-md bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white disabled:opacity-60"
+                className="w-full rounded-md bg-zinc-900 px-3 py-2 text-sm font-medium text-white disabled:opacity-60 sm:w-auto sm:py-1.5"
               >
                 {processing ? "Processing..." : `Process ${drafts.length} item(s)`}
               </button>
               <button
                 type="button"
                 onClick={clearDrafts}
-                className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm"
+                className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm sm:w-auto sm:py-1.5"
               >
                 Clear
               </button>
@@ -564,7 +586,7 @@ function ProductsPageInner() {
               {copy.products.loadErrorPrefix} {error}
             </p>
           ) : listings.length === 0 ? (
-            <ProductsEmptyState />
+            <p className="mt-8 text-sm text-zinc-500">No listings yet.</p>
           ) : (
             <ProductsTable listings={listings} onSelectListing={setSelectedListing} />
           )}

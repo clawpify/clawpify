@@ -9,6 +9,16 @@ const listingStatusLabel = (listing: ConsignmentListingDto) => {
   return listing.status;
 };
 
+const listingStatusClassName = (listing: ConsignmentListingDto) => {
+  const status = listingStatusLabel(listing).toLowerCase();
+
+  if (status === "approved") return "bg-emerald-100 text-emerald-800";
+  if (status === "draft") return "bg-zinc-100 text-zinc-700";
+  if (status === "declined") return "bg-rose-100 text-rose-800";
+  if (status === "pending") return "bg-amber-100 text-amber-800";
+  return "bg-zinc-100 text-zinc-700";
+};
+
 type ProductsTableProps = {
   listings: ConsignmentListingDto[];
   onSelectListing?: (listing: ConsignmentListingDto) => void;
@@ -48,7 +58,9 @@ export function ProductsTable({ listings, onSelectListing }: ProductsTableProps)
               </td>
               <td className="max-w-[280px] truncate px-4 py-3 font-medium text-zinc-900">{row.title}</td>
               <td className="px-4 py-3">
-                <span className="rounded-md bg-zinc-100 px-2 py-0.5 text-xs text-zinc-700">
+                <span
+                  className={`rounded-md px-2 py-0.5 text-xs ${listingStatusClassName(row)}`}
+                >
                   {listingStatusLabel(row)}
                 </span>
               </td>
