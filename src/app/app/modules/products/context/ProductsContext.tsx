@@ -177,19 +177,19 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
     setProcessError(null);
   }, []);
 
+  const clearDraftsAfterProcessing = useCallback(() => {
+    setDrafts((prev) => {
+      for (const draft of prev) {
+        for (const image of draft.images) URL.revokeObjectURL(image.previewUrl);
+      }
+      return [];
+    });
+    setProcessError(null);
+  }, []);
+
   const processDrafts = useCallback(
     async () => {
       if (drafts.length === 0) return;
-      const missingModel = drafts.find((d) => !d.model.trim());
-      if (missingModel) {
-        setProcessError("Each product needs a model before processing.");
-        return;
-      }
-      const missingImages = drafts.find((d) => d.images.length === 0);
-      if (missingImages) {
-        setProcessError("Each product needs at least one image before processing.");
-        return;
-      }
 
       setProcessing(true);
       setProcessError(null);
@@ -206,13 +206,14 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
         const results = await processProductsResponse(res);
         setProcessResults(results);
         await refetch();
+        clearDraftsAfterProcessing();
       } catch (e) {
         setProcessError(e instanceof Error ? e.message : "Failed to process products");
       } finally {
         setProcessing(false);
       }
     },
-    [drafts, effectiveOrgId, fetchAuth, refetch]
+    [clearDraftsAfterProcessing, drafts, effectiveOrgId, fetchAuth, refetch]
   );
 
   const updateListing = useCallback(

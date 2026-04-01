@@ -15,12 +15,68 @@ const formatUsd = (value?: number) => {
   return usd.format(value);
 };
 
+const formatDurationMs = (value?: number) => {
+  if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) return null;
+  if (value < 1000) return `${Math.round(value)}ms`;
+  return `${(value / 1000).toFixed(1)}s`;
+};
+
 const sourceLabel = (url: string) => {
   try {
-    return new URL(url).hostname.replace(/^www\./, "");
+    const parsed = new URL(url);
+    const domain = parsed.hostname.replace(/^www\./, "");
+    const segments = parsed.pathname.split("/").filter(Boolean);
+    const tail = segments.at(-1);
+    if (!tail) return domain;
+    const slug = decodeURIComponent(tail).replace(/[-_]+/g, " ").trim();
+    if (!slug || slug.length < 3) return domain;
+    return `${domain} • ${slug}`;
   } catch {
     return url;
   }
+};
+
+const normalizeSourceUrl = (value: string) => {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  const hasScheme = /^https?:\/\//i.test(trimmed);
+  const hasDot = trimmed.includes(".");
+  const isLocalhost = /^localhost(?::\d+)?(?:\/|$)/i.test(trimmed);
+  const isIp = /^\d{1,3}(?:\.\d{1,3}){3}(?::\d+)?(?:\/|$)/.test(trimmed);
+  if (!hasScheme && !hasDot && !isLocalhost && !isIp) return null;
+  const withScheme = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+  try {
+    const url = new URL(withScheme);
+    if (!url.hostname) return null;
+    return url.toString();
+  } catch {
+    return null;
+  }
+};
+
+const canonicalSourceKey = (url: string) => {
+  try {
+    const parsed = new URL(url);
+    const path = parsed.pathname.replace(/\/+$/, "");
+    return `${parsed.hostname.toLowerCase()}${path}`;
+  } catch {
+    return url.toLowerCase();
+  }
+};
+
+const uniqueDisplaySources = (values?: string[]) => {
+  const items = values ?? [];
+  const seen = new Set<string>();
+  const out: Array<{ raw: string; normalized: string }> = [];
+  for (const raw of items) {
+    const normalized = normalizeSourceUrl(raw);
+    if (!normalized) continue;
+    const key = canonicalSourceKey(normalized);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push({ raw, normalized });
+  }
+  return out;
 };
 
 const humanizeProcessItemError = (value?: string) => {
@@ -39,6 +95,35 @@ const humanizeDraftClientId = (clientId: string, index: number) => {
   if (ordinal) return `Draft ${Number.parseInt(ordinal, 10) + 1}`;
   return `Item ${index + 1}`;
 };
+
+const PRICING_PREVIEW_CHARS = 240;
+
+const pricingPreview = (value: string) => {
+  const normalized = value.replace(/\s+/g, " ").trim();
+  if (normalized.length <= PRICING_PREVIEW_CHARS) return { short: normalized, hasMore: false };
+  const cutoff = normalized.lastIndexOf(" ", PRICING_PREVIEW_CHARS);
+  const safeIndex = cutoff > 140 ? cutoff : PRICING_PREVIEW_CHARS;
+  return { short: `${normalized.slice(0, safeIndex).trimEnd()}...`, hasMore: true };
+};
+
+function ExpandableRationale({ text }: { text: string }) {
+  const [expanded, setExpanded] = useState(false);
+  const preview = pricingPreview(text);
+  return (
+    <div className="mt-1">
+      <p>{expanded ? text : preview.short}</p>
+      {preview.hasMore ? (
+        <button
+          type="button"
+          onClick={() => setExpanded((prev) => !prev)}
+          className="mt-1 text-xs font-medium text-indigo-700 underline-offset-2 hover:underline"
+        >
+          {expanded ? "Show less" : "Show full rationale"}
+        </button>
+      ) : null}
+    </div>
+  );
+}
 
 function ProductsPageInner() {
   const {
@@ -68,6 +153,7 @@ function ProductsPageInner() {
   const [savingListing, setSavingListing] = useState(false);
   const [approvingListing, setApprovingListing] = useState(false);
   const [deletingListing, setDeletingListing] = useState(false);
+  const [aiResultsHidden, setAiResultsHidden] = useState(false);
 
   const onPickImages = (clientId: string) => {
     setTargetDraftId(clientId);
@@ -84,6 +170,10 @@ function ProductsPageInner() {
     const refreshed = listings.find((item) => item.id === selectedListing.id);
     if (refreshed) setSelectedListing(refreshed);
   }, [listings, selectedListing]);
+
+  useEffect(() => {
+    if (processResults.length > 0) setAiResultsHidden(false);
+  }, [processResults]);
 
   const onCloseModal = () => {
     setSelectedListing(null);
@@ -219,6 +309,15 @@ function ProductsPageInner() {
                       <div className="flex gap-2">
                         <button
                           type="button"
+                          onClick={() => removeDraft(draft.clientId)}
+                          className="rounded-md border border-rose-200 px-2 py-1 text-[11px] font-medium text-rose-700 hover:bg-rose-50"
+                          aria-label={`Remove product ${index + 1}`}
+                          title="Remove product"
+                        >
+                          Remove
+                        </button>
+                        <button
+                          type="button"
                           onClick={() => onPickImages(draft.clientId)}
                           className="rounded-md border border-zinc-300 px-3 py-1.5 text-xs text-zinc-700"
                         >
@@ -226,10 +325,10 @@ function ProductsPageInner() {
                         </button>
                         <button
                           type="button"
-                          onClick={() => removeDraft(draft.clientId)}
-                          className="rounded-md border border-rose-200 px-3 py-1.5 text-xs text-rose-700"
+                          onClick={() => onPickImages(draft.clientId)}
+                          className="rounded-md border border-zinc-300 px-3 py-1.5 text-xs text-zinc-700"
                         >
-                          Remove product
+                          Take picture
                         </button>
                       </div>
                     </div>
@@ -324,9 +423,18 @@ function ProductsPageInner() {
             ) : null}
           </section>
 
-          {processResults.length > 0 ? (
+          {processResults.length > 0 && !aiResultsHidden ? (
             <section className="mt-5 rounded-xl border border-zinc-200 bg-white p-4">
-              <h3 className="text-sm font-semibold text-zinc-900">AI Results</h3>
+              <div className="flex items-center justify-between gap-2">
+                <h3 className="text-sm font-semibold text-zinc-900">AI Results</h3>
+                <button
+                  type="button"
+                  onClick={() => setAiResultsHidden(true)}
+                  className="rounded-md border border-zinc-200 px-2 py-1 text-xs text-zinc-600 hover:bg-zinc-50"
+                >
+                  Hide
+                </button>
+              </div>
               <div className="mt-3 space-y-2 text-sm">
                 {processResults.map((result, index) => (
                   <div
@@ -339,9 +447,14 @@ function ProductsPageInner() {
                     </p>
                     {result.status === "created" ? (
                       <>
+                        {formatDurationMs(result.parsed?.durationMs) ? (
+                          <p className="mt-1 text-xs text-zinc-500">
+                            AI processing time: {formatDurationMs(result.parsed?.durationMs)}
+                          </p>
+                        ) : null}
                         <div className="mt-2 flex flex-wrap gap-2 text-xs font-medium">
-                          <span className="rounded-full bg-zinc-100 px-2.5 py-1 text-zinc-800">
-                            Floor {formatUsd(result.parsed?.floorPrice)}
+                          <span className="rounded-full bg-amber-100 px-2.5 py-1 text-amber-800">
+                            Suggested {formatUsd(result.parsed?.suggestedPrice)}
                           </span>
                           <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-emerald-800">
                             Cash buy {formatUsd(result.parsed?.consignorCashBuyPrice)}
@@ -349,9 +462,6 @@ function ProductsPageInner() {
                           <span className="rounded-full bg-blue-100 px-2.5 py-1 text-blue-800">
                             Range {formatUsd(result.parsed?.consignmentRangeLow)} -{" "}
                             {formatUsd(result.parsed?.consignmentRangeHigh)}
-                          </span>
-                          <span className="rounded-full bg-amber-100 px-2.5 py-1 text-amber-800">
-                            Suggested {formatUsd(result.parsed?.suggestedPrice)}
                           </span>
                         </div>
                         {result.parsed?.itemDescriptionChips?.length ? (
@@ -384,7 +494,7 @@ function ProductsPageInner() {
                             <p className="text-xs font-semibold uppercase tracking-wide text-indigo-700">
                               Pricing rationale
                             </p>
-                            <p className="mt-1">{result.parsed.pricingReasoning}</p>
+                            <ExpandableRationale text={result.parsed.pricingReasoning} />
                           </div>
                         ) : null}
                         {result.parsed?.pricingChips?.length ? (
@@ -408,43 +518,34 @@ function ProductsPageInner() {
                           <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
                             Sources
                           </p>
-                          {result.parsed?.sourcesSearched?.length ? (
-                            <div className="mt-2 flex flex-wrap gap-2">
-                              {result.parsed.sourcesSearched.map((source) => (
-                                <a
-                                  key={source}
-                                  href={source}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className="inline-flex max-w-full items-center gap-1 rounded-md border border-zinc-200 bg-white px-2.5 py-1 text-xs text-zinc-700 transition hover:border-zinc-300 hover:bg-zinc-50"
-                                  title={source}
-                                >
-                                  <span className="truncate">{sourceLabel(source)}</span>
-                                  <span aria-hidden="true" className="text-zinc-400">
-                                    ↗
-                                  </span>
-                                </a>
-                              ))}
-                            </div>
+                          {uniqueDisplaySources(result.parsed?.sourcesSearched).length ? (
+                            <details className="mt-2">
+                              <summary className="cursor-pointer text-xs text-zinc-600 hover:text-zinc-800">
+                                Show sources ({uniqueDisplaySources(result.parsed?.sourcesSearched).length})
+                              </summary>
+                              <div className="mt-2 flex flex-wrap gap-2">
+                                {uniqueDisplaySources(result.parsed?.sourcesSearched).map(
+                                  ({ raw, normalized }) => (
+                                    <a
+                                      key={`${raw}-all`}
+                                      href={normalized}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="inline-flex max-w-full items-center gap-1 rounded-md border border-zinc-200 bg-white px-2.5 py-1 text-xs text-zinc-700 transition hover:border-zinc-300 hover:bg-zinc-50"
+                                      title={normalized}
+                                    >
+                                      <span className="truncate">{sourceLabel(normalized)}</span>
+                                      <span aria-hidden="true" className="text-zinc-400">
+                                        ↗
+                                      </span>
+                                    </a>
+                                  )
+                                )}
+                              </div>
+                            </details>
                           ) : (
                             <p className="mt-1 text-xs text-zinc-500">No sources returned.</p>
                           )}
-                          {result.parsed?.sourcesSearched?.length ? (
-                            <div className="mt-2 space-y-1">
-                              {result.parsed.sourcesSearched.map((source) => (
-                                  <a
-                                    key={`${source}-full`}
-                                    href={source}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    className="block truncate text-[11px] text-zinc-400 underline-offset-2 hover:underline"
-                                  >
-                                    {source}
-                                  </a>
-                                
-                              ))}
-                            </div>
-                          ) : null}
                         </div>
                       </>
                     ) : (

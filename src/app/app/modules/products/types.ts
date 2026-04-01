@@ -41,6 +41,7 @@ export type ProductIntakeImage = {
 };
 
 export type ProductAiParsed = {
+  durationMs?: number;
   suggestedPrice?: number;
   floorPrice?: number;
   consignorCashBuyPrice?: number;

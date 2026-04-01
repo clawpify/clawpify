@@ -273,11 +273,10 @@ type ProductProcessRequest = {
 };
 
 const DEFAULT_PRODUCT_SYSTEM_PROMPT =
-  "You are an expert resale assistant. Return only JSON with keys: suggestedPrice (number, USD), sourcesSearched (array of strings), suggestedDescription (string, max 180 chars), brandDescription (string, 2-4 sentences describing the brand in this style: 'IMG is a Norwegian furniture brand known for...'), pricingReasoning (string, 1-2 sentences explaining why this price range makes sense), itemDescriptionChips (array of 3-6 short strings describing item attributes and condition), pricingChips (array of 3-6 short strings that explain price drivers like rarity, condition, brand demand, comps), title (string), brand (string).";
+  "You are an expert resale assistant. Return only JSON with keys: suggestedPrice (number, USD), sourcesSearched (array of strings), suggestedDescription (string, max 180 chars), brandDescription (string, 2-4 sentences describing the brand in this style: 'IMG is a Norwegian furniture brand known for...'), pricingReasoning (string, 1-2 sentences explaining why this price range makes sense), itemDescriptionChips (array of 3-6 short strings describing item attributes and condition), pricingChips (array of 3-6 short strings that explain price drivers like rarity, condition, brand demand, comps), title (string), brand (string). Do NOT use quantity semantics (single, pair, set, multiple pieces, lot, bundle, count) as a reason for pricing, and do NOT mention those terms in pricingReasoning or pricingChips. pricingReasoning must be complete sentences and must NOT end with ellipses.";
 const CLEANING_FEE_CENTS = 15_000;
 const MAX_DESCRIPTION_LENGTH = 180;
 const MAX_BRAND_DESCRIPTION_LENGTH = 520;
-const MAX_PRICING_REASONING_LENGTH = 280;
 
 const parseJsonFromText = (value: string): Record<string, unknown> | null => {
   const trimmed = value.trim();
@@ -335,10 +334,16 @@ const shortenBrandDescription = (value: string): string => {
   return `${normalized.slice(0, MAX_BRAND_DESCRIPTION_LENGTH - 1).trimEnd()}...`;
 };
 
-const shortenPricingReasoning = (value: string): string => {
+const QUANTITY_SEMANTICS_RE =
+  /\b(single|pair|set|sets|multiple|pieces?|bundle|lot|count|not a set)\b/i;
+
+const sanitizePricingReasoning = (value: string): string => {
   const normalized = value.replace(/\s+/g, " ").trim();
-  if (normalized.length <= MAX_PRICING_REASONING_LENGTH) return normalized;
-  return `${normalized.slice(0, MAX_PRICING_REASONING_LENGTH - 1).trimEnd()}...`;
+  if (!normalized) return normalized;
+  const sentences = normalized.split(/(?<=[.!?])\s+/);
+  const kept = sentences.filter((sentence) => !QUANTITY_SEMANTICS_RE.test(sentence));
+  const cleaned = kept.join(" ").trim();
+  return cleaned || "Pricing reflects brand, condition, and comparable market demand.";
 };
 
 const normalizeChips = (value: unknown): string[] => {
@@ -346,7 +351,12 @@ const normalizeChips = (value: unknown): string[] => {
   return value
     .filter((entry): entry is string => typeof entry === "string")
     .map((entry) => entry.replace(/\s+/g, " ").trim())
-    .filter((entry, index, arr) => entry.length > 0 && arr.indexOf(entry) === index)
+    .filter(
+      (entry, index, arr) =>
+        entry.length > 0 &&
+        !QUANTITY_SEMANTICS_RE.test(entry) &&
+        arr.indexOf(entry) === index
+    )
     .slice(0, 6);
 };
 
@@ -381,14 +391,12 @@ const handleProductsProcess = async (req: Request) => {
     const invalid = items.find(
       (item) =>
         !item.clientId ||
-        !item.model?.trim() ||
         !Array.isArray(item.imageDataUrls) ||
-        item.imageDataUrls.length === 0 ||
         item.imageDataUrls.some((imageDataUrl) => !imageDataUrl.startsWith("data:image/"))
     );
     if (invalid) {
       return Response.json(
-        { error: "each item requires clientId, model, and imageDataUrls (data:image/*[])" },
+        { error: "each item requires clientId and imageDataUrls (data:image/*[])" },
         { status: 400 }
       );
     }
@@ -401,7 +409,8 @@ const handleProductsProcess = async (req: Request) => {
         agents: items.map((item, index) => ({
           id: item.clientId,
           provider: "openai",
-          web_search: false,
+          web_search: true,
+          include_web_search_sources: true,
           order: index,
           prompt: `Analyze this product and return JSON only for clientId=${item.clientId}.`,
           input: [
@@ -427,7 +436,7 @@ const handleProductsProcess = async (req: Request) => {
                       null,
                       2
                     ) +
-                    "\nReturn strictly valid JSON with keys: suggestedPrice, sourcesSearched, suggestedDescription, brandDescription, pricingReasoning, itemDescriptionChips, pricingChips, title, brand.",
+                    "\nReturn strictly valid JSON with keys: suggestedPrice, sourcesSearched, suggestedDescription, brandDescription, pricingReasoning, itemDescriptionChips, pricingChips, title, brand. pricingReasoning must be full sentences and not truncated with ellipses.",
                 },
                 ...item.imageDataUrls.map((imageDataUrl) => ({
                   type: "input_image" as const,
@@ -520,10 +529,10 @@ const handleProductsProcess = async (req: Request) => {
         const brandDescription = shortenBrandDescription(brandDescriptionRaw);
         const pricingReasoningRaw =
           typeof parsed.pricingReasoning === "string" ? parsed.pricingReasoning : "";
-        const pricingReasoning = shortenPricingReasoning(pricingReasoningRaw);
+        const pricingReasoning = sanitizePricingReasoning(pricingReasoningRaw);
         const itemDescriptionChips = normalizeChips(parsed.itemDescriptionChips);
         const pricingChips = normalizeChips(parsed.pricingChips);
-        const floorPriceCents = Math.max(0, suggestedPriceCents - CLEANING_FEE_CENTS);
+        const floorPriceCents = suggestedPriceCents;
         const consignorCashBuyPriceCents = Math.round(floorPriceCents * 0.5);
         const consignmentRangeLowCents = Math.max(0, Math.round(floorPriceCents * 0.8));
         const consignmentRangeHighCents = Math.round(floorPriceCents * 1.2);
@@ -536,9 +545,13 @@ const handleProductsProcess = async (req: Request) => {
           typeof parsed.brand === "string" && parsed.brand.trim().length > 0
             ? parsed.brand.trim()
             : sourceItem.model.trim().split(/\s+/)[0] ?? "";
-        const sourcesSearched = Array.isArray(parsed.sourcesSearched)
+        const providerSources = Array.isArray(agent.sources)
+          ? agent.sources.filter((x): x is string => typeof x === "string")
+          : [];
+        const modelSources = Array.isArray(parsed.sourcesSearched)
           ? parsed.sourcesSearched.filter((x): x is string => typeof x === "string")
-          : (agent.sources ?? []);
+          : [];
+        const sourcesSearched = providerSources.length > 0 ? providerSources : modelSources;
         const descriptionHtml = [suggestedDescription, brandDescription]
           .map((part) => part.trim())
           .filter(Boolean)
@@ -569,6 +582,7 @@ const handleProductsProcess = async (req: Request) => {
               consignorCashBuyPriceCents,
               consignmentRangeLowCents,
               consignmentRangeHighCents,
+              durationMs: agent.duration_ms ?? null,
               brand,
               brandDescription,
               pricingReasoning,
@@ -613,6 +627,7 @@ const handleProductsProcess = async (req: Request) => {
           clientId: sourceItem.clientId,
           status: "created",
           parsed: {
+            durationMs: agent.duration_ms ?? undefined,
             suggestedPrice: toDollars(suggestedPriceCents),
             floorPrice: toDollars(floorPriceCents),
             consignorCashBuyPrice: toDollars(consignorCashBuyPriceCents),
