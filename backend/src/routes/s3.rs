@@ -1,12 +1,12 @@
 use std::path::Path;
 
 use axum::{
-  body::Bytes,
+  body::{Body, Bytes},
   extract::{DefaultBodyLimit, Query, State},
   handler::Handler,
   http::{header, HeaderMap, StatusCode},
   middleware,
-  response::Redirect,
+  response::Response,
   Json, Router,
 };
 use aws_sdk_s3::primitives::ByteStream;
@@ -21,8 +21,6 @@ use crate::middleware as mw;
 use crate::repositories::stored_images as stored_images_repo;
 
 const MAX_BYTES: u64 = 16 * 1024 * 1024;
-const PRESIGN_SECS: u64 = 3600;
-
 #[derive(Deserialize)]
 pub struct UploadQuery {
   pub file_name: Option<String>,
@@ -45,7 +43,7 @@ pub fn routes() -> Router<AppState> {
     .route(
       "/s3/objects",
       axum::routing::post(upload_object.layer(DefaultBodyLimit::max(MAX_BYTES as usize)))
-        .get(download_redirect)
+        .get(download_object)
         .delete(delete_object),
     )
     .route_layer(middleware::from_fn(mw::require_internal_auth))
@@ -175,23 +173,57 @@ async fn upload_object(
   Ok(Json(UploadResult { key, byte_size }))
 }
 
-async fn download_redirect(
+async fn download_object(
   State(state): State<AppState>,
   OrgId(org_id): OrgId,
   UserId(user_id): UserId,
   Query(q): Query<KeyQuery>,
-) -> Result<Redirect, ApiError> {
+) -> Result<Response, ApiError> {
   let (client, bucket) = s3(&state)?;
   let key = validate_key(&q.key, &org_id, &user_id)?;
 
-  let presigned = crate::s3::presign_get(client, bucket, key, PRESIGN_SECS)
+  let out = client
+    .get_object()
+    .bucket(bucket)
+    .key(key)
+    .send()
     .await
     .map_err(|e| {
-      tracing::error!(key = %key, %e, "presign get");
+      tracing::error!(key = %key, %e, "get_object");
       error::internal(e)
     })?;
 
-  Ok(Redirect::temporary(presigned.uri()))
+  if let Some(len) = out.content_length() {
+    if len > 0 && len as u64 > MAX_BYTES {
+      return Err(error::bad_request("object too large"));
+    }
+  }
+
+  let content_type = out
+    .content_type()
+    .filter(|s| !s.is_empty())
+    .map(|s| s.to_string())
+    .unwrap_or_else(|| "application/octet-stream".to_string());
+
+  let body = out
+    .body
+    .collect()
+    .await
+    .map_err(|e| {
+      tracing::error!(key = %key, %e, "get_object body");
+      error::internal(e)
+    })?
+    .into_bytes();
+
+  if body.len() as u64 > MAX_BYTES {
+    return Err(error::bad_request("object too large"));
+  }
+
+  Response::builder()
+    .status(StatusCode::OK)
+    .header(header::CONTENT_TYPE, content_type)
+    .body(Body::from(body))
+    .map_err(|e| error::internal(e))
 }
 
 async fn delete_object(

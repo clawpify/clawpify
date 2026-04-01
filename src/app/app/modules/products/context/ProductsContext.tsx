@@ -4,6 +4,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -23,6 +24,8 @@ const ProductsContext = createContext<ProductsContextValue | null>(null);
 
 export function ProductsProvider({ children }: { children: ReactNode }) {
   const fetchAuth = useAuthenticatedFetch();
+  /** After first sync, refetch quietly so Clerk/`fetchAuth` identity changes do not toggle `loading` and unmount listing detail (wiping local pending media state). */
+  const initialProductsFetchStarted = useRef(false);
   const [listings, setListings] = useState<ConsignmentListingDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -118,7 +121,9 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
   );
 
   useEffect(() => {
-    void refetch();
+    const quiet = initialProductsFetchStarted.current;
+    initialProductsFetchStarted.current = true;
+    void refetch({ quiet });
   }, [refetch]);
 
   const value = useMemo(

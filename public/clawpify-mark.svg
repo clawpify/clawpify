@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none" role="img" aria-labelledby="title">
+  <title id="title">Clawpify</title>
+  <defs>
+    <clipPath id="clawpifyMarkStripeClip">
+      <rect x="0" y="24" width="26" height="26" />
+    </clipPath>
+  </defs>
+  <circle cx="24" cy="24" r="22" fill="#94a3b8" />
+  <g clip-path="url(#clawpifyMarkStripeClip)">
+    <path
+      d="M-4 30 L30 -4 M-2 34 L34 -2 M0 38 L38 0 M2 42 L42 2"
+      stroke="#f4f4f5"
+      stroke-width="1.35"
+      stroke-linecap="round"
+    />
+  </g>
+</svg>

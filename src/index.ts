@@ -1,3 +1,5 @@
+import { watch } from "node:fs";
+import path from "node:path";
 import { serve } from "bun";
 import tailwindPlugin from "bun-plugin-tailwind";
 import { getAuthOptional, requireAuth, AuthError } from "./lib/auth";
@@ -15,44 +17,75 @@ for (const [key, value] of Object.entries(process.env)) {
   }
 }
 
-const frontendBuild = await Bun.build({
-  entrypoints: [import.meta.dir + "/index.html"],
-  target: "browser",
-  sourcemap: "none",
-  minify: process.env.NODE_ENV === "production",
-  define: clientDefines,
-  plugins: [tailwindPlugin],
-});
-
-if (!frontendBuild.success) {
-  throw new Error("Failed to build frontend bundle from index.html");
-}
-
 const builtAssets = new Map<string, Blob>();
 let mainBundle: Blob | null = null;
-let htmlTemplate = "";
-for (const output of frontendBuild.outputs) {
-  const fileName = output.path.split("/").pop();
-  if (!fileName) continue;
-  if (fileName.endsWith(".html")) {
-    htmlTemplate = await output.text();
-    continue;
+let rawHtml = "";
+
+async function rebuildFrontendBundle() {
+  const frontendBuild = await Bun.build({
+    entrypoints: [path.join(import.meta.dir, "index.html")],
+    target: "browser",
+    sourcemap: "none",
+    minify: process.env.NODE_ENV === "production",
+    define: clientDefines,
+    plugins: [tailwindPlugin],
+  });
+
+  if (!frontendBuild.success) {
+    const detail = frontendBuild.logs.map((l) => l.message).join("\n");
+    throw new Error(`Failed to build frontend bundle: ${detail || "unknown error"}`);
   }
-  if (!mainBundle && fileName.endsWith(".js")) mainBundle = output;
-  builtAssets.set(`/${fileName}`, output);
+
+  builtAssets.clear();
+  mainBundle = null;
+  let htmlTemplate = "";
+  for (const output of frontendBuild.outputs) {
+    const fileName = output.path.split("/").pop();
+    if (!fileName) continue;
+    if (fileName.endsWith(".html")) {
+      htmlTemplate = await output.text();
+      continue;
+    }
+    if (!mainBundle && fileName.endsWith(".js")) mainBundle = output;
+    builtAssets.set(`/${fileName}`, output);
+  }
+
+  if (!htmlTemplate) {
+    throw new Error("Missing built HTML output");
+  }
+
+  const html = htmlTemplate.replaceAll('href="./', 'href="/').replaceAll('src="./', 'src="/');
+  if (mainBundle) {
+    builtAssets.set("/frontend.tsx", mainBundle);
+  }
+  rawHtml = html;
 }
 
-if (!htmlTemplate) {
-  throw new Error("Missing built HTML output");
-}
+await rebuildFrontendBundle();
 
-const rawHtml = htmlTemplate
-  .replaceAll('href="./', 'href="/')
-  .replaceAll('src="./', 'src="/');
+if (process.env.NODE_ENV !== "production") {
+  let rebuildTimer: ReturnType<typeof setTimeout> | null = null;
+  const scheduleRebuild = () => {
+    if (rebuildTimer) clearTimeout(rebuildTimer);
+    rebuildTimer = setTimeout(() => {
+      rebuildTimer = null;
+      void rebuildFrontendBundle()
+        .then(() => console.log("[dev] Frontend bundle rebuilt — refresh the browser"))
+        .catch((e) => console.error("[dev] Frontend rebuild failed:", e));
+    }, 120);
+  };
 
-// Compatibility for cached HTML that still points to /frontend.tsx
-if (mainBundle) {
-  builtAssets.set("/frontend.tsx", mainBundle);
+  const srcRoot = import.meta.dir;
+  try {
+    watch(srcRoot, { recursive: true }, (_event, filename) => {
+      if (!filename) return;
+      if (!/\.(tsx?|jsx?|css|html)$/.test(filename)) return;
+      if (filename.includes(".cursor") || filename.includes("node_modules")) return;
+      scheduleRebuild();
+    });
+  } catch (e) {
+    console.warn("[dev] Could not watch src for frontend rebuilds:", e);
+  }
 }
 
 type ProxyPath = string | ((req: Request) => string);

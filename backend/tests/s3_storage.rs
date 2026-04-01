@@ -170,15 +170,16 @@ async fn s3_e2e_ai_image_upload_download_delete(pool: PgPool) {
     )
     .await
     .expect("download");
-  assert_eq!(res.status(), StatusCode::TEMPORARY_REDIRECT);
-  let loc = res
-    .headers()
-    .get(header::LOCATION)
-    .and_then(|v| v.to_str().ok())
-    .expect("Location");
-  let got = client_http.get(loc).send().await.expect("get object");
-  assert!(got.status().is_success(), "GET object {}", got.status());
-  let downloaded = got.bytes().await.expect("body");
+  assert_eq!(res.status(), StatusCode::OK);
+  assert_eq!(
+    res.headers()
+      .get(header::CONTENT_TYPE)
+      .and_then(|v| v.to_str().ok()),
+    Some("image/png")
+  );
+  let downloaded = axum::body::to_bytes(res.into_body(), usize::MAX)
+    .await
+    .expect("body");
   assert_eq!(downloaded.as_ref(), bytes.as_slice());
 
   let del_q = Serializer::new(String::new())

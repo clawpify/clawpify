@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { Show, SignInButton, UserButton } from "@clerk/react";
 
-import logo from "../../../logo.svg";
+import clawpifyMark from "../../../clawpify-mark.svg";
 
 const navLinks = [
   { label: "products", href: "#products" },
@@ -16,9 +16,9 @@ export function LandingNav() {
       <nav className="mx-auto flex max-w-7xl items-center justify-between bg-[#f2f3f1]/90 px-6 py-4 backdrop-blur-sm">
         <Link to="/" className="flex items-center gap-2">
           <img
-            src={logo}
+            src={clawpifyMark}
             alt="Clawpify"
-            className="h-9 w-9 rounded-lg object-contain"
+            className="h-9 w-9 rounded-full object-contain"
           />
           <span className="text-lg font-semibold text-zinc-900">Clawpify</span>
         </Link>

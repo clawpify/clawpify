@@ -1,5 +1,15 @@
 import type { ConsignmentListingDto } from "../types";
 
+/** Browsers often omit `File.type` (drag-drop, some folders); fall back on extension. */
+const IMAGE_FILENAME_EXT = /\.(jpe?g|png|gif|webp|avif|heif|heic|bmp|tif?f|svg)$/i;
+
+export function isSelectableImageFile(file: File): boolean {
+  const t = file.type.trim();
+  if (t.startsWith("image/")) return true;
+  if (t === "" && IMAGE_FILENAME_EXT.test(file.name)) return true;
+  return false;
+}
+
 function isValidImageUrl(s: string): boolean {
   const t = s.trim();
   return /^https?:\/\//i.test(t) || /^data:image\//i.test(t);

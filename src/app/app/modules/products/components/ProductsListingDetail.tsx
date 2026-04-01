@@ -126,7 +126,7 @@ export function ProductsListingDetail({ listing }: Props) {
                       />
                     ) : null}
                     <span
-                      className="relative z-[1] mt-px size-2 shrink-0 rounded-full border-2 border-white bg-zinc-300 shadow-[0_0_0_1px_rgba(0,0,0,0.06)]"
+                      className="relative z-[1] mt-px size-2 shrink-0 rounded-full border-2 border-white bg-zinc-400 shadow-[0_0_0_1px_rgba(0,0,0,0.08)]"
                       aria-hidden
                     />
                   </div>

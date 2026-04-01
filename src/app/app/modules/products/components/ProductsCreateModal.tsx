@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { ImageIcon, PackageIcon, XMarkIcon } from "../../../../../icons/workspace-icons";
+import { XMarkIcon } from "../../../../../icons/workspace-icons";
 import { copy } from "../../../utils/copy";
 import { useProducts } from "../context/ProductsContext";
+import { isSelectableImageFile } from "../utils/listingMedia";
 import { plainTextToDescriptionHtml } from "../utils/plainToDescriptionHtml";
 import type { ProductCreateFormState, ProductsCreateModalProps } from "../types";
+import { ListingMediaGallery } from "./listing-media/ListingMediaGallery";
 
 const MAX_IMAGES = 8;
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
@@ -42,9 +44,17 @@ function categorySelectValue(productType: string, presetValues: readonly string[
 export function ProductsCreateModal({ open, onClose, onCreated }: ProductsCreateModalProps) {
   const { createListingWithImageFiles, creating } = useProducts();
   const [form, setForm] = useState(() => initialForm());
+  const [heroIndex, setHeroIndex] = useState(0);
+  const [submitAttempted, setSubmitAttempted] = useState(false);
   const titleRef = useRef<HTMLInputElement>(null);
+  const descriptionRef = useRef<HTMLTextAreaElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const formRef = useRef(form);
+  const heroIndexRef = useRef(heroIndex);
   const prevOpen = useRef(false);
+
+  formRef.current = form;
+  heroIndexRef.current = heroIndex;
 
   const categoryPresets = useMemo(
     () =>
@@ -72,9 +82,29 @@ export function ProductsCreateModal({ open, onClose, onCreated }: ProductsCreate
   useEffect(() => {
     if (open && !prevOpen.current) {
       resetForm();
+      setSubmitAttempted(false);
+      setHeroIndex(0);
     }
     prevOpen.current = open;
   }, [open, resetForm]);
+
+  useEffect(() => {
+    const n = form.imageSlots.length;
+    if (n === 0) {
+      setHeroIndex(0);
+      return;
+    }
+    setHeroIndex((h) => (h >= n ? n - 1 : h));
+  }, [form.imageSlots.length]);
+
+  const mediaSlots = useMemo(
+    () =>
+      form.imageSlots.map((s, i) => ({
+        key: `${s.previewUrl.slice(0, 48)}-${i}`,
+        url: s.previewUrl,
+      })),
+    [form.imageSlots]
+  );
 
   useEffect(() => {
     if (!open) return;
@@ -104,37 +134,44 @@ export function ProductsCreateModal({ open, onClose, onCreated }: ProductsCreate
     setForm((f) => ({ ...f, [key]: value }));
   };
 
-  const onPickFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const list = e.target.files;
-    e.target.value = "";
-    if (!list?.length) return;
-    const additions: ProductCreateFormState["imageSlots"] = [];
-    for (const file of Array.from(list)) {
-      if (!file.type.startsWith("image/")) continue;
-      if (file.size > MAX_IMAGE_BYTES) {
-        window.alert(copy.products.createModalImageTooLarge);
-        continue;
-      }
-      if (form.imageSlots.length + additions.length >= MAX_IMAGES) {
-        window.alert(copy.products.createModalMaxImages);
-        break;
-      }
-      additions.push({ file, previewUrl: URL.createObjectURL(file) });
-    }
-    if (!additions.length) return;
-    setForm((f) => ({
-      ...f,
-      imageSlots: [...f.imageSlots, ...additions].slice(0, MAX_IMAGES),
-    }));
-  };
-
-  const removeImage = (idx: number) => {
+  const addImageFiles = useCallback((picked: File[]) => {
+    if (!picked.length) return;
     setForm((f) => {
-      const removed = f.imageSlots[idx];
-      if (removed) URL.revokeObjectURL(removed.previewUrl);
-      return { ...f, imageSlots: f.imageSlots.filter((_, i) => i !== idx) };
+      const additions: ProductCreateFormState["imageSlots"] = [];
+      for (const file of picked) {
+        if (!isSelectableImageFile(file)) continue;
+        if (file.size > MAX_IMAGE_BYTES) {
+          window.alert(copy.products.createModalImageTooLarge);
+          continue;
+        }
+        if (f.imageSlots.length + additions.length >= MAX_IMAGES) {
+          window.alert(copy.products.createModalMaxImages);
+          break;
+        }
+        additions.push({ file, previewUrl: URL.createObjectURL(file) });
+      }
+      if (!additions.length) return f;
+      return {
+        ...f,
+        imageSlots: [...f.imageSlots, ...additions].slice(0, MAX_IMAGES),
+      };
     });
-  };
+  }, []);
+
+  const onRemoveAt = useCallback((idx: number) => {
+    const f = formRef.current;
+    const h = heroIndexRef.current;
+    const n = f.imageSlots.length;
+    let nextH = h;
+    if (idx < h) nextH = h - 1;
+    else if (idx === h) nextH = h >= n - 1 ? Math.max(0, h - 1) : h;
+    setHeroIndex(nextH);
+    setForm((prev) => {
+      const removed = prev.imageSlots[idx];
+      if (removed) URL.revokeObjectURL(removed.previewUrl);
+      return { ...prev, imageSlots: prev.imageSlots.filter((_, i) => i !== idx) };
+    });
+  }, []);
 
   const onCategorySelectChange = (value: string) => {
     if (value === "") {
@@ -151,15 +188,29 @@ export function ProductsCreateModal({ open, onClose, onCreated }: ProductsCreate
     setField("productType", value);
   };
 
+  const titleTrimmed = form.title.trim();
+  const descriptionTrimmed = form.description.trim();
+  const canSubmit = titleTrimmed.length > 0 && descriptionTrimmed.length > 0;
+  const titleErrorId = "products-create-modal-title-error";
+  const descriptionErrorId = "products-create-modal-description-error";
+  const showTitleError = submitAttempted && titleTrimmed.length === 0;
+  const showDescriptionError = submitAttempted && descriptionTrimmed.length === 0;
+
   const submit = async () => {
+    if (!canSubmit) {
+      setSubmitAttempted(true);
+      if (!titleTrimmed) titleRef.current?.focus();
+      else descriptionRef.current?.focus();
+      return;
+    }
     const priceCents = Math.max(0, Math.round((parseFloat(form.priceDollars) || 0) * 100));
     const html = plainTextToDescriptionHtml(form.description);
     try {
       const files = form.imageSlots.map((s) => s.file);
       const created = await createListingWithImageFiles(
         {
-          title: form.title.trim() || undefined,
-          description_html: html || undefined,
+          title: titleTrimmed,
+          description_html: html,
           product_type: form.productType.trim() || undefined,
           sku: form.sku.trim() || undefined,
           price_cents: priceCents,
@@ -178,8 +229,6 @@ export function ProductsCreateModal({ open, onClose, onCreated }: ProductsCreate
   const catSelectVal = categorySelectValue(form.productType, presetValues);
   const showCustomCategory = catSelectVal === CATEGORY_CUSTOM;
 
-  const attachDisabled = creating || form.imageSlots.length >= MAX_IMAGES;
-
   if (!open) return null;
 
   return createPortal(
@@ -197,18 +246,9 @@ export function ProductsCreateModal({ open, onClose, onCreated }: ProductsCreate
         onClick={(e) => e.stopPropagation()}
       >
         <header className="flex shrink-0 items-center justify-between gap-3 border-b border-zinc-100 px-5 py-2.5 sm:px-7 sm:py-3">
-          <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-            <span className="inline-flex h-7 items-center gap-1.5 rounded-md border border-zinc-200/90 bg-zinc-50 px-2 text-[11px] font-semibold uppercase tracking-wide text-zinc-600">
-              <PackageIcon size={13} className="shrink-0 text-emerald-600" />
-              {copy.products.pageHeading}
-            </span>
-            <span className="text-zinc-300" aria-hidden>
-              /
-            </span>
-            <span id="products-create-modal-title" className="text-[13px] font-medium text-zinc-900">
-              {copy.products.createModalTitle}
-            </span>
-          </div>
+          <span id="products-create-modal-title" className="min-w-0 text-[13px] font-medium text-zinc-900">
+            {copy.products.createModalTitle}
+          </span>
           <button
             type="button"
             onClick={() => !creating && onClose()}
@@ -220,49 +260,55 @@ export function ProductsCreateModal({ open, onClose, onCreated }: ProductsCreate
         </header>
 
         <div className="min-h-0 flex-1 overflow-y-auto px-5 sm:px-7">
-          <input ref={fileRef} type="file" accept="image/*" multiple className="hidden" onChange={onPickFiles} />
-
           <div className="pt-4">
+            <ListingMediaGallery
+              mediaSlots={mediaSlots}
+              heroIndex={heroIndex}
+              onSelectHero={setHeroIndex}
+              fileInputRef={fileRef}
+              onImageFiles={addImageFiles}
+              emptyHeadline={copy.products.createModalMediaNoImages}
+              emptyHint={copy.products.createModalMediaDropHint}
+              chooseFilesLabel={copy.products.createModalMediaChooseFiles}
+              regionAriaLabel={copy.products.createModalMediaGalleryRegionAria}
+              onRemoveAt={onRemoveAt}
+            />
+          </div>
+
+          <div className="mt-4">
             <input
               ref={titleRef}
+              id="products-create-modal-title-field"
               value={form.title}
               onChange={(e) => setField("title", e.target.value)}
               placeholder={copy.products.createModalTitlePlaceholder}
+              aria-invalid={showTitleError}
+              aria-describedby={showTitleError ? titleErrorId : undefined}
               className="w-full border-0 bg-transparent text-2xl font-semibold tracking-tight text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-0 sm:text-[1.65rem] sm:leading-snug"
               autoComplete="off"
             />
+            {showTitleError ? (
+              <p id={titleErrorId} className="mt-1.5 text-[13px] text-red-600">
+                {copy.products.createModalTitleRequired}
+              </p>
+            ) : null}
             <textarea
+              ref={descriptionRef}
+              id="products-create-modal-description"
               value={form.description}
               onChange={(e) => setField("description", e.target.value)}
               placeholder={copy.products.createModalDescriptionPlaceholder}
               rows={5}
-              className="mt-3 min-h-[7.5rem] w-full resize-y border-0 bg-transparent text-[15px] leading-relaxed text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-0 sm:text-[15px] sm:leading-[1.6]"
+              aria-invalid={showDescriptionError}
+              aria-describedby={showDescriptionError ? descriptionErrorId : undefined}
+              className="mt-3 h-[7.5rem] min-h-0 w-full resize-none overflow-y-auto border-0 bg-transparent text-[15px] leading-relaxed text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-0 sm:text-[15px] sm:leading-[1.6]"
             />
+            {showDescriptionError ? (
+              <p id={descriptionErrorId} className="mt-1.5 text-[13px] text-red-600">
+                {copy.products.createModalDescriptionRequired}
+              </p>
+            ) : null}
           </div>
-
-          {form.imageSlots.length > 0 ? (
-            <div className="mt-4 flex flex-wrap items-center gap-1.5">
-              {form.imageSlots.map((slot, i) => (
-                <div
-                  key={`${i}-${slot.previewUrl.slice(0, 24)}`}
-                  className="relative h-9 w-9 shrink-0 overflow-hidden rounded-md border border-zinc-200/90 bg-zinc-50"
-                >
-                  <img src={slot.previewUrl} alt="" className="h-full w-full object-cover" />
-                  <button
-                    type="button"
-                    onClick={() => removeImage(i)}
-                    className="absolute right-0 top-0 flex h-3.5 min-w-[14px] items-center justify-center rounded-bl bg-zinc-900/75 px-0.5 text-[9px] font-bold text-white hover:bg-red-600"
-                    aria-label={copy.products.createModalRemoveImage}
-                  >
-                    ×
-                  </button>
-                </div>
-              ))}
-              <span className="text-[10px] font-medium tabular-nums text-zinc-400">
-                {form.imageSlots.length}/{MAX_IMAGES}
-              </span>
-            </div>
-          ) : null}
 
           <div className="mt-4 border-t border-zinc-100 pt-3.5 pb-5 sm:mt-5 sm:pt-4">
             <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -322,26 +368,15 @@ export function ProductsCreateModal({ open, onClose, onCreated }: ProductsCreate
           </div>
         </div>
 
-        <footer className="mt-auto flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-zinc-100 bg-zinc-50/40 px-5 py-3 sm:px-7">
+        <footer className="mt-auto flex shrink-0 flex-wrap items-center justify-end gap-3 border-t border-zinc-100 bg-zinc-50/40 px-5 py-3 sm:px-7">
           <button
             type="button"
-            onClick={() => fileRef.current?.click()}
-            disabled={attachDisabled}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-zinc-200/90 bg-white text-zinc-500 shadow-sm shadow-black/[0.04] transition hover:border-zinc-300 hover:bg-white hover:text-zinc-800 disabled:pointer-events-none disabled:opacity-40"
-            aria-label={copy.products.createModalAttachmentAria}
+            onClick={() => void submit()}
+            disabled={creating}
+            className={`rounded-md bg-indigo-600 px-4 py-2 text-[13px] font-semibold text-white shadow-sm shadow-indigo-600/25 transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50 ${!creating && !canSubmit ? "opacity-50 hover:bg-indigo-600" : ""}`}
           >
-            <ImageIcon size={18} className="text-current" />
+            {creating ? copy.products.creating : copy.products.createModalSubmit}
           </button>
-          <div className="flex flex-1 flex-wrap items-center justify-end">
-            <button
-              type="button"
-              onClick={() => void submit()}
-              disabled={creating}
-              className="rounded-md bg-indigo-600 px-4 py-2 text-[13px] font-semibold text-white shadow-sm shadow-indigo-600/25 transition hover:bg-indigo-500 disabled:opacity-50"
-            >
-              {creating ? copy.products.creating : copy.products.createModalSubmit}
-            </button>
-          </div>
         </footer>
       </div>
     </div>,

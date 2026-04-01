@@ -7,6 +7,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { createPortal } from "react-dom";
 
 type ToastContextValue = {
   showToast: (message: string) => void;
@@ -45,15 +46,18 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={{ showToast }}>
       {children}
-      {message ? (
-        <div
-          role="status"
-          aria-live="polite"
-          className="fixed bottom-6 left-1/2 z-[200] max-w-[min(90vw,24rem)] -translate-x-1/2 rounded-lg border border-zinc-200/90 bg-white px-4 py-2.5 text-center text-sm font-medium text-zinc-800 shadow-[0_4px_24px_rgba(15,23,42,0.12),0_1px_3px_rgba(15,23,42,0.08)]"
-        >
-          {message}
-        </div>
-      ) : null}
+      {message
+        ? createPortal(
+            <div
+              role="status"
+              aria-live="polite"
+              className="fixed bottom-24 left-1/2 z-[340] max-w-[min(90vw,24rem)] -translate-x-1/2 rounded-lg border border-zinc-200/90 bg-white px-4 py-2.5 text-center text-sm font-medium text-zinc-800 shadow-[0_4px_24px_rgba(15,23,42,0.12),0_1px_3px_rgba(15,23,42,0.08)]"
+            >
+              {message}
+            </div>,
+            document.body
+          )
+        : null}
     </ToastContext.Provider>
   );
 }

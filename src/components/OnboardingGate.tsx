@@ -1,6 +1,7 @@
 import { Show, RedirectToSignIn } from "@clerk/react";
 import { Navigate } from "react-router-dom";
 import { useUser } from "@clerk/react";
+import { ClawpifyLoadingScreen } from "../app/app/components/ClawpifyLoadingScreen";
 
 type OnboardingGateProps = {
   children: React.ReactNode;
@@ -36,8 +37,8 @@ function OnboardingGateContent({ children }: OnboardingGateProps) {
 
   if (!isLoaded) {
     return (
-      <div className="flex min-h-[200px] items-center justify-center">
-        <span className="text-zinc-500">Loading...</span>
+      <div className="flex min-h-[200px] min-w-0 w-full flex-col bg-white">
+        <ClawpifyLoadingScreen variant="fill" />
       </div>
     );
   }

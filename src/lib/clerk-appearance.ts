@@ -24,7 +24,7 @@ export const clerkAppearance = {
     identityPreviewEditButton: "text-zinc-900",
   },
   options: {
-    logoImageUrl: "/logo.svg",
+    logoImageUrl: "/clawpify-mark.svg",
     logoLinkUrl: "/",
     socialButtonsVariant: "blockButton" as const,
     socialButtonsPlacement: "top" as const,
