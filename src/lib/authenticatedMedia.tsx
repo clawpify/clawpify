@@ -4,7 +4,7 @@ import { useAuthenticatedFetch } from "./api";
 /** Raw `<img src>` to `/api/s3/objects` does not send Bearer; fetch via `useAuthenticatedFetch` instead. */
 export function imageUrlNeedsAuthFetch(raw: string): boolean {
   const t = raw.trim();
-  if (!t || t.startsWith("data:")) return false;
+  if (!t || t.startsWith("data:") || t.startsWith("blob:")) return false;
   try {
     const base = typeof window !== "undefined" ? window.location.origin : "http://localhost";
     const u = new URL(t, base);

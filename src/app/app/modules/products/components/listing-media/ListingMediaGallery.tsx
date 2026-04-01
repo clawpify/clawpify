@@ -1,4 +1,11 @@
-import { useCallback, useState, type RefObject } from "react";
+import {
+  useCallback,
+  useState,
+  type ChangeEvent,
+  type DragEvent,
+  type KeyboardEvent,
+  type RefObject,
+} from "react";
 import { copy } from "../../../../utils/copy";
 import {
   ChevronLeftIcon,
@@ -8,6 +15,7 @@ import {
 } from "../../../../../../icons/workspace-icons";
 import { AuthenticatedImg } from "../../../../../../lib/authenticatedMedia";
 import { listingMediaEmptyHeroFrame, listingMediaHeroFrame } from "./listingMediaChrome";
+import type { ListingMediaSlot } from "./listingMediaTypes";
 
 function fillCountTemplate(template: string, current: number, total: number) {
   return template.replaceAll("{current}", String(current)).replaceAll("{total}", String(total));
@@ -22,9 +30,8 @@ function imageFilesFromDataTransfer(dt: DataTransfer): File[] {
 }
 
 type Props = {
-  images: string[];
+  mediaSlots: ListingMediaSlot[];
   heroIndex: number;
-  heroSrc: string | null;
   onSelectHero: (i: number) => void;
   fileInputRef: RefObject<HTMLInputElement | null>;
   onImageFiles: (files: File[]) => void;
@@ -32,15 +39,15 @@ type Props = {
 };
 
 export function ListingMediaGallery({
-  images,
+  mediaSlots,
   heroIndex,
-  heroSrc,
   onSelectHero,
   fileInputRef,
   onImageFiles,
   mediaUploading = false,
 }: Props) {
-  const n = images.length;
+  const n = mediaSlots.length;
+  const heroSrc = mediaSlots[heroIndex]?.url ?? null;
   const [emptyDragOver, setEmptyDragOver] = useState(false);
   const current = heroIndex + 1;
   const canGoPrev = n > 1 && heroIndex > 0;
@@ -55,7 +62,7 @@ export function ListingMediaGallery({
   }, [canGoNext, heroIndex, onSelectHero]);
 
   const onHeroKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
+    (e: KeyboardEvent) => {
       if (n < 2) return;
       if (e.key === "ArrowLeft") {
         e.preventDefault();
@@ -74,7 +81,7 @@ export function ListingMediaGallery({
   }, [fileInputRef, mediaUploading]);
 
   const onFileInputChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
+    (e: ChangeEvent<HTMLInputElement>) => {
       const list = e.target.files;
       e.target.value = "";
       if (!list?.length) return;
@@ -84,7 +91,7 @@ export function ListingMediaGallery({
   );
 
   const onHeroDrop = useCallback(
-    (e: React.DragEvent) => {
+    (e: DragEvent) => {
       e.preventDefault();
       e.stopPropagation();
       setEmptyDragOver(false);
@@ -223,9 +230,9 @@ export function ListingMediaGallery({
                   role="tablist"
                   aria-label={copy.products.detailMediaGalleryDotsAria}
                 >
-                  {images.map((_, i) => (
+                  {mediaSlots.map((slot, i) => (
                     <button
-                      key={i}
+                      key={slot.key}
                       type="button"
                       role="tab"
                       aria-selected={i === heroIndex}
@@ -256,9 +263,9 @@ export function ListingMediaGallery({
         onChange={onFileInputChange}
       />
       <div className="flex flex-wrap items-center gap-1.5">
-        {images.map((url, i) => (
+        {mediaSlots.map((slot, i) => (
           <button
-            key={`${url}-${i}`}
+            key={slot.key}
             type="button"
             onClick={() => onSelectHero(i)}
             aria-current={i === heroIndex ? "true" : undefined}
@@ -270,7 +277,7 @@ export function ListingMediaGallery({
             }`}
           >
             <span className="block h-11 w-11 bg-zinc-100">
-              <AuthenticatedImg src={url} alt="" className="h-full w-full object-cover" loading="lazy" />
+              <AuthenticatedImg src={slot.url} alt="" className="h-full w-full object-cover" loading="lazy" />
             </span>
           </button>
         ))}
