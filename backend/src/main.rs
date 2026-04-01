@@ -1,11 +1,23 @@
 use std::net::SocketAddr;
+use std::path::Path;
 
 use axum::middleware::from_fn;
 use backend::{db, middleware, routes};
 
+/// Loads env files so S3 vars work even when the shell cwd is the monorepo root.
+/// `dotenvy::dotenv()` only searches upward from cwd — it never opens `backend/.env` by itself.
+fn load_dotenv() {
+  let crate_root = Path::new(env!("CARGO_MANIFEST_DIR"));
+  let _ = dotenvy::from_path(crate_root.join(".env"));
+  if let Some(repo) = crate_root.parent() {
+    let _ = dotenvy::from_path(repo.join(".env"));
+  }
+  let _ = dotenvy::dotenv();
+}
+
 #[tokio::main]
 async fn main() {
-  dotenvy::dotenv().ok();
+  load_dotenv();
 
   tracing_subscriber::fmt()
     .with_env_filter(

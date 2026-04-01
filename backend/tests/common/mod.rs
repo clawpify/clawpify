@@ -12,6 +12,7 @@ pub async fn ensure_org(pool: &PgPool, org_id: &str) {
     .expect("ensure org");
 }
 
+#[allow(dead_code)] // not every integration test crate uses this
 pub async fn json_from_body(body: Body) -> Value {
   let bytes = axum::body::to_bytes(body, usize::MAX)
     .await

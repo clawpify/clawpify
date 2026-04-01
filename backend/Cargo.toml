@@ -33,6 +33,7 @@ subtle = "2.5"
 base64 = "0.22"
 hex = "0.4"
 utoipa = { version = "4.2", features = ["chrono", "uuid"] }
+aws-sdk-s3 = { version = "=1.96.0", default-features = false, features = ["rt-tokio", "rustls"] }
 
 # tower: integration tests only (tower::ServiceExt in tests/api_crud.rs); production uses tower-http.
 [dev-dependencies]
@@ -40,4 +41,3 @@ tokio = { version = "1", features = ["rt", "macros"] }
 tower = { version = "0.5", features = ["util"] }
 base64 = "0.22"
 hmac = "0.12"
-sha1 = "0.10"

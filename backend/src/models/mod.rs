@@ -7,4 +7,5 @@ pub mod contracts;
 pub mod intake_batch;
 pub mod organization;
 pub mod product;
+pub mod stored_image;
 pub mod subscriber;

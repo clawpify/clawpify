@@ -9,6 +9,7 @@ mod llm;
 mod state;
 mod subscribers;
 mod webhooks;
+mod s3;
 
 pub use state::AppState;
 
@@ -30,6 +31,7 @@ fn core_routes() -> Router<AppState> {
     .merge(activity::routes())
     .merge(subscribers::routes())
     .merge(llm::routes())
+    .merge(s3::routes())
 }
 
 /// API tree with [`AppState`] (database pool + future shared deps).
