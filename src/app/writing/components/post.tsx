@@ -2,8 +2,6 @@ import type { ReactNode } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useParams, Link } from "react-router-dom";
-import { Footer } from "../../landing/components/Footer";
-import { Sidebar } from "../../landing/components/Sidebar";
 import { Newsletter } from "./Newsletter";
 import { posts } from "../utils/posts";
 
@@ -72,8 +70,7 @@ export function WritingPostPage() {
 
   if (!post) {
     return (
-      <div className="landing flex h-screen overflow-hidden bg-[#f2f3f1]">
-        <Sidebar />
+      <div className="landing flex h-screen flex-col overflow-hidden bg-[#f2f3f1]">
         <div className="flex flex-1 flex-col min-w-0">
           <main className="flex-1 overflow-y-auto">
             <div className="mx-auto max-w-3xl px-5 pt-32 pb-24 md:px-8 text-center">
@@ -87,7 +84,6 @@ export function WritingPostPage() {
                 ← Back to Writing
               </Link>
             </div>
-            <Footer />
           </main>
         </div>
       </div>
@@ -97,8 +93,7 @@ export function WritingPostPage() {
   const headings = Array.from(post.content.matchAll(/^##\s+(.+)$/gm), (match) => match[1]!.trim());
 
   return (
-    <div className="landing flex h-screen overflow-hidden bg-[#f2f3f1]">
-      <Sidebar />
+    <div className="landing flex h-screen flex-col overflow-hidden bg-[#f2f3f1]">
       <div className="flex flex-1 flex-col min-w-0">
         <main className="flex-1 overflow-y-auto">
           <article className="mx-auto max-w-5xl px-5 pt-12 pb-10 md:px-8">
@@ -223,7 +218,6 @@ export function WritingPostPage() {
             )}
           </article>
           <Newsletter />
-          <Footer />
         </main>
       </div>
     </div>

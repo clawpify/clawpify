@@ -1,5 +1,4 @@
 import { Link } from "react-router-dom";
-import { Sidebar } from "../landing/components/Sidebar";
 
 const team = [
   { name: "Alhwyn Geonzon", role: "Vibe coder" },
@@ -8,8 +7,7 @@ const team = [
 
 export function AboutPage() {
   return (
-    <div className="landing flex min-h-screen bg-[#f2f3f1]">
-      <Sidebar />
+    <div className="landing flex min-h-screen flex-col bg-[#f2f3f1]">
       <div className="flex flex-1 flex-col min-w-0">
         <div className="shrink-0 px-5 pt-7 pb-10 md:px-8 md:pt-7 md:pb-12 lg:px-10">
           <Link
