@@ -1,6 +1,5 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { Sidebar } from "../landing/components/Sidebar";
 
 const sections: { id: string; title: string; body: ReactNode }[] = [
   {
@@ -167,8 +166,7 @@ const sections: { id: string; title: string; body: ReactNode }[] = [
 
 export function PrivacyPage() {
   return (
-    <div className="landing flex min-h-screen bg-[#f2f3f1]">
-      <Sidebar />
+    <div className="landing flex min-h-screen flex-col bg-[#f2f3f1]">
       <div className="flex min-w-0 flex-1 flex-col">
         <div className="shrink-0 px-5 pt-7 pb-6 md:px-8 md:pt-7 md:pb-8 lg:px-10">
           <Link
