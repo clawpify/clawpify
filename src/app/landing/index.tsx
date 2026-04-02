@@ -26,14 +26,6 @@ export function LandingPage() {
             ctaLabel={copy.intro.ctaLabel}
             ctaHref={copy.intro.ctaHref}
           />
-          <IntroFeaturesSection
-            heading={copy.introAiSearch.heading}
-            paragraph={copy.introAiSearch.paragraph}
-            features={copy.featuresAiSearch}
-            sectionId="insights"
-            panelLabel={copy.introAiSearch.panelLabel}
-            mockupVariant="insights"
-          />
           <FAQSection />
           <Footer />
         </main>

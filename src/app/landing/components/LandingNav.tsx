@@ -33,7 +33,7 @@ export function LandingNav() {
             </Link>
           ))}
           <Show when="signed-out">
-            <SignInButton mode="redirect" forceRedirectUrl="/app">
+            <SignInButton mode="redirect" forceRedirectUrl="/">
               <button
                 type="button"
                 className="rounded-lg bg-zinc-900 px-5 py-2.5 text-sm font-medium uppercase tracking-wide text-white transition hover:bg-zinc-800"
@@ -44,10 +44,10 @@ export function LandingNav() {
           </Show>
           <Show when="signed-in">
             <Link
-              to="/app"
+              to="/dashboard"
               className="text-sm font-medium uppercase tracking-wide text-zinc-600 transition hover:text-zinc-900"
             >
-              App
+              Dashboard
             </Link>
             <UserButton afterSignOutUrl="/" />
           </Show>

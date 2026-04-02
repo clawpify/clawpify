@@ -7,10 +7,10 @@ export const copy = {
     ctaHref: "#",
   },
   hero: {
-    headline: "Make your product AI native",
+    headline: "Bring product discovery into the AI economy",
     rotatingWords: ["Commerce", "B2B", "SaaS", "E-commerce", "Agents"],
     subline:
-      "Insights that reveal which prompts convert. Optimization methods that make agents buy.",
+      "Audits that reveal which prompts convert. Optimization methods that make agents buy.",
     ctaPrimary: "Book a call",
     ctaSecondary: "Explore docs",
     heroDemo: {
@@ -50,7 +50,7 @@ export const copy = {
       "Optimizing prompts that drive purchases",
       "Scaling across Shopify, WooCommerce, and more",
     ],
-    solution: "Clawpify erases that drag in one workflow.",
+    solution: "Clawpify erases that drag in one audit.",
   },
   features: [
     {
@@ -65,45 +65,32 @@ export const copy = {
     },
     {
       label: "BRAND ALIGNMENT",
-      title: "Make sure AI aligns with your brand",
+      title: "Make sure AI recommends your brand",
       description: "Keep your brand story straight across every AI that talks about you.",
     },
   ],
   introAiSearch: {
-    panelLabel: "Insights",
-    heading: "Turn AI searches into actionable insights",
+    heading: "See what AI thinks about your brand",
     paragraph:
-      "Run a prompt across AI search, see how models and competitors respond, and turn every result into clear actions for your team.",
+      "See what a council of AI models thinks about your prompt within AI search—and how you stack up against competitors.",
   },
   featuresAiSearch: [
-    {
-      label: "PROMPT ANALYSIS",
-      title: "Run one prompt across AI search",
-      description: "See how major models answer the same query and where your brand actually appears.",
-    },
-    {
-      label: "COMPETITOR INTEL",
-      title: "Spot who wins the recommendation",
-      description: "Compare which competitors are cited, what they are praised for, and where you are missing.",
-    },
-    {
-      label: "ACTIONABLE INSIGHTS",
-      title: "Get fixes your team can act on",
-      description: "Turn AI results into concrete content, schema, and merchandising updates that improve visibility.",
-    },
+    { title: "AI Search" },
+    { title: "Competitors" },
+    { title: "Prompts" },
   ],
   howItWorks: {
     title: "How it works",
     steps: [
       { number: 1, title: "Connect your store", desc: "Link Shopify, WooCommerce, or other platforms in minutes." },
-      { number: 2, title: "Analyze performance", desc: "We analyze your product data and AI prompt performance." },
+      { number: 2, title: "Run the audit", desc: "We analyze your product data and AI prompt performance." },
       { number: 3, title: "Apply optimizations", desc: "Get actionable recommendations to convert more agents." },
     ],
   },
   testimonials: [
     {
       quote:
-        "Clawpify revealed exactly which prompts were driving our agent conversions. We doubled our AI-driven sales in a month.",
+        "Clawpify's audit revealed exactly which prompts were driving our agent conversions. We doubled our AI-driven sales in a month.",
       author: "Sarah Chen",
       role: "Head of E-commerce",
       company: "TechGear Co",
@@ -136,17 +123,17 @@ export const copy = {
       {
         question: "Can I try Clawpify for free?",
         answer:
-          "Yes. You can explore Clawpify and see how your products perform across AI agents before committing to a plan.",
+          "Yes. We offer a free audit so you can see how your products perform across AI agents before committing to a plan.",
       },
       {
         question: "Can I use Clawpify with my team?",
         answer:
-          "Absolutely. Clawpify supports team workspaces so multiple people can collaborate, view reports, and apply optimizations together.",
+          "Absolutely. Clawpify supports team workspaces so multiple people can collaborate on audits, view reports, and apply optimizations together.",
       },
       {
         question: "How long does it take to set up and start using Clawpify?",
         answer:
-          "Most stores are up and running in under 10 minutes. Connect your platform and start optimizing right away.",
+          "Most stores are up and running in under 10 minutes. Connect your platform, run the audit, and start optimizing right away.",
       },
       {
         question: "Does Clawpify support multiple e-commerce platforms?",
@@ -168,23 +155,16 @@ export const copy = {
         links: [
           { label: "Home", href: "/" },
           { label: "About", href: "/about" },
-          { label: "Writing", href: "/blog" },
+          { label: "Writing", href: "#" },
         ],
-      },
-      {
-        heading: "Developer",
-        links: [{ label: "GitHub", href: "https://github.com/clawpify" }],
       },
       {
         heading: "Legal",
-        links: [{ label: "Privacy Policy", href: "/privacy" }],
+        links: [{ label: "Privacy Policy", href: "#" }],
       },
       {
         heading: "Connect",
-        links: [
-          { label: "Book a demo", href: "https://calendar.notion.so/meet/alhwyn/clawpify" },
-          { label: "Discord", href: "https://discord.gg/Pqr6rk5HNg" },
-        ],
+        links: [{ label: "Book a demo", href: "https://calendar.notion.so/meet/alhwyn/clawpify" }],
       },
     ],
     copyright: "© 2026 Clawpify",
