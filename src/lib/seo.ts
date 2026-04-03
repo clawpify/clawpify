@@ -216,7 +216,6 @@ Allow: /
 Disallow: /app/
 Disallow: /sign-in
 Disallow: /sign-up
-Disallow: /onboarding
 
 Sitemap: ${BASE_URL}/sitemap.xml`;
 }

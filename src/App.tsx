@@ -2,6 +2,7 @@ import { useLocation } from "react-router-dom";
 import { useEffect } from "react";
 import { useAuth, useOrganizationList } from "@clerk/react";
 import "./index.css";
+import { pathRequiresClerk } from "./lib/path-requires-clerk.ts";
 import { AppShell } from "./shell/AppShell";
 import { AppTopNav } from "./shell/AppTopNav";
 import { AppRoutes } from "./shell/AppRoutes";
@@ -9,11 +10,12 @@ import { AppRoutes } from "./shell/AppRoutes";
 export function App() {
   const { pathname } = useLocation();
   const fullBleed = isFullBleedShell(pathname);
+  const clerk = pathRequiresClerk(pathname);
 
   return (
     <AppShell fullBleed={fullBleed}>
-      <EnsureActiveOrganization />
-      {!fullBleed && <AppTopNav />}
+      {clerk && <EnsureActiveOrganization />}
+      {!fullBleed && clerk && <AppTopNav />}
       <AppRoutes />
     </AppShell>
   );
@@ -42,11 +44,6 @@ function EnsureActiveOrganization() {
   return null;
 }
 
-/**
- * 
- * @param pathname - The pathname to check.
- * @returns 
- */
 function isFullBleedShell(p: string): boolean {
   if (p === "/" || p === "/about" || p === "/privacy") return true;
   if (p === "/sign-in" || p === "/sign-up") return true;

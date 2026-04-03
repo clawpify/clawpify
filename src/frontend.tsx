@@ -1,35 +1,19 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import { ClerkProvider } from "@clerk/react";
 import { BrowserRouter } from "react-router-dom";
 import { App } from "./App.tsx";
-import { clerkAppearance } from "./lib/clerk-appearance.ts";
+import { ClerkShell } from "./ClerkShell.tsx";
 import "./lib/chartConfig";
 
 const elem = document.getElementById("root")!;
-const pk = process.env.BUN_PUBLIC_CLERK_PUBLISHABLE_KEY ?? "";
-
-const inner = (
-  <BrowserRouter>
-    <App />
-  </BrowserRouter>
-);
 
 const app = (
   <StrictMode>
-    {pk ? (
-      <ClerkProvider
-        publishableKey={pk}
-        signInUrl="/sign-in"
-        signUpUrl="/sign-up"
-        afterSignOutUrl="/"
-        appearance={clerkAppearance}
-      >
-        {inner}
-      </ClerkProvider>
-    ) : (
-      inner
-    )}
+    <BrowserRouter>
+      <ClerkShell>
+        <App />
+      </ClerkShell>
+    </BrowserRouter>
   </StrictMode>
 );
 

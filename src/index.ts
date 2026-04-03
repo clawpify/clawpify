@@ -1,5 +1,5 @@
 import { serve } from "bun";
-import { getAuthOptional, requireAuth, AuthError } from "./lib/auth";
+import { requireAuth, AuthError } from "./lib/auth";
 import { createProxyHandler, proxyToRustPublic } from "./utils/networkFns";
 import { generateRobotsTxt, generateSitemapXml, injectSeoMeta } from "./lib/seo";
 import { logAndValidateRustProxy } from "./proxy-safety";
@@ -58,9 +58,8 @@ const handleHealth = (req: Request) => forwardPublic(req);
 
 const handleSubscribersPost = async (req: Request) => {
   const clientIP = serverRef?.requestIP(req)?.address ?? "unknown";
-  const auth = await getAuthOptional(req);
   try {
-    return await forwardPublic(req, { clientIP, auth: auth ?? undefined });
+    return await forwardPublic(req, { clientIP });
   } catch (e) {
     console.error(
       "POST /api/subscribers proxy failed (check RUST_API_URL reaches the Rust service, or set BUN_PUBLIC_API_BASE for direct browser calls):",

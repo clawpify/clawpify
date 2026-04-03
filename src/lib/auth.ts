@@ -4,7 +4,7 @@ const CLERK_SECRET_KEY = process.env.CLERK_SECRET_KEY;
 
 /**
  * Extract the Clerk session token from a request.
- * Checks the Authorization header, then the `__session` query param, then the Cookie header.
+ * Checks the Authorization header, then the `__session` cookie.
  *
  * @param req - The incoming request to inspect.
  * @returns The raw session token string, or null if none was found.
@@ -14,11 +14,6 @@ export async function getAuthToken(req: Request): Promise<string | null> {
 
   if (authHeader?.startsWith("Bearer ")) return authHeader.slice(7);
 
-  const url = new URL(req.url);
-  const sessionToken = url.searchParams.get("__session");
-
-  if (sessionToken) return sessionToken;
-
   const cookieHeader = req.headers.get("Cookie");
   if (cookieHeader) {
     const match = cookieHeader.match(/__session=([^;]+)/);
@@ -27,40 +22,6 @@ export async function getAuthToken(req: Request): Promise<string | null> {
   }
 
   return null;
-}
-
-/**
- * Attempt to authenticate the request without throwing.
- * Returns auth context if the token is valid, or null for any failure.
- *
- * @param req - The incoming request to authenticate.
- * @returns Auth payload with userId and optional org fields, or null if unauthenticated.
- */
-export async function getAuthOptional(req: Request): Promise<{
-  userId: string;
-  orgId?: string;
-  orgRole?: string;
-} | null> {
-  if (!CLERK_SECRET_KEY) return null;
-
-  const token = await getAuthToken(req);
-
-  if (!token) return null;
-
-  let payload: Awaited<ReturnType<typeof verifyToken>> | null = null;
-  try {
-    payload = await verifyToken(token, { secretKey: CLERK_SECRET_KEY });
-  } catch {
-    return null;
-  }
-
-  if (!payload?.sub) return null;
-
-  return {
-    userId: payload.sub,
-    orgId: payload.org_id as string | undefined,
-    orgRole: payload.org_role as string | undefined,
-  };
 }
 
 /**
@@ -76,7 +37,6 @@ export async function requireAuth(req: Request): Promise<{
   orgId?: string;
   orgRole?: string;
 }> {
-
   if (!CLERK_SECRET_KEY) throw new Error("CLERK_SECRET_KEY is not configured");
 
   const token = await getAuthToken(req);
@@ -90,7 +50,7 @@ export async function requireAuth(req: Request): Promise<{
   if (!payload) throw new AuthError("Invalid or expired token");
 
   const sub = payload.sub;
-  
+
   if (!sub) throw new AuthError("Token missing subject");
 
   return {

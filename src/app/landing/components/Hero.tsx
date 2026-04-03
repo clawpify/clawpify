@@ -1,32 +1,16 @@
-import { SignInButton, UserButton, useAuth } from "@clerk/react";
+import { Link } from "react-router-dom";
 import type { HeroProps } from "../types";
 import { landingCopy, landingPalette } from "../utils";
-import { Button } from "./Button";
 import { HeroFloatingProducts } from "./HeroFloatingProducts";
 import { Input } from "./Input";
 
 export function Hero({ className = "" }: HeroProps) {
-  const { isLoaded, isSignedIn } = useAuth();
   const { hero } = landingCopy;
 
   const heroMinHeight = [
     "min-h-[min(64vh,620px)]",
     "md:min-h-[min(78vh,780px)]",
   ].join(" ");
-
-/*   const authControls = !isLoaded ? (
-    <Button type="button" disabled className="pointer-events-none min-w-0 px-6 py-2 text-sm opacity-60" aria-busy>
-      {hero.ctaLabel}
-    </Button>
-  ) : isSignedIn ? (
-    <UserButton />
-  ) : (
-    <SignInButton mode="redirect" forceRedirectUrl="/app">
-      <Button type="button" className="min-w-0 px-6 py-2 text-sm">
-        {hero.ctaLabel}
-      </Button>
-    </SignInButton>
-  ); */
 
   return (
     <section
@@ -42,9 +26,14 @@ export function Hero({ className = "" }: HeroProps) {
         <HeroFloatingProducts className="relative h-full min-h-[280px] w-full md:min-h-[340px]" />
       </div>
 
- {/*      <div className="pointer-events-auto absolute right-4 top-4 z-20 flex items-center gap-2 md:right-8 md:top-5">
-        {authControls}
-      </div> */}
+      <div className="pointer-events-auto absolute right-4 top-4 z-20 flex items-center gap-2 md:right-8 md:top-5">
+        <Link
+          to="/sign-in"
+          className="landing-sans-copy rounded-full border border-zinc-200 bg-white/90 px-4 py-2 text-sm font-medium text-zinc-800 shadow-sm backdrop-blur-sm transition hover:bg-white"
+        >
+          {hero.ctaLabel}
+        </Link>
+      </div>
 
       <header
         className={[
@@ -61,17 +50,7 @@ export function Hero({ className = "" }: HeroProps) {
               {hero.subline}
             </p>
             <div className="mt-2.5 flex min-h-[3.25rem] flex-wrap items-center justify-center gap-4 md:mt-3">
-              {!isLoaded ? (
-                <Button type="button" disabled className="pointer-events-none opacity-60" aria-busy>
-                  {hero.ctaLabel}
-                </Button>
-              ) : isSignedIn ? (
-                <>
-                  <Input />
-                </>
-              ) : (
-                <Input />
-              )}
+              <Input />
             </div>
           </div>
         </div>

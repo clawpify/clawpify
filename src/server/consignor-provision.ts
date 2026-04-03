@@ -64,7 +64,7 @@ export async function handleProvisionConsignor(req: Request) {
     }
 
     const { firstName, lastName } = splitName(displayName);
-    const user = await (clerkClient.users as any).createUser({
+    const user = await clerkClient.users.createUser({
       firstName,
       ...(lastName ? { lastName } : {}),
       ...(email ? { emailAddress: [email] } : {}),
@@ -73,7 +73,7 @@ export async function handleProvisionConsignor(req: Request) {
       skipPasswordRequirement: true,
     });
 
-    await (clerkClient.organizations as any).createOrganizationMembership({
+    await clerkClient.organizations.createOrganizationMembership({
       organizationId: orgId,
       userId: user.id,
       role: "org:member",
@@ -92,19 +92,33 @@ export async function handleProvisionConsignor(req: Request) {
     });
 
     return proxyToRust(consignorReq, "/api/consignors", authWithOrg);
-  } catch (error: any) {
+  } catch (error: unknown) {
     if (error instanceof AuthError) {
       return Response.json({ error: error.message }, { status: 401 });
     }
-    const clerkMessage =
-      error?.errors?.[0]?.longMessage ??
-      error?.errors?.[0]?.message ??
-      error?.message;
-    if (typeof clerkMessage === "string" && clerkMessage.length > 0) {
+    const { message: clerkMessage, status } = clerkApiErrorDetails(error);
+    if (clerkMessage) {
       console.error("POST /api/consignors/provision Clerk error:", clerkMessage);
-      return Response.json({ error: clerkMessage }, { status: error?.status ?? 422 });
+      return Response.json({ error: clerkMessage }, { status: status ?? 422 });
     }
     console.error("POST /api/consignors/provision failed:", error);
     return Response.json({ error: "Failed to create consignor" }, { status: 500 });
   }
+}
+
+function clerkApiErrorDetails(error: unknown): { message?: string; status?: number } {
+  if (!error || typeof error !== "object") return {};
+  const rec = error as Record<string, unknown>;
+  const status = typeof rec.status === "number" ? rec.status : undefined;
+  const first = Array.isArray(rec.errors) ? rec.errors[0] : undefined;
+  if (first && typeof first === "object") {
+    const err = first as Record<string, unknown>;
+    const longMessage = err.longMessage;
+    const nested = err.message;
+    if (typeof longMessage === "string" && longMessage.length > 0) return { message: longMessage, status };
+    if (typeof nested === "string" && nested.length > 0) return { message: nested, status };
+  }
+  const top = rec.message;
+  if (typeof top === "string" && top.length > 0) return { message: top, status };
+  return { status };
 }
