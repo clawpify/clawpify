@@ -1,4 +1,5 @@
 export { Button } from "./Button";
+export { Input } from "./Input";
 export { ExploreAiIcon } from "./ExploreAiIcon";
 export { FeatureCard } from "./FeatureCard";
 export { FeaturesSection } from "./FeaturesSection";

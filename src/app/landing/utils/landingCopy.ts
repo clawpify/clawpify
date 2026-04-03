@@ -14,6 +14,14 @@ export const landingCopy = {
     subline: "Count inventory, track splits, post listings.",
     ctaLabel: "Sign in",
   },
+  heroWaitlist: {
+    emailLabel: "Email address",
+    placeholder: "you@example.com",
+    submitLabel: "Join waitlist",
+    submittingLabel: "Joining…",
+    successMessage: "You're on the list. We'll be in touch.",
+    signInPrompt: "Already have an account? Sign in",
+  },
   featuresIntro: {
     headline: "In your workspace",
   },

@@ -16,7 +16,7 @@ export const landingOrangeBubbleStyle: CSSProperties = {
 
 export const landingOrangeBubbleClassName = [
   "relative isolate overflow-hidden rounded-full",
-  "border font-medium antialiased text-black shadow-md",
+  "border font-medium antialiased text-white shadow-md",
   "transition-[filter,opacity]",
   "before:pointer-events-none before:absolute before:inset-x-[12%] before:top-px before:z-[1] before:h-[42%] before:rounded-[999px]",
   "before:bg-gradient-to-b before:from-white/50 before:via-white/15 before:to-transparent",

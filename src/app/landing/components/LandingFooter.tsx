@@ -7,6 +7,36 @@ import type {
 import { landingPalette } from "../utils";
 import { ExploreAiIcon } from "./ExploreAiIcon";
 
+function FooterWordmarkBubbleLink({ wordmark }: { wordmark: string }) {
+  const chars = Array.from(wordmark);
+  return (
+    <Link
+      to="/"
+      aria-label={wordmark}
+      className="inline-flex w-fit flex-wrap items-center gap-1.5 no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2"
+    >
+      {chars.map((char, i) => {
+        if (char === " ") {
+          return <span key={`sp-${i}`} className="w-1.5 shrink-0" aria-hidden />;
+        }
+        return (
+          <span
+            key={`${i}-${char}`}
+            className="landing-footer-ai-bubble-hitbox landing-footer-wordmark-hitbox grid h-[clamp(2.5rem,4.2vw,3.75rem)] w-[clamp(2.5rem,4.2vw,3.75rem)] shrink-0 place-items-center overflow-visible rounded-full"
+          >
+            <span
+              className="landing-glass-sphere landing-footer-ai-bubble grid h-full w-full place-items-center rounded-full font-mono text-[clamp(1.2rem,2.35vw,2rem)] font-medium uppercase leading-none tracking-tight text-[#26251e]"
+              style={{ animationDelay: `${i * 0.55}s` }}
+            >
+              {char}
+            </span>
+          </span>
+        );
+      })}
+    </Link>
+  );
+}
+
 function FooterExploreAiBubbles({ providers }: { providers: readonly LandingFooterExploreProvider[] }) {
   return (
     <div className="flex items-center gap-1.5 py-1">
@@ -34,23 +64,27 @@ function FooterExploreAiBubbles({ providers }: { providers: readonly LandingFoot
 function FooterLink({ label, href, external }: LandingFooterLink) {
   const useNative =
     Boolean(external) || href.startsWith("http") || href.startsWith("mailto:");
-  const className =
-    "font-mono text-[0.78rem] text-[#26251e] transition hover:text-[#6b6455]";
+  const hitboxClass = "landing-footer-nav-bubble-hitbox";
+  const bubble = (
+    <span className="landing-glass-sphere inline-flex items-center justify-center rounded-full px-2.5 py-1.5 font-mono text-[0.78rem] leading-tight text-current">
+      {label}
+    </span>
+  );
   if (useNative) {
     return (
       <a
         href={href}
         target={href.startsWith("mailto:") ? undefined : "_blank"}
         rel={href.startsWith("mailto:") ? undefined : "noopener noreferrer"}
-        className={className}
+        className={hitboxClass}
       >
-        {label}
+        {bubble}
       </a>
     );
   }
   return (
-    <Link to={href} className={className}>
-      {label}
+    <Link to={href} className={hitboxClass}>
+      {bubble}
     </Link>
   );
 }
@@ -67,19 +101,14 @@ export function LandingFooter({
     <footer
       className={["relative z-0 mt-auto border-t", className].filter(Boolean).join(" ")}
       style={{
-        backgroundColor: landingPalette.footer.background,
+        backgroundColor: landingPalette.pageBackground,
         borderColor: landingPalette.footer.divider,
       }}
     >
       <div className="w-full pb-8">
         <div className="grid w-full grid-cols-1 px-5 pt-10 md:min-h-[190px] md:grid-cols-[minmax(0,1fr)_1px_minmax(0,1fr)] md:items-stretch md:pr-8 md:pl-0 md:pt-0 lg:pr-10 lg:pl-0">
           <div className="hidden flex-col justify-end gap-2 pb-0 md:flex md:pl-6 md:pr-8 md:pt-10 lg:pl-8">
-            <Link
-              to="/"
-              className="font-mono w-fit text-[clamp(3rem,5vw,5rem)] font-medium uppercase leading-none tracking-tight text-[#26251e] no-underline transition hover:text-[#6b6455] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2"
-            >
-              {wordmark}
-            </Link>
+            <FooterWordmarkBubbleLink wordmark={wordmark} />
             <p className="landing-sans-copy max-w-xs text-sm leading-relaxed text-zinc-600">{tagline}</p>
           </div>
 
