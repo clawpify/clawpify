@@ -1,38 +1,33 @@
-/** No trailing slash. Empty = same origin (Bun proxy). Set when the API is on another origin. */
-const API_BASE = (
-  typeof process !== "undefined" && process.env.BUN_PUBLIC_API_BASE
-    ? String(process.env.BUN_PUBLIC_API_BASE).replace(/\/$/, "")
-    : ""
-);
+import { messageFromErrorBody } from "./messageFromErrorBody";
+import type { SubscribeRequest, SubscribeResponse } from "../types/subscribe";
 
-export type SubscribeRequest = {
-  email: string;
-};
+export type { SubscribeRequest, SubscribeResponse };
 
-export type SubscribeResponse = {
-  ok: boolean;
-  already_subscribed?: boolean;
-};
+/**
+ * Empty base = same-origin `/api/*` (Bun proxies via `RUST_API_URL`).
+ * Set `BUN_PUBLIC_API_BASE` when the browser should call the API host directly.
+ */
+function apiBase(): string {
+  if (typeof process === "undefined") return "";
+  const raw = process.env.BUN_PUBLIC_API_BASE;
+  return raw ? String(raw).replace(/\/$/, "") : "";
+}
 
 export async function subscribe(
   body: SubscribeRequest
 ): Promise<SubscribeResponse> {
-  const res = await fetch(`${API_BASE}/api/subscribers`, {
+  const res = await fetch(`${apiBase()}/api/subscribers`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
+
   if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    const e = err as { error?: string | { message?: string } };
-    const nested =
-      typeof e.error === "object" &&
-      e.error !== null &&
-      "message" in e.error
-        ? (e.error as { message?: string }).message
-        : undefined;
-    const flat = typeof e.error === "string" ? e.error : undefined;
-    throw new Error(nested || flat || `Request failed: ${res.status}`);
+    const payload = await res.json().catch(() => undefined);
+    throw new Error(
+      messageFromErrorBody(payload) ?? `Request failed: ${res.status}`
+    );
   }
+
   return res.json() as Promise<SubscribeResponse>;
 }

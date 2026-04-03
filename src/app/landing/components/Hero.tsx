@@ -1,4 +1,4 @@
-import { useAuth } from "@clerk/react";
+import { SignInButton, UserButton, useAuth } from "@clerk/react";
 import type { HeroProps } from "../types";
 import { landingCopy, landingPalette } from "../utils";
 import { Button } from "./Button";
@@ -14,19 +14,19 @@ export function Hero({ className = "" }: HeroProps) {
     "md:min-h-[min(78vh,780px)]",
   ].join(" ");
 
-  // const authControls = !isLoaded ? (
-  //   <Button type="button" disabled className="pointer-events-none min-w-0 px-6 py-2 text-sm opacity-60" aria-busy>
-  //     {hero.ctaLabel}
-  //   </Button>
-  // ) : isSignedIn ? (
-  //   <UserButton afterSignOutUrl="/" />
-  // ) : (
-  //   <SignInButton mode="redirect" forceRedirectUrl="/app">
-  //     <Button type="button" className="min-w-0 px-6 py-2 text-sm">
-  //       {hero.ctaLabel}
-  //     </Button>
-  //   </SignInButton>
-  // );
+/*   const authControls = !isLoaded ? (
+    <Button type="button" disabled className="pointer-events-none min-w-0 px-6 py-2 text-sm opacity-60" aria-busy>
+      {hero.ctaLabel}
+    </Button>
+  ) : isSignedIn ? (
+    <UserButton />
+  ) : (
+    <SignInButton mode="redirect" forceRedirectUrl="/app">
+      <Button type="button" className="min-w-0 px-6 py-2 text-sm">
+        {hero.ctaLabel}
+      </Button>
+    </SignInButton>
+  ); */
 
   return (
     <section
@@ -42,7 +42,7 @@ export function Hero({ className = "" }: HeroProps) {
         <HeroFloatingProducts className="relative h-full min-h-[280px] w-full md:min-h-[340px]" />
       </div>
 
-      {/* <div className="pointer-events-auto absolute right-4 top-4 z-20 flex items-center gap-2 md:right-8 md:top-5">
+ {/*      <div className="pointer-events-auto absolute right-4 top-4 z-20 flex items-center gap-2 md:right-8 md:top-5">
         {authControls}
       </div> */}
 

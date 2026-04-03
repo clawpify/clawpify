@@ -1,3 +1,5 @@
+import type { AuthPayload } from "../types/auth";
+
 const RUST_API_URL = process.env.RUST_API_URL ?? "http://127.0.0.1:3000";
 
 function rustProxyFetchInit(req: Request, headers: Headers): RequestInit {
@@ -24,11 +26,7 @@ async function forwardOr502(backendUrl: string, init: RequestInit): Promise<Resp
   }
 }
 
-export type AuthPayload = {
-  userId: string;
-  orgId?: string;
-  orgRole?: string;
-};
+export type { AuthPayload };
 
 function normalizeOrgId(value: string | undefined | null): string | undefined {
   const t = typeof value === "string" ? value.trim() : "";

@@ -1,14 +1,11 @@
 import { useAuth } from "@clerk/react";
 import { useCallback } from "react";
+import type { LogActivityPayload } from "../types/agent-activity";
+import { messageFromErrorBody } from "./messageFromErrorBody";
 
 const API_BASE = "";
 
-export type LogActivityPayload = {
-  agent_name: string;
-  action_type: string;
-  store_id?: string;
-  payload?: Record<string, unknown>;
-};
+export type { LogActivityPayload };
 
 /**
  * Fire-and-forget log of agent activity to the backend.
@@ -59,17 +56,10 @@ export function useAuthenticatedFetch() {
       // Retry once with a fresh token if the cached one was expired
       if (res.status === 401) return request(true);
       if (res.status === 400) {
-        try {
-          const body = (await res.clone().json()) as {
-            error?: string | { message?: string };
-          };
-          const message =
-            typeof body?.error === "string" ? body.error : body?.error?.message;
-          if (message?.toLowerCase().includes("org required")) {
-            return request(true);
-          }
-        } catch {
-          // ignored
+        const body = await res.clone().json().catch(() => undefined);
+        const message = messageFromErrorBody(body);
+        if (message?.toLowerCase().includes("org required")) {
+          return request(true);
         }
       }
 
