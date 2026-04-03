@@ -8,31 +8,13 @@ import { landingPalette } from "../utils";
 import { ExploreAiIcon } from "./ExploreAiIcon";
 
 function FooterWordmarkBubbleLink({ wordmark }: { wordmark: string }) {
-  const chars = Array.from(wordmark);
   return (
     <Link
       to="/"
       aria-label={wordmark}
-      className="inline-flex w-fit flex-wrap items-center gap-1.5 no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2"
+      className="inline-flex w-fit font-mono text-3xl font-normal uppercase leading-none tracking-tight text-zinc-900 no-underline transition-colors hover:text-zinc-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 md:text-4xl"
     >
-      {chars.map((char, i) => {
-        if (char === " ") {
-          return <span key={`sp-${i}`} className="w-1.5 shrink-0" aria-hidden />;
-        }
-        return (
-          <span
-            key={`${i}-${char}`}
-            className="landing-footer-ai-bubble-hitbox landing-footer-wordmark-hitbox grid h-[clamp(2.5rem,4.2vw,3.75rem)] w-[clamp(2.5rem,4.2vw,3.75rem)] shrink-0 place-items-center overflow-visible rounded-full"
-          >
-            <span
-              className="landing-glass-sphere landing-footer-ai-bubble grid h-full w-full place-items-center rounded-full font-mono text-[clamp(1.2rem,2.35vw,2rem)] font-medium uppercase leading-none tracking-tight text-[#26251e]"
-              style={{ animationDelay: `${i * 0.55}s` }}
-            >
-              {char}
-            </span>
-          </span>
-        );
-      })}
+      {wordmark}
     </Link>
   );
 }
