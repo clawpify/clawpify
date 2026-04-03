@@ -1,7 +1,7 @@
 export const landingCopy = {
   nav: {
-    ctaLabel: "Open app",
-    signedInCtaLabel: "Open app",
+    ctaLabel: "Sign in",
+    signedInCtaLabel: "Sign in",
     links: [
       { label: "Features", href: "/#features" },
       { label: "About", href: "/about" },
@@ -13,6 +13,14 @@ export const landingCopy = {
     headline: "Software for consignment shops",
     subline: "Count inventory, track splits, post listings.",
     ctaLabel: "Sign in",
+  },
+  heroWaitlist: {
+    emailLabel: "Email address",
+    placeholder: "you@example.com",
+    submitLabel: "Join waitlist",
+    submittingLabel: "Joining…",
+    successMessage: "You're on the list. We'll be in touch.",
+    signInPrompt: "Already have an account? Sign in",
   },
   featuresIntro: {
     headline: "In your workspace",

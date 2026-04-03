@@ -9,8 +9,8 @@ fn normalize_email(email: &str) -> String {
 
 pub async fn create(pool: &PgPool, email: &str) -> Result<Subscriber, sqlx::Error> {
   sqlx::query_as::<_, Subscriber>(
-    r#"INSERT INTO subscribers (email)
-       VALUES ($1)
+    r#"INSERT INTO waitlist (email, ip_hash)
+       VALUES ($1, 'test-repo-fingerprint')
        RETURNING id, email, created_at"#,
   )
   .bind(normalize_email(email))
@@ -20,7 +20,7 @@ pub async fn create(pool: &PgPool, email: &str) -> Result<Subscriber, sqlx::Erro
 
 pub async fn update(pool: &PgPool, id: Uuid, email: &str) -> Result<Option<Subscriber>, sqlx::Error> {
   sqlx::query_as::<_, Subscriber>(
-    r#"UPDATE subscribers
+    r#"UPDATE waitlist
        SET email = $2
        WHERE id = $1
        RETURNING id, email, created_at"#,
@@ -32,7 +32,7 @@ pub async fn update(pool: &PgPool, id: Uuid, email: &str) -> Result<Option<Subsc
 }
 
 pub async fn delete(pool: &PgPool, id: Uuid) -> Result<bool, sqlx::Error> {
-  let done = sqlx::query("DELETE FROM subscribers WHERE id = $1")
+  let done = sqlx::query("DELETE FROM waitlist WHERE id = $1")
     .bind(id)
     .execute(pool)
     .await?;
@@ -57,7 +57,7 @@ mod tests {
     let deleted = delete(&pool, created.id).await.expect("delete subscriber");
     assert!(deleted);
 
-    let maybe = sqlx::query_scalar::<_, Uuid>("SELECT id FROM subscribers WHERE id = $1")
+    let maybe = sqlx::query_scalar::<_, Uuid>("SELECT id FROM waitlist WHERE id = $1")
       .bind(created.id)
       .fetch_optional(&pool)
       .await

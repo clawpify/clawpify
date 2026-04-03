@@ -82,13 +82,7 @@ impl ApiError {
   }
 
   pub fn conflict(message: impl Into<String>) -> Self {
-    Self::new(
-      StatusCode::CONFLICT,
-      "conflict",
-      "conflict",
-      message,
-      None,
-    )
+    Self::new(StatusCode::CONFLICT, "conflict", "conflict", message, None)
   }
 
   pub fn internal_logged(source: &sqlx::Error) -> Self {
@@ -117,6 +111,16 @@ impl ApiError {
       StatusCode::SERVICE_UNAVAILABLE,
       "service_unavailable",
       "service_unavailable",
+      message,
+      None,
+    )
+  }
+
+  pub fn too_many_requests(message: impl Into<String>) -> Self {
+    Self::new(
+      StatusCode::TOO_MANY_REQUESTS,
+      "rate_limit_error",
+      "too_many_requests",
       message,
       None,
     )
@@ -176,4 +180,8 @@ pub fn conflict(msg: &str) -> ApiError {
 
 pub fn idempotency_mismatch() -> ApiError {
   ApiError::idempotency_mismatch()
+}
+
+pub fn too_many_requests(msg: impl Into<String>) -> ApiError {
+  ApiError::too_many_requests(msg)
 }

@@ -15,7 +15,6 @@ export const landingPalette = {
     ].join(", "),
   },
   footer: {
-    background: "#e8e9e7",
     divider: "rgba(90, 88, 82, 0.2)",
     swatch: "#26251e",
   },
