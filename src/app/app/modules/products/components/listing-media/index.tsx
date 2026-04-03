@@ -108,13 +108,8 @@ export function ListingMediaSection({ listing }: Props) {
       }
 
       setPending((prev) => [...prev, ...toAdd]);
-      showToast(
-        toAdd.length === 1
-          ? copy.products.detailMediaAddedOne
-          : copy.products.detailMediaAddedMany.replace("{count}", String(toAdd.length)),
-      );
     },
-    [serverUrls.length, pending.length, showToast],
+    [serverUrls.length, pending.length],
   );
 
   const savePending = useCallback(async () => {
@@ -130,7 +125,7 @@ export function ListingMediaSection({ listing }: Props) {
       setImageListVersion((v) => v + 1);
       showToast(copy.products.detailMediaUploadSuccess);
     } catch (e) {
-      window.alert(e instanceof Error ? e.message : "Upload failed");
+      showToast(e instanceof Error ? e.message : "Upload failed");
     } finally {
       setMediaUploading(false);
     }

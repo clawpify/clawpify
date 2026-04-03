@@ -8,6 +8,11 @@ import {
   type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
+import {
+  landingOrangeBubbleClassName,
+  landingOrangeBubbleStyle,
+  landingWhiteBubbleClassName,
+} from "../app/landing/components/Button";
 
 export type ActionToastPayload = {
   message: string;
@@ -111,17 +116,24 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                   type="button"
                   disabled={actionPayload.secondaryDisabled === true}
                   onClick={actionPayload.onSecondary}
-                  className="rounded-md border border-zinc-200 bg-white px-3 py-1.5 text-sm font-medium text-zinc-800 shadow-sm transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50"
+                  className={[
+                    landingWhiteBubbleClassName,
+                    "landing-sans-copy inline-flex min-h-9 items-center justify-center px-4 py-2 text-sm",
+                  ].join(" ")}
                 >
-                  {actionPayload.secondaryLabel}
+                  <span className="relative z-[2]">{actionPayload.secondaryLabel}</span>
                 </button>
                 <button
                   type="button"
                   disabled={actionPayload.primaryDisabled === true}
                   onClick={actionPayload.onPrimary}
-                  className="rounded-md bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
+                  className={[
+                    landingOrangeBubbleClassName,
+                    "landing-sans-copy inline-flex min-h-9 items-center justify-center px-4 py-2 text-sm",
+                  ].join(" ")}
+                  style={landingOrangeBubbleStyle}
                 >
-                  {actionPayload.primaryLabel}
+                  <span className="relative z-[2]">{actionPayload.primaryLabel}</span>
                 </button>
               </div>
             </div>,

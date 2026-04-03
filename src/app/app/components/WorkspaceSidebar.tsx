@@ -1,59 +1,7 @@
 import { Link, useLocation } from "react-router-dom";
-import {
-  OrganizationSwitcher,
-  Show,
-  UserButton,
-  useOrganization,
-  useUser,
-} from "@clerk/react";
+import { OrganizationSwitcher, Show } from "@clerk/react";
 import { InboxIcon, PackageIcon } from "../../../icons/workspace-icons";
 import { copy } from "../utils/copy";
-
-function WorkspaceUserHeader() {
-  const { user, isLoaded } = useUser();
-  const { organization } = useOrganization();
-
-  if (!isLoaded || !user) {
-    return (
-      <div className="mb-4 flex items-center gap-2 px-2">
-        <div className="h-6 w-6 shrink-0 rounded-full bg-zinc-200/80" />
-        <div className="min-w-0 flex-1 space-y-1">
-          <div className="h-3.5 w-24 rounded bg-zinc-200/80" />
-          <div className="h-3 w-16 rounded bg-zinc-200/60" />
-        </div>
-      </div>
-    );
-  }
-
-  const displayName =
-    user.fullName ||
-    [user.firstName, user.lastName].filter(Boolean).join(" ") ||
-    user.primaryEmailAddress?.emailAddress ||
-    "Account";
-
-  return (
-    <div className="mb-4 flex items-center gap-2 px-2">
-      <UserButton
-        appearance={{
-          elements: {
-            rootBox: "w-auto shrink-0",
-            userButtonBox: "flex items-center justify-start",
-            userButtonTrigger: "h-6 w-6 rounded-full focus:shadow-none",
-            userButtonAvatarBox: "h-6 w-6",
-            avatarBox: "h-6 w-6",
-            userButtonAvatarImage: "h-6 w-6",
-          },
-        }}
-      />
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-semibold text-zinc-900">{displayName}</p>
-        {organization?.name ? (
-          <p className="truncate text-xs text-zinc-500">{organization.name}</p>
-        ) : null}
-      </div>
-    </div>
-  );
-}
 
 type WorkspaceSidebarProps = {
   className?: string;
@@ -72,7 +20,6 @@ export function WorkspaceSidebar({ className, onNavigate }: WorkspaceSidebarProp
       style={{ fontFamily: "var(--workspace-font)" }}
     >
       <Show when="signed-in">
-        <WorkspaceUserHeader />
         <div className="mb-3 px-2">
           <OrganizationSwitcher
             hidePersonal

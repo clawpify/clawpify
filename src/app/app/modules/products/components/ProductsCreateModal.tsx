@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { landingOrangeBubbleClassName, landingOrangeBubbleStyle } from "../../../../landing/components/Button";
 import { XMarkIcon } from "../../../../../icons/workspace-icons";
 import { copy } from "../../../utils/copy";
 import { useProducts } from "../context/ProductsContext";
@@ -11,7 +12,6 @@ import { ListingMediaGallery } from "./listing-media/ListingMediaGallery";
 const MAX_IMAGES = 8;
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
-/** Sentinel `<select>` value when category is free-form. */
 const CATEGORY_CUSTOM = "__custom__";
 
 function initialForm(): ProductCreateFormState {
@@ -26,7 +26,6 @@ function initialForm(): ProductCreateFormState {
   };
 }
 
-/** Linear-style attribute pills (compact, rounded-full). */
 const metaPillClass =
   "h-7 shrink-0 rounded-full border border-zinc-200/90 bg-white px-2.5 text-[11px] font-medium text-zinc-700 placeholder:text-zinc-400 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition focus:border-zinc-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20";
 
@@ -267,9 +266,7 @@ export function ProductsCreateModal({ open, onClose, onCreated }: ProductsCreate
               onSelectHero={setHeroIndex}
               fileInputRef={fileRef}
               onImageFiles={addImageFiles}
-              emptyHeadline={copy.products.createModalMediaNoImages}
-              emptyHint={copy.products.createModalMediaDropHint}
-              chooseFilesLabel={copy.products.createModalMediaChooseFiles}
+              compactWhenEmpty
               regionAriaLabel={copy.products.createModalMediaGalleryRegionAria}
               onRemoveAt={onRemoveAt}
             />
@@ -373,9 +370,18 @@ export function ProductsCreateModal({ open, onClose, onCreated }: ProductsCreate
             type="button"
             onClick={() => void submit()}
             disabled={creating}
-            className={`rounded-md bg-indigo-600 px-4 py-2 text-[13px] font-semibold text-white shadow-sm shadow-indigo-600/25 transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50 ${!creating && !canSubmit ? "opacity-50 hover:bg-indigo-600" : ""}`}
+            className={[
+              landingOrangeBubbleClassName,
+              "landing-sans-copy inline-flex min-h-9 items-center justify-center px-5 py-2 text-[13px] font-semibold disabled:cursor-not-allowed disabled:opacity-50",
+              !creating && !canSubmit ? "opacity-50" : "",
+            ]
+              .filter(Boolean)
+              .join(" ")}
+            style={landingOrangeBubbleStyle}
           >
-            {creating ? copy.products.creating : copy.products.createModalSubmit}
+            <span className="relative z-[2]">
+              {creating ? copy.products.creating : copy.products.createModalSubmit}
+            </span>
           </button>
         </footer>
       </div>

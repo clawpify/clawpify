@@ -11,6 +11,7 @@ use axum::{
 };
 use aws_sdk_s3::primitives::ByteStream;
 use serde::{Deserialize, Serialize};
+use sqlx::PgPool;
 use url::form_urlencoded::Serializer;
 use uuid::Uuid;
 
@@ -18,9 +19,11 @@ use super::extractors::{OrgId, UserId};
 use super::state::AppState;
 use crate::error::{self, ApiError};
 use crate::middleware as mw;
+use crate::repositories::listings;
 use crate::repositories::stored_images as stored_images_repo;
 
 const MAX_BYTES: u64 = 16 * 1024 * 1024;
+
 #[derive(Deserialize)]
 pub struct UploadQuery {
   pub file_name: Option<String>,
@@ -39,34 +42,27 @@ pub struct KeyQuery {
 }
 
 pub fn routes() -> Router<AppState> {
-  Router::new()
-    .route(
-      "/s3/objects",
-      axum::routing::post(upload_object.layer(DefaultBodyLimit::max(MAX_BYTES as usize)))
-        .get(download_object)
-        .delete(delete_object),
-    )
-    .route_layer(middleware::from_fn(mw::require_internal_auth))
+  Router::new().route(
+    "/s3/objects",
+    axum::routing::post(upload_object.layer(DefaultBodyLimit::max(MAX_BYTES as usize)))
+      .get(download_object)
+      .delete(delete_object),
+  )
+  .route_layer(middleware::from_fn(mw::require_internal_auth))
 }
 
-fn prefix(org: &str, user: &str) -> String {
+fn upload_prefix(org: &str, user: &str) -> String {
   format!("uploads/{org}/{user}/")
-}
-
-fn owns_key(key: &str, org: &str, user: &str) -> bool {
-  key.starts_with(&prefix(org, user))
 }
 
 /// Whether `storage_key` belongs to this org/user prefix (same rules as upload GET/DELETE).
 pub(crate) fn storage_key_owned_by_user(key: &str, org: &str, user: &str) -> bool {
-  owns_key(key, org, user)
+  key.starts_with(&upload_prefix(org, user))
 }
 
 /// Same-origin path for cookie-auth BFF clients (`GET` returns object bytes).
 pub(crate) fn stored_image_proxy_path(storage_key: &str) -> String {
-  let q = Serializer::new(String::new())
-    .append_pair("key", storage_key)
-    .finish();
+  let q = Serializer::new(String::new()).append_pair("key", storage_key).finish();
   format!("/api/s3/objects?{q}")
 }
 
@@ -75,17 +71,35 @@ fn validate_key<'a>(raw: &'a str, org: &str, user: &str) -> Result<&'a str, ApiE
   if key.is_empty() {
     return Err(error::bad_request("key required"));
   }
-  if !owns_key(key, org, user) {
+  if !storage_key_owned_by_user(key, org, user) {
     return Err(error::bad_request("forbidden key"));
   }
   Ok(key)
 }
 
-fn s3<'a>(state: &'a AppState) -> Result<(&'a aws_sdk_s3::Client, &'a str), ApiError> {
-  match (&state.s3_client, &state.s3_bucket) {
-    (Some(c), Some(b)) => Ok((c, b.as_str())),
-    _ => Err(error::service_unavailable("Object storage not configured")),
-  }
+fn s3_unavailable() -> ApiError {
+  let missing = crate::s3::missing_bucket_env_keys();
+  let msg = if missing.is_empty() {
+    "Object storage is disabled: set ENDPOINT, REGION, BUCKET, RAILWAY_BUCKET_ID, and BUCKET_SECRET (see backend/.env.example)."
+      .to_string()
+  } else {
+    format!(
+      "Object storage not configured — unset or blank: {}. Add them to backend/.env and restart.",
+      missing.join(", ")
+    )
+  };
+  ApiError::service_unavailable(msg)
+}
+
+fn s3(state: &AppState) -> Result<(&aws_sdk_s3::Client, &str), ApiError> {
+  let client = state.s3_client.as_ref().ok_or_else(s3_unavailable)?;
+  let bucket = state.s3_bucket.as_deref().ok_or_else(s3_unavailable)?;
+  Ok((client, bucket))
+}
+
+fn s3_err(op: &'static str, key: impl std::fmt::Display, err: impl std::fmt::Display) -> ApiError {
+  tracing::error!(key = %key, %err, op);
+  error::internal(err)
 }
 
 fn basename(file_name: &str) -> String {
@@ -114,6 +128,14 @@ fn content_type_for_upload(headers: &HeaderMap) -> Result<&str, ApiError> {
   Ok(raw.split(';').next().unwrap_or(raw).trim())
 }
 
+async fn require_listing(pool: &PgPool, org_id: &str, listing_id: Uuid) -> Result<(), ApiError> {
+  listings::get_by_id(pool, org_id, listing_id)
+    .await
+    .map_err(error::db_error)?
+    .ok_or_else(|| error::not_found("Listing not found"))?;
+  Ok(())
+}
+
 async fn upload_object(
   State(state): State<AppState>,
   OrgId(org_id): OrgId,
@@ -125,20 +147,17 @@ async fn upload_object(
   let (client, bucket) = s3(&state)?;
 
   if let Some(lid) = q.listing_id {
-    let _listing = crate::repositories::listings::get_by_id(&state.pool, org_id.as_ref(), lid)
-      .await
-      .map_err(error::db_error)?
-      .ok_or_else(|| error::not_found("Listing not found"))?;
+    require_listing(&state.pool, org_id.as_ref(), lid).await?;
   }
 
   let byte_size = body.len() as u64;
   if byte_size == 0 || byte_size > MAX_BYTES {
     return Err(error::bad_request("body size out of range"));
   }
+
   let content_type = content_type_for_upload(&headers)?;
-  let name_hint = q.file_name.as_deref().unwrap_or("upload");
-  let safe_name = basename(name_hint);
-  let key = format!("{}{}_{}", prefix(&org_id, &user_id), Uuid::new_v4(), safe_name);
+  let safe_name = basename(q.file_name.as_deref().unwrap_or("upload"));
+  let key = format!("{}{}_{}", upload_prefix(&org_id, &user_id), Uuid::new_v4(), safe_name);
   let len_i64 = i64::try_from(byte_size).map_err(|_| error::bad_request("body too large"))?;
 
   client
@@ -149,10 +168,7 @@ async fn upload_object(
     .body(ByteStream::from(body))
     .send()
     .await
-    .map_err(|e| {
-      tracing::error!(%key, %e, "put_object");
-      error::internal(e)
-    })?;
+    .map_err(|e| s3_err("put_object", &key, e))?;
 
   stored_images_repo::insert(
     &state.pool,
@@ -165,10 +181,7 @@ async fn upload_object(
     q.listing_id,
   )
   .await
-  .map_err(|e| {
-    tracing::error!(%key, %e, "stored_images insert");
-    error::internal(e)
-  })?;
+  .map_err(|e| s3_err("stored_images insert", &key, e))?;
 
   Ok(Json(UploadResult { key, byte_size }))
 }
@@ -188,10 +201,7 @@ async fn download_object(
     .key(key)
     .send()
     .await
-    .map_err(|e| {
-      tracing::error!(key = %key, %e, "get_object");
-      error::internal(e)
-    })?;
+    .map_err(|e| s3_err("get_object", key, e))?;
 
   if let Some(len) = out.content_length() {
     if len > 0 && len as u64 > MAX_BYTES {
@@ -203,16 +213,13 @@ async fn download_object(
     .content_type()
     .filter(|s| !s.is_empty())
     .map(|s| s.to_string())
-    .unwrap_or_else(|| "application/octet-stream".to_string());
+    .unwrap_or_else(|| "application/octet-stream".into());
 
   let body = out
     .body
     .collect()
     .await
-    .map_err(|e| {
-      tracing::error!(key = %key, %e, "get_object body");
-      error::internal(e)
-    })?
+    .map_err(|e| s3_err("get_object body", key, e))?
     .into_bytes();
 
   if body.len() as u64 > MAX_BYTES {
@@ -241,17 +248,11 @@ async fn delete_object(
     .key(key)
     .send()
     .await
-    .map_err(|e| {
-      tracing::error!(key = %key, %e, "delete_object");
-      error::internal(e)
-    })?;
+    .map_err(|e| s3_err("delete_object", key, e))?;
 
   stored_images_repo::delete_by_org_and_key(&state.pool, &org_id, key)
     .await
-    .map_err(|e| {
-      tracing::error!(key = %key, %e, "stored_images delete");
-      error::internal(e)
-    })?;
+    .map_err(|e| s3_err("stored_images delete", key, e))?;
 
   Ok(StatusCode::NO_CONTENT)
 }

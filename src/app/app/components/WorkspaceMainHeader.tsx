@@ -1,3 +1,5 @@
+import { Link } from "react-router-dom";
+import { Show, SignInButton, UserButton } from "@clerk/react";
 import { useWorkspaceHeader } from "../context/WorkspaceHeaderContext";
 import {
   FilterIcon,
@@ -8,11 +10,8 @@ import {
   ChevronDownIcon,
 } from "../../../icons/workspace-icons";
 
-/**
- * Workspace main header component.
- *
- * @returns The workspace main header component.
- */
+const clerkPublishableKey = process.env.BUN_PUBLIC_CLERK_PUBLISHABLE_KEY ?? "";
+
 export function WorkspaceMainHeader() {
   const { config } = useWorkspaceHeader();
   if (config.hideHeader) {
@@ -72,8 +71,42 @@ export function WorkspaceMainHeader() {
           </div>
         )}
 
-        {/* Right: action icons */}
+        {/* Right: account + action icons */}
         <div className="flex items-center gap-0.5">
+          {clerkPublishableKey ? (
+            <>
+              <Show when="signed-out">
+                <SignInButton mode="modal">
+                  <button
+                    type="button"
+                    className="mr-2 rounded-md px-3 py-1.5 text-sm font-medium text-zinc-700 transition hover:bg-zinc-100 hover:text-zinc-900"
+                  >
+                    Sign in
+                  </button>
+                </SignInButton>
+              </Show>
+              <Show when="signed-in">
+                <div className="mr-2 flex items-center">
+                  <UserButton
+                    appearance={{
+                      elements: {
+                        rootBox: "flex items-center",
+                        userButtonTrigger:
+                          "rounded-md ring-1 ring-zinc-200/80 transition hover:bg-zinc-50 focus:shadow-none",
+                      },
+                    }}
+                  />
+                </div>
+              </Show>
+            </>
+          ) : (
+            <Link
+              to="/sign-in"
+              className="mr-2 rounded-md px-3 py-1.5 text-sm font-medium text-zinc-700 transition hover:bg-zinc-100 hover:text-zinc-900"
+            >
+              Sign in
+            </Link>
+          )}
           {onAdd && (
             <button
               type="button"

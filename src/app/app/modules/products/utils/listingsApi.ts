@@ -25,13 +25,11 @@ export function listingImagesPath(listingId: string): string {
   return `/api/listings/${encodeURIComponent(listingId)}/images`;
 }
 
-/** Row from `GET .../listings/:id/images` (backend adds `url` when available). */
 export type ListingImageApiRow = {
   storage_key: string;
   url?: string;
 };
 
-/** Same-origin `<img src>` path: prefer API `url`, else build from `storage_key`. */
 export function listingImageSrc(row: ListingImageApiRow): string {
   const u = row.url?.trim();
   if (u) return u;
@@ -41,8 +39,15 @@ export function listingImageSrc(row: ListingImageApiRow): string {
 export async function parseApiErrorJson(res: Response): Promise<string> {
   let detail = res.statusText;
   try {
-    const body = (await res.json()) as { error?: string };
-    if (body?.error) detail = body.error;
+    const body = (await res.json()) as {
+      error?: string | { message?: string };
+    };
+    const err = body?.error;
+    if (typeof err === "string" && err.trim()) {
+      detail = err;
+    } else if (err && typeof err === "object" && typeof err.message === "string" && err.message.trim()) {
+      detail = err.message;
+    }
   } catch {
     /* ignore */
   }
@@ -69,7 +74,6 @@ export async function ensureListingMutationOk(res: Response): Promise<void> {
   }
 }
 
-/** Proxied to Rust `POST /api/s3/objects` with optional `listing_id` + `file_name` query. */
 export function s3ObjectsUploadPath(listingId: string, fileName: string): string {
   const p = new URLSearchParams();
   p.set("listing_id", listingId);

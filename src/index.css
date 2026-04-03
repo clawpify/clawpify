@@ -204,7 +204,7 @@ body {
   transition: color 0.2s ease;
 }
 
-/** Shared glass orb: footer “Explore” pills + hero floating bubbles */
+/* Footer “Explore” pills + hero floating bubbles */
 .landing-glass-sphere {
   position: relative;
   isolation: isolate;
@@ -269,6 +269,33 @@ body {
   z-index: 1;
 }
 
+/* Hero photo inside orb — light tray so contain letterboxing matches the glass */
+.landing-glass-sphere--meme {
+  background: rgba(248, 250, 252, 0.92);
+}
+
+.landing-glass-sphere--meme::before {
+  z-index: 2;
+  opacity: 0.42;
+}
+
+.landing-glass-sphere--meme::after {
+  z-index: 2;
+  opacity: 0.55;
+}
+
+.landing-glass-sphere > .landing-glass-sphere__meme-media {
+  position: absolute;
+  left: 8%;
+  top: 8%;
+  z-index: 1;
+  width: 84%;
+  height: 84%;
+  object-fit: contain;
+  object-position: center;
+  pointer-events: none;
+}
+
 /* Footer inner: drift variant A (default) */
 .landing-footer-ai-bubble {
   animation: landing-footer-ai-bubble-drift-a 11.4s ease-in-out infinite;
@@ -303,6 +330,12 @@ body {
   .landing-hero-float-bubble--c,
   .landing-footer-ai-bubble {
     animation: none !important;
+  }
+
+  .animate-pending-bar-in {
+    animation: none;
+    opacity: 1;
+    transform: translateX(-50%);
   }
 }
 
@@ -403,6 +436,21 @@ body {
 
 .animate-toast-ephemeral-in {
   animation: toastEphemeralIn 0.32s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes pendingBarSlideUp {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(1rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+.animate-pending-bar-in {
+  animation: pendingBarSlideUp 0.38s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 nav a {

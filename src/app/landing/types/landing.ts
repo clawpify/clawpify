@@ -4,11 +4,13 @@ export type HeroProps = {
   className?: string;
 };
 
+export type FeatureCardVisual = "inventoryBubbles" | "moneyMotif" | "channelLogos";
+
 export type FeatureCardProps = {
   title: string;
   description: string;
   ctaLabel: string;
-  /** When omitted, CTA is visual-only (no navigation). */
+  visual: FeatureCardVisual;
   ctaHref?: string;
   className?: string;
 };

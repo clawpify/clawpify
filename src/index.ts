@@ -2,7 +2,7 @@ import path from "node:path";
 import { serve } from "bun";
 import { requireAuth, AuthError } from "./lib/auth";
 import { createProxyHandler, proxyToRustPublic } from "./utils/networkFns";
-import { generateRobotsTxt, generateSitemapXml, injectSeoMeta } from "./lib/seo";
+import { generateLlmsTxt, generateRobotsTxt, generateSitemapXml, injectSeoMeta } from "./lib/seo";
 import { logAndValidateRustProxy } from "./proxy-safety";
 import { loadBundledFrontend } from "./server/build-frontend";
 import { handleCompleteOnboarding } from "./server/clerk-onboarding";
@@ -16,7 +16,27 @@ const { builtAssets, rawHtml } = await loadBundledFrontend(`${import.meta.dir}/i
 type ProxyPath = string | ((req: Request) => string);
 
 const pathnameOf = (req: Request) => new URL(req.url).pathname;
-const toPublicAssetPath = (req: Request) => `public${pathnameOf(req)}`;
+
+const PUBLIC_DIR = path.resolve(path.join(import.meta.dir, "..", "public"));
+const PUBLIC_IMAGE_DIR = path.resolve(PUBLIC_DIR, "image");
+
+function resolvePublicImageFile(req: Request): string | null {
+  let decoded = pathnameOf(req);
+  try {
+    decoded = decodeURIComponent(decoded);
+  } catch {
+    return null;
+  }
+  const prefix = "/image/";
+  if (!decoded.startsWith(prefix)) return null;
+  const sub = decoded.slice(prefix.length);
+  if (!sub || sub.includes("..") || path.isAbsolute(sub)) return null;
+  const abs = path.resolve(PUBLIC_IMAGE_DIR, sub);
+  const normImage = path.normalize(PUBLIC_IMAGE_DIR);
+  const normAbs = path.normalize(abs);
+  if (!normAbs.startsWith(normImage + path.sep) && normAbs !== normImage) return null;
+  return abs;
+}
 
 /** Files in `/public` linked at site root (favicon, Clerk `logoImageUrl`, legacy mark). */
 const PUBLIC_ROOT_NAMES = new Set([
@@ -60,11 +80,18 @@ const handleSitemapXml = () =>
     headers: { "Content-Type": "application/xml" },
   });
 
+const handleLlmsTxt = () =>
+  new Response(generateLlmsTxt(), {
+    headers: { "Content-Type": "text/markdown; charset=utf-8" },
+  });
+
 const handleImageAsset = async (req: Request) => {
-  const file = Bun.file(toPublicAssetPath(req));
+  const abs = resolvePublicImageFile(req);
+  if (!abs) return new Response("Not found", { status: 404 });
+  const file = Bun.file(abs);
   if (await file.exists()) {
     return new Response(file, {
-      headers: { "Content-Type": file.type },
+      headers: { "Content-Type": file.type || "application/octet-stream" },
     });
   }
   return new Response("Not found", { status: 404 });
@@ -102,6 +129,7 @@ logAndValidateRustProxy(port);
 const routes = {
   "/robots.txt": handleRobotsTxt,
   "/sitemap.xml": handleSitemapXml,
+  "/llms.txt": handleLlmsTxt,
   "/healthz": handleHealthz,
   "/image/*": handleImageAsset,
 

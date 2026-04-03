@@ -14,7 +14,6 @@ import { isSelectableImageFile } from "../../utils/listingMedia";
 import { listingMediaEmptyHeroFrame, listingMediaHeroFrame } from "./listingMediaChrome";
 import type { ListingMediaSlot } from "./listingMediaTypes";
 
-/** Blob/data URLs are local previews — skip the auth-fetch path entirely. */
 function SlotImg({ url, className, loading }: { url: string; className?: string; loading?: "lazy" | "eager" }) {
   if (url.startsWith("blob:") || url.startsWith("data:")) {
     return <img src={url} alt="" className={className} loading={loading} />;
@@ -37,16 +36,12 @@ type Props = {
   fileInputRef: RefObject<HTMLInputElement | null>;
   onImageFiles: (files: File[]) => void;
   mediaUploading?: boolean;
-  /** When set, overrides empty-state headline (detail default: detailNoImages). */
   emptyHeadline?: string;
-  /** When set, overrides empty drop hint when not uploading (detail: detailMediaDropHint). */
   emptyHint?: string;
-  /** When set, overrides “Choose files” chip (detail: detailMediaChooseFiles). */
   chooseFilesLabel?: string;
-  /** When set, region aria-label for both empty and filled states (detail: detailMediaGalleryRegionAria). */
   regionAriaLabel?: string;
-  /** Corner control on each filmstrip thumb; stopPropagation so selection unchanged until remove. */
   onRemoveAt?: (index: number) => void;
+  compactWhenEmpty?: boolean;
 };
 
 export function ListingMediaGallery({
@@ -61,6 +56,7 @@ export function ListingMediaGallery({
   chooseFilesLabel,
   regionAriaLabel,
   onRemoveAt,
+  compactWhenEmpty = false,
 }: Props) {
   const pickInputId = useId();
   const n = mediaSlots.length;
@@ -76,6 +72,9 @@ export function ListingMediaGallery({
 
   const regionLabel =
     regionAriaLabel ?? copy.products.detailMediaGalleryRegionAria;
+
+  const showEmptyHero = n === 0 && !compactWhenEmpty;
+  const compactEmptyStrip = n === 0 && compactWhenEmpty;
 
   const goPrev = useCallback(() => {
     if (n > 1 && heroIndex > 0) onSelectHero(heroIndex - 1);
@@ -125,7 +124,7 @@ export function ListingMediaGallery({
 
   return (
     <div className="space-y-3">
-      {n === 0 ? (
+      {showEmptyHero ? (
         <label
           htmlFor={pickInputId}
           role="region"
@@ -163,7 +162,7 @@ export function ListingMediaGallery({
             </span>
           </div>
         </label>
-      ) : (
+      ) : n > 0 ? (
         <div
           role="region"
           tabIndex={0}
@@ -183,7 +182,7 @@ export function ListingMediaGallery({
             </div>
           ) : null}
         </div>
-      )}
+      ) : null}
 
       <input
         ref={fileInputRef}
@@ -196,7 +195,43 @@ export function ListingMediaGallery({
         tabIndex={-1}
         onChange={onFileInputChange}
       />
-      <div className="flex flex-wrap items-center justify-center gap-1.5">
+      <div
+        role={compactEmptyStrip ? "region" : undefined}
+        aria-label={compactEmptyStrip ? regionLabel : undefined}
+        aria-busy={compactEmptyStrip ? mediaUploading : undefined}
+        className={[
+          "flex flex-wrap items-center justify-center gap-1.5",
+          compactEmptyStrip && emptyDragOver ? "rounded-lg border border-dashed border-zinc-400 bg-zinc-50 py-2" : "",
+        ]
+          .filter(Boolean)
+          .join(" ")}
+        onDragEnter={
+          compactEmptyStrip
+            ? (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (!mediaUploading) setEmptyDragOver(true);
+              }
+            : undefined
+        }
+        onDragLeave={
+          compactEmptyStrip
+            ? (e) => {
+                e.preventDefault();
+                if (!e.currentTarget.contains(e.relatedTarget as Node)) setEmptyDragOver(false);
+              }
+            : undefined
+        }
+        onDragOver={
+          compactEmptyStrip
+            ? (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+              }
+            : undefined
+        }
+        onDrop={compactEmptyStrip ? onHeroDrop : undefined}
+      >
         {mediaSlots.map((slot, i) => (
           <div key={slot.key} className="relative">
             <button

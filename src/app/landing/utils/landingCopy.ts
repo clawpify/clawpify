@@ -30,16 +30,19 @@ export const landingCopy = {
       title: "Track inventory",
       description: "Floor stock, online, and sold.",
       ctaLabel: "Inventory",
+      visual: "inventoryBubbles" as const,
     },
     {
       title: "Consignor agreements",
       description: "Terms and payouts stay on each item.",
       ctaLabel: "Agreements",
+      visual: "moneyMotif" as const,
     },
     {
       title: "Cross-post listings",
       description: "Draft once, push to your channels.",
       ctaLabel: "Listings",
+      visual: "channelLogos" as const,
     },
   ],
   footer: {

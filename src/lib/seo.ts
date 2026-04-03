@@ -1,15 +1,31 @@
 const BASE_URL = process.env.BUN_PUBLIC_BASE_URL || "https://clawpify.com";
 
+const DEFAULT_OG_IMAGE = `${BASE_URL}/image/dollars.png`;
+const DEFAULT_ORG_LOGO = `${BASE_URL}/apple-touch-icon.png`;
+
 type RouteMeta = {
   title: string;
   description: string;
   ogImage?: string;
 };
 
+const ORG_SLOGAN = "Software for consignment shops";
+
+const ORG_KNOWS_ABOUT = [
+  "Consignment retail",
+  "Resale shop operations",
+  "Inventory management",
+  "Consignor agreements and payouts",
+  "Multi-channel listings",
+  "Shopify",
+  "WooCommerce",
+  "E-commerce API integrations",
+];
+
 const defaultMeta: RouteMeta = {
-  title: "Clawpify - Own How AI Sells Your Products",
+  title: "Clawpify — Software for consignment shops",
   description:
-    "Optimize product data, reveal which prompts convert, and earn more from AI-driven purchases across ChatGPT, Perplexity, and more.",
+    "Count inventory, track consignor splits, and cross-post listings from one workspace. Connect Shopify, WooCommerce, or custom storefronts. Built for shops navigating AI discovery and agent commerce.",
 };
 
 const routeMeta: Record<string, RouteMeta> = {
@@ -17,7 +33,7 @@ const routeMeta: Record<string, RouteMeta> = {
   "/about": {
     title: "About - Clawpify",
     description:
-      "Learn how Clawpify helps e-commerce brands optimize for AI-driven commerce and get discovered by AI agents.",
+      "Who we are: consignment shop software for inventory, consignor agreements, and listings — and how we're thinking about Shopify UCP and agentic commerce.",
   },
   "/privacy": {
     title: "Privacy Policy - Clawpify",
@@ -27,7 +43,7 @@ const routeMeta: Record<string, RouteMeta> = {
   "/blog": {
     title: "Blog - Clawpify",
     description:
-      "Thoughts on AI commerce, product discovery, and the shift from search to agents.",
+      "Writing on consignment operations, listings, and the shift toward AI-driven commerce.",
   },
 };
 
@@ -52,7 +68,9 @@ function buildJsonLd(pathname: string): string {
       "@type": "Organization",
       name: "Clawpify",
       url: BASE_URL,
-      logo: `${BASE_URL}/image/clawpify.png`,
+      logo: DEFAULT_ORG_LOGO,
+      slogan: ORG_SLOGAN,
+      knowsAbout: ORG_KNOWS_ABOUT,
       description: defaultMeta.description,
       sameAs: [
         "https://twitter.com/clawpify",
@@ -65,6 +83,7 @@ function buildJsonLd(pathname: string): string {
       "@type": "WebSite",
       name: "Clawpify",
       url: BASE_URL,
+      description: defaultMeta.description,
     });
 
     schemas.push({
@@ -92,7 +111,7 @@ function buildJsonLd(pathname: string): string {
           name: "Who can use Clawpify?",
           acceptedAnswer: {
             "@type": "Answer",
-            text: "Clawpify is built for e-commerce brands and agencies. If you sell products online and want AI agents to recommend them, Clawpify is a fit for you.",
+            text: "Clawpify is built for consignment and resale shops that track floor and online inventory, manage consignor agreements and payouts, and publish listings to multiple sales channels.",
           },
         },
         {
@@ -100,7 +119,7 @@ function buildJsonLd(pathname: string): string {
           name: "Can I try Clawpify for free?",
           acceptedAnswer: {
             "@type": "Answer",
-            text: "Yes. You can explore Clawpify and see how your products perform across AI agents before committing to a plan.",
+            text: "Yes. You can explore the workspace and connect your store before choosing a paid plan.",
           },
         },
         {
@@ -108,7 +127,7 @@ function buildJsonLd(pathname: string): string {
           name: "Can I use Clawpify with my team?",
           acceptedAnswer: {
             "@type": "Answer",
-            text: "Absolutely. Clawpify supports team workspaces so multiple people can collaborate, view reports, and apply optimizations together.",
+            text: "Yes. Organization workspaces let your team collaborate on inventory, listings, and day-to-day consignment operations together.",
           },
         },
         {
@@ -116,7 +135,7 @@ function buildJsonLd(pathname: string): string {
           name: "How long does it take to set up and start using Clawpify?",
           acceptedAnswer: {
             "@type": "Answer",
-            text: "Most stores are up and running in under 10 minutes. Connect your platform and start optimizing right away.",
+            text: "Most shops are up and running in under 10 minutes: connect Shopify, WooCommerce, or your custom storefront, then start adding inventory and listings.",
           },
         },
         {
@@ -132,7 +151,7 @@ function buildJsonLd(pathname: string): string {
           name: "Will it integrate with my existing tools?",
           acceptedAnswer: {
             "@type": "Answer",
-            text: "Clawpify is designed to fit into your current stack. We offer integrations with popular analytics, CMS, and marketing platforms.",
+            text: "Clawpify fits next to your storefront and sales channels. Connect your platform to sync products, then draft and cross-post listings without replacing your whole stack.",
           },
         },
       ],
@@ -163,7 +182,7 @@ function buildJsonLd(pathname: string): string {
 function buildSeoBlock(pathname: string): string {
   const meta = routeMeta[pathname] ?? defaultMeta;
   const canonical = pathname === "/" ? BASE_URL : `${BASE_URL}${pathname}`;
-  const ogImage = meta.ogImage ?? `${BASE_URL}/image/clawpify.png`;
+  const ogImage = meta.ogImage ?? DEFAULT_OG_IMAGE;
   const jsonLd = buildJsonLd(pathname);
 
   return `<title>${escapeAttr(meta.title)}</title>
@@ -177,8 +196,8 @@ function buildSeoBlock(pathname: string): string {
     <meta property="og:description" content="${escapeAttr(meta.description)}" />
     <meta property="og:url" content="${canonical}" />
     <meta property="og:image" content="${ogImage}" />
-    <meta property="og:image:width" content="1200" />
-    <meta property="og:image:height" content="630" />
+    <meta property="og:image:width" content="2715" />
+    <meta property="og:image:height" content="2479" />
     <meta property="og:image:type" content="image/png" />
     <meta property="og:image:alt" content="${escapeAttr(meta.title)}" />
     <meta name="twitter:card" content="summary_large_image" />
@@ -217,7 +236,40 @@ Disallow: /app/
 Disallow: /sign-in
 Disallow: /sign-up
 
+# ${BASE_URL}/llms.txt
+
 Sitemap: ${BASE_URL}/sitemap.xml`;
+}
+
+export function generateLlmsTxt(): string {
+  return `# Clawpify
+
+> ${ORG_SLOGAN}
+
+## Summary
+
+Clawpify is consignment and resale **operations software**: inventory across floor, online, and sold states; consignor agreements and payout splits; and drafting with cross-posting of listings to multiple sales channels. It is **not** a Shopify-only "shopping agent" or narrow prompt-optimization widget—think back-office consignment workflows first, with storefront connections as part of the stack.
+
+## Integrations
+
+- Shopify
+- WooCommerce
+- Custom storefronts via API
+
+## Key URLs
+
+- ${BASE_URL}/ — Home
+- ${BASE_URL}/about — About
+- ${BASE_URL}/blog — Blog / Writing
+- ${BASE_URL}/privacy — Privacy policy
+
+## Contact and social
+
+- Email: hello@clawpify.com
+- GitHub: https://github.com/clawpify
+- Discord: https://discord.gg/Pqr6rk5HNg
+- X (Twitter): https://twitter.com/clawpify
+`;
 }
 
 /**
