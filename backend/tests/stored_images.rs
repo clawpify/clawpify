@@ -23,6 +23,7 @@ async fn stored_images_insert_and_delete(pool: PgPool) {
     "image/png",
     1024,
     "smoke.png",
+    None,
   )
   .await
   .expect("insert");
@@ -55,6 +56,7 @@ async fn stored_images_insert_fails_without_organization(pool: PgPool) {
     "image/png",
     1,
     "x.png",
+    None,
   )
   .await;
   assert!(err.is_err(), "insert should fail: organizations FK");
@@ -66,10 +68,10 @@ async fn stored_images_duplicate_storage_key_fails(pool: PgPool) {
   let org = "org-dup-storage-key";
   let key = "uploads/org-dup-storage-key/u/22222222-2222-2222-2222-222222222222_dup.png";
 
-  stored_images::insert(&pool, org, "u", key, "image/png", 1, "dup.png")
+  stored_images::insert(&pool, org, "u", key, "image/png", 1, "dup.png", None)
     .await
     .expect("first insert");
 
-  let second = stored_images::insert(&pool, org, "u", key, "image/png", 2, "dup.png").await;
+  let second = stored_images::insert(&pool, org, "u", key, "image/png", 2, "dup.png", None).await;
   assert!(second.is_err(), "unique storage_key");
 }

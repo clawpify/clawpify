@@ -4,11 +4,12 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
 import { useAuthenticatedFetch } from "../../../../../lib/api";
-import type { ConsignmentListingDto, CreateListingBody, ProductsContextValue } from "../types";
+import type { ConsignmentListingDto, CreateListingBody, ProductsContextValue, UpdateListingBody } from "../types";
 import {
   ensureListingMutationOk,
   listingsCreatePath,
@@ -16,17 +17,21 @@ import {
   listingsListPath,
   parseListingResponse,
   parseListingsResponse,
+  uploadListingObject,
 } from "../utils/listingsApi";
 
 const ProductsContext = createContext<ProductsContextValue | null>(null);
 
 export function ProductsProvider({ children }: { children: ReactNode }) {
   const fetchAuth = useAuthenticatedFetch();
+  /** After first sync, refetch quietly so Clerk/`fetchAuth` identity changes do not toggle `loading` and unmount listing detail (wiping local pending media state). */
+  const initialProductsFetchStarted = useRef(false);
   const [listings, setListings] = useState<ConsignmentListingDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+  const [updatingListing, setUpdatingListing] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
   const refetch = useCallback(
@@ -74,6 +79,53 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
     [fetchAuth, refetch]
   );
 
+  const createListingWithImageFiles = useCallback(
+    async (body: CreateListingBody, imageFiles: File[]) => {
+      setCreating(true);
+      setCreateError(null);
+      try {
+        const payload = { ...body, media_urls: [] as unknown[] };
+        const res = await fetchAuth(listingsCreatePath, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const created = await parseListingResponse(res);
+        for (const file of imageFiles) {
+          await uploadListingObject(fetchAuth, created.id, file);
+        }
+        await refetch({ quiet: true });
+        return created;
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : "Unknown error";
+        setCreateError(msg);
+        throw e;
+      } finally {
+        setCreating(false);
+      }
+    },
+    [fetchAuth, refetch]
+  );
+
+  const updateListing = useCallback(
+    async (id: string, body: UpdateListingBody) => {
+      setUpdatingListing(true);
+      try {
+        const res = await fetchAuth(listingsDetailPath(id), {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        const updated = await parseListingResponse(res);
+        setListings((prev) => prev.map((l) => (l.id === id ? updated : l)));
+        return updated;
+      } finally {
+        setUpdatingListing(false);
+      }
+    },
+    [fetchAuth]
+  );
+
   const deleteListing = useCallback(
     async (id: string) => {
       setDeleting(true);
@@ -89,7 +141,9 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
   );
 
   useEffect(() => {
-    void refetch();
+    const quiet = initialProductsFetchStarted.current;
+    initialProductsFetchStarted.current = true;
+    void refetch({ quiet });
   }, [refetch]);
 
   const value = useMemo(
@@ -99,12 +153,28 @@ export function ProductsProvider({ children }: { children: ReactNode }) {
       error,
       refetch: () => refetch(),
       createListing,
+      createListingWithImageFiles,
       creating,
       createError,
+      updateListing,
+      updatingListing,
       deleteListing,
       deleting,
     }),
-    [listings, loading, error, refetch, createListing, creating, createError, deleteListing, deleting]
+    [
+      listings,
+      loading,
+      error,
+      refetch,
+      createListing,
+      createListingWithImageFiles,
+      creating,
+      createError,
+      updateListing,
+      updatingListing,
+      deleteListing,
+      deleting,
+    ]
   );
 
   return <ProductsContext.Provider value={value}>{children}</ProductsContext.Provider>;

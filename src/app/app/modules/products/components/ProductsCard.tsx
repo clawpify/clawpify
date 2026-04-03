@@ -1,6 +1,7 @@
+import { AuthenticatedImg } from "../../../../../lib/authenticatedMedia";
 import type { ConsignmentListingDto } from "../types";
+import { useListingStoredImageThumb } from "../hooks/useListingStoredImageThumb";
 import { formatListingPrice } from "../utils/formatListingPrice";
-import { listingPrimaryImageUrl } from "../utils/listingMedia";
 import { PackageIcon } from "../../../../../icons/workspace-icons";
 
 type Props = {
@@ -10,7 +11,7 @@ type Props = {
 };
 
 export function ProductsCard({ listing, selected, onSelect }: Props) {
-  const src = listingPrimaryImageUrl(listing);
+  const src = useListingStoredImageThumb(listing);
 
   return (
     <button
@@ -24,7 +25,7 @@ export function ProductsCard({ listing, selected, onSelect }: Props) {
     >
       <div className="relative aspect-square w-full bg-zinc-100">
         {src ? (
-          <img src={src} alt="" className="h-full w-full object-cover" loading="lazy" />
+          <AuthenticatedImg src={src} alt="" className="h-full w-full object-cover" loading="lazy" />
         ) : (
           <span className="flex h-full w-full items-center justify-center text-zinc-400">
             <PackageIcon size={28} className="text-zinc-400" />

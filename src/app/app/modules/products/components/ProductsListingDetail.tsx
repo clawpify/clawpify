@@ -1,18 +1,19 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useToast } from "../../../../../lib/toast";
 import { copy } from "../../../utils/copy";
+import { useProducts } from "../context/ProductsContext";
 import type { ConsignmentListingDto } from "../types";
+import { htmlToMarkdown, markdownToSafeHtml } from "../utils/listingMarkdown";
 import { buildListingTimelineEvents } from "../utils/buildListingTimelineEvents";
 import { formatListingPrice } from "../utils/formatListingPrice";
-import { listingImageUrls } from "../utils/listingMedia";
 import { statusDotClass } from "../utils/productStatusTab";
 import { PlusIcon } from "../../../../../icons/workspace-icons";
+import { ListingMediaSection } from "./listing-media";
+import { RAIL_CARD_SHADOW } from "./listing-media/listingMediaChrome";
 
 type Props = {
   listing: ConsignmentListingDto;
 };
-
-const RAIL_CARD_SHADOW =
-  "shadow-[0_1px_3px_rgba(15,23,42,0.08),0_1px_2px_-1px_rgba(15,23,42,0.06)]";
 
 const TAG_DOT_CLASSES = [
   "bg-amber-500",
@@ -26,13 +27,6 @@ function tagDotClass(tag: string): string {
   let h = 0;
   for (let i = 0; i < tag.length; i++) h = (h + tag.charCodeAt(i) * (i + 1)) % 1000;
   return TAG_DOT_CLASSES[h % TAG_DOT_CLASSES.length] ?? "bg-zinc-400";
-}
-
-function categoryLabel(listing: ConsignmentListingDto): string {
-  const t = listing.product_type?.trim();
-  if (t) return t;
-  if (listing.tags?.length) return listing.tags[0] ?? "";
-  return copy.products.categoryUncategorized;
 }
 
 function vendorLabel(listing: ConsignmentListingDto): string {
@@ -93,168 +87,112 @@ function DetailRailCard({ title, children }: { title: string; children: ReactNod
   );
 }
 
-/** Design-only: file/drop handlers reset input; persistence comes in phase 2. */
-function noopFiles(e: React.ChangeEvent<HTMLInputElement>) {
-  e.target.value = "";
-}
-
-function ListingMediaDropzoneEmpty({ fileInputRef }: { fileInputRef: React.RefObject<HTMLInputElement | null> }) {
-  const [dragOver, setDragOver] = useState(false);
-
-  return (
-    <div
-      className={`flex min-h-[11rem] w-full flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-zinc-200/90 bg-zinc-50/60 px-4 py-8 transition-colors sm:min-h-[12.5rem] ${
-        dragOver ? "border-zinc-300 bg-zinc-100/80" : ""
-      }`}
-      onDragEnter={(e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        setDragOver(true);
-      }}
-      onDragLeave={(e) => {
-        e.preventDefault();
-        if (!e.currentTarget.contains(e.relatedTarget as Node)) setDragOver(false);
-      }}
-      onDragOver={(e) => {
-        e.preventDefault();
-        e.stopPropagation();
-      }}
-      onDrop={(e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        setDragOver(false);
-      }}
-    >
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*"
-        multiple
-        className="hidden"
-        aria-hidden
-        tabIndex={-1}
-        onChange={noopFiles}
-      />
-      <button
-        type="button"
-        onClick={() => fileInputRef.current?.click()}
-        aria-label={copy.products.detailMediaAddAria}
-        className="text-sm font-medium text-zinc-700 underline-offset-4 transition hover:text-zinc-900 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-400"
-      >
-        {copy.products.detailMediaAdd}
-      </button>
-      <p className="text-xs text-zinc-400">{copy.products.detailMediaDropHint}</p>
-    </div>
-  );
-}
-
-type ListingMediaGalleryProps = {
-  images: string[];
-  heroIndex: number;
-  heroSrc: string | null;
-  onSelectHero: (i: number) => void;
-  fileInputRef: React.RefObject<HTMLInputElement | null>;
-};
-
-function ListingMediaGallery({ images, heroIndex, heroSrc, onSelectHero, fileInputRef }: ListingMediaGalleryProps) {
-  return (
-    <div className="space-y-3">
-      <div
-        className="flex min-h-[12rem] max-h-[min(22rem,56vw)] w-full items-center justify-center overflow-hidden rounded-lg border border-zinc-200/80 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)]"
-        onDragOver={(e) => e.preventDefault()}
-        onDrop={(e) => e.preventDefault()}
-      >
-        {heroSrc ? (
-          <img
-            src={heroSrc}
-            alt=""
-            className="max-h-[22rem] w-full max-w-full object-contain"
-            loading="lazy"
-          />
-        ) : null}
-      </div>
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*"
-        multiple
-        className="hidden"
-        aria-hidden
-        tabIndex={-1}
-        onChange={noopFiles}
-      />
-      <div className="flex flex-wrap items-center gap-1.5">
-        {images.map((url, i) => (
-          <button
-            key={url}
-            type="button"
-            onClick={() => onSelectHero(i)}
-            aria-current={i === heroIndex ? "true" : undefined}
-            aria-label={`${copy.products.detailSectionMedia} ${i + 1}`}
-            className={`relative overflow-hidden rounded-md ring-1 ring-inset transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-400 ${
-              i === heroIndex
-                ? "ring-2 ring-zinc-900 ring-offset-1 ring-offset-white"
-                : "ring-black/[0.06] hover:ring-zinc-300"
-            }`}
-          >
-            <span className="block h-11 w-11 bg-zinc-100">
-              <img src={url} alt="" className="h-full w-full object-cover" loading="lazy" />
-            </span>
-          </button>
-        ))}
-        <button
-          type="button"
-          onClick={() => fileInputRef.current?.click()}
-          aria-label={copy.products.detailMediaAddAria}
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-dashed border-zinc-200/80 bg-white text-zinc-400 transition hover:border-zinc-300 hover:text-zinc-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-400"
-        >
-          <PlusIcon size={18} className="text-current" />
-        </button>
-      </div>
-    </div>
-  );
-}
-
 export function ProductsListingDetail({ listing }: Props) {
-  const images = useMemo(() => listingImageUrls(listing), [listing]);
-  const [heroIndex, setHeroIndex] = useState(0);
+  const { updateListing, updatingListing } = useProducts();
+  const { showToast, setActionToast } = useToast();
+  const [titleDraft, setTitleDraft] = useState(listing.title);
+  const [mdDraft, setMdDraft] = useState(() => htmlToMarkdown(listing.description_html ?? ""));
+  const [lastSavedTitle, setLastSavedTitle] = useState(listing.title);
+  const [lastSavedMarkdown, setLastSavedMarkdown] = useState(() =>
+    htmlToMarkdown(listing.description_html ?? "")
+  );
   const timeline = useMemo(() => buildListingTimelineEvents(listing), [listing]);
   const tags = listing.tags ?? [];
-  const detailFileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    setHeroIndex(0);
+    const md = htmlToMarkdown(listing.description_html ?? "");
+    setTitleDraft(listing.title);
+    setMdDraft(md);
+    setLastSavedTitle(listing.title);
+    setLastSavedMarkdown(md);
   }, [listing.id]);
-  const heroSrc = images[heroIndex] ?? null;
+
+  useEffect(() => () => setActionToast(null), [setActionToast]);
+
+  const hasUnsavedEdits =
+    titleDraft.trim() !== lastSavedTitle.trim() || mdDraft !== lastSavedMarkdown;
+
+  const onCancelEdits = useCallback(() => {
+    setTitleDraft(lastSavedTitle);
+    setMdDraft(lastSavedMarkdown);
+  }, [lastSavedTitle, lastSavedMarkdown]);
+
+  const onSaveEdits = useCallback(async () => {
+    try {
+      const updated = await updateListing(listing.id, {
+        title: titleDraft.trim(),
+        description_html: markdownToSafeHtml(mdDraft),
+      });
+      const md = htmlToMarkdown(updated.description_html ?? "");
+      setTitleDraft(updated.title);
+      setMdDraft(md);
+      setLastSavedTitle(updated.title);
+      setLastSavedMarkdown(md);
+      showToast(copy.products.detailListingSaved);
+    } catch (e) {
+      showToast(
+        `${copy.products.detailListingSaveFailed} ${e instanceof Error ? e.message : "Unknown error"}`
+      );
+    }
+  }, [updateListing, listing.id, titleDraft, mdDraft, showToast]);
+
+  const saveDisabled = updatingListing || !hasUnsavedEdits;
+
+  useEffect(() => {
+    if (!hasUnsavedEdits) {
+      setActionToast(null);
+      return;
+    }
+    setActionToast({
+      message: copy.products.detailUnsavedChangesBar,
+      primaryLabel: copy.products.detailDescriptionSave,
+      secondaryLabel: copy.products.detailDescriptionCancel,
+      ariaLabel: copy.products.detailUnsavedChangesAria,
+      onPrimary: () => void onSaveEdits(),
+      onSecondary: onCancelEdits,
+      primaryDisabled: saveDisabled,
+      secondaryDisabled: updatingListing,
+    });
+  }, [
+    hasUnsavedEdits,
+    setActionToast,
+    onSaveEdits,
+    onCancelEdits,
+    saveDisabled,
+    updatingListing,
+  ]);
 
   return (
     <div className="flex min-h-0 flex-col gap-8 lg:grid lg:grid-cols-[minmax(0,1fr)_17.5rem] lg:items-start lg:gap-6 lg:pl-0">
       <div className="min-w-0">
         <section aria-label={copy.products.detailSectionMedia}>
-          {images.length === 0 ? (
-            <ListingMediaDropzoneEmpty fileInputRef={detailFileInputRef} />
-          ) : (
-            <ListingMediaGallery
-              images={images}
-              heroIndex={heroIndex}
-              heroSrc={heroSrc}
-              onSelectHero={setHeroIndex}
-              fileInputRef={detailFileInputRef}
-            />
-          )}
+          <ListingMediaSection listing={listing} />
         </section>
 
-        <h1 className="mt-7 text-xl font-semibold tracking-[-0.02em] text-zinc-900 sm:text-2xl">{listing.title}</h1>
+        <div className="mt-7 flex flex-col gap-1">
+          <label className="sr-only" htmlFor="listing-detail-title">
+            {copy.products.createModalTitlePlaceholder}
+          </label>
+          <input
+            id="listing-detail-title"
+            type="text"
+            value={titleDraft}
+            onChange={(e) => setTitleDraft(e.target.value)}
+            className="w-full border-0 bg-transparent p-0 text-2xl font-bold tracking-tight text-zinc-900 shadow-none outline-none ring-0 transition placeholder:text-zinc-400 focus-visible:outline-none focus-visible:ring-0"
+            placeholder={copy.products.createModalTitlePlaceholder}
+            autoComplete="off"
+          />
+        </div>
 
         <section className="mt-7" aria-label={copy.products.detailSectionDescription}>
-          {listing.description_html?.trim() ? (
-            <div
-              className="max-w-none text-[14px] leading-[1.65] text-zinc-600 [&_a]:font-medium [&_a]:text-zinc-900 [&_a]:underline [&_a]:decoration-zinc-300 [&_a]:underline-offset-2 [&_h1]:text-lg [&_h2]:text-base [&_h3]:text-sm [&_li]:ml-4 [&_ol]:list-decimal [&_ol]:pl-4 [&_p]:mb-3 [&_p:last-child]:mb-0 [&_strong]:font-medium [&_strong]:text-zinc-800 [&_ul]:list-disc [&_ul]:pl-4"
-              dangerouslySetInnerHTML={{ __html: listing.description_html }}
-            />
-          ) : (
-            <p className="text-sm italic text-zinc-500">{copy.products.detailNoDescription}</p>
-          )}
+          <textarea
+            value={mdDraft}
+            onChange={(e) => setMdDraft(e.target.value)}
+            rows={8}
+            className="w-full min-h-[10rem] resize-y border-0 bg-transparent px-0 py-2 text-base leading-[1.65] text-zinc-600 shadow-none outline-none ring-0 transition placeholder:text-zinc-400 focus-visible:outline-none focus-visible:ring-0"
+            placeholder={copy.products.createModalDescriptionPlaceholder}
+            aria-label={copy.products.createModalDescriptionPlaceholder}
+          />
         </section>
 
         <section className="mt-14 border-t border-zinc-100 pt-8" aria-label={copy.products.detailSectionActivity}>
@@ -266,7 +204,6 @@ export function ProductsListingDetail({ listing }: Props) {
               const isLast = i === timeline.length - 1;
               return (
                 <li key={ev.id} className="flex gap-3 pb-5 last:pb-0">
-                  {/* Rail stretches to text height; line extends through row gap (pb-5) so it meets the next dot */}
                   <div className="relative flex w-[18px] shrink-0 justify-center self-stretch">
                     {!isLast ? (
                       <span
@@ -275,7 +212,7 @@ export function ProductsListingDetail({ listing }: Props) {
                       />
                     ) : null}
                     <span
-                      className="relative z-[1] mt-px size-2 shrink-0 rounded-full border-2 border-white bg-zinc-300 shadow-[0_0_0_1px_rgba(0,0,0,0.06)]"
+                      className="relative z-[1] mt-px size-2 shrink-0 rounded-full border-2 border-white bg-zinc-400 shadow-[0_0_0_1px_rgba(0,0,0,0.08)]"
                       aria-hidden
                     />
                   </div>
@@ -299,7 +236,6 @@ export function ProductsListingDetail({ listing }: Props) {
               </span>
             </PropertyRow>
             <PropertyRow label={copy.products.detailSidebarSku}>{skuLabel(listing)}</PropertyRow>
-            <PropertyRow label={copy.products.detailSidebarCategory}>{categoryLabel(listing)}</PropertyRow>
             <PropertyRow label={copy.products.detailSidebarVendor}>{vendorLabel(listing)}</PropertyRow>
             <PropertyRow label={copy.products.detailSidebarChannels}>
               <span className="text-zinc-500">{copy.products.detailNone}</span>

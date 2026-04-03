@@ -1,16 +1,17 @@
 use std::path::Path;
 
 use axum::{
-  body::Bytes,
+  body::{Body, Bytes},
   extract::{DefaultBodyLimit, Query, State},
   handler::Handler,
   http::{header, HeaderMap, StatusCode},
   middleware,
-  response::Redirect,
+  response::Response,
   Json, Router,
 };
 use aws_sdk_s3::primitives::ByteStream;
 use serde::{Deserialize, Serialize};
+use url::form_urlencoded::Serializer;
 use uuid::Uuid;
 
 use super::extractors::{OrgId, UserId};
@@ -20,11 +21,10 @@ use crate::middleware as mw;
 use crate::repositories::stored_images as stored_images_repo;
 
 const MAX_BYTES: u64 = 16 * 1024 * 1024;
-const PRESIGN_SECS: u64 = 3600;
-
 #[derive(Deserialize)]
 pub struct UploadQuery {
   pub file_name: Option<String>,
+  pub listing_id: Option<Uuid>,
 }
 
 #[derive(Serialize)]
@@ -43,7 +43,7 @@ pub fn routes() -> Router<AppState> {
     .route(
       "/s3/objects",
       axum::routing::post(upload_object.layer(DefaultBodyLimit::max(MAX_BYTES as usize)))
-        .get(download_redirect)
+        .get(download_object)
         .delete(delete_object),
     )
     .route_layer(middleware::from_fn(mw::require_internal_auth))
@@ -55,6 +55,19 @@ fn prefix(org: &str, user: &str) -> String {
 
 fn owns_key(key: &str, org: &str, user: &str) -> bool {
   key.starts_with(&prefix(org, user))
+}
+
+/// Whether `storage_key` belongs to this org/user prefix (same rules as upload GET/DELETE).
+pub(crate) fn storage_key_owned_by_user(key: &str, org: &str, user: &str) -> bool {
+  owns_key(key, org, user)
+}
+
+/// Same-origin path for cookie-auth BFF clients (`GET` returns object bytes).
+pub(crate) fn stored_image_proxy_path(storage_key: &str) -> String {
+  let q = Serializer::new(String::new())
+    .append_pair("key", storage_key)
+    .finish();
+  format!("/api/s3/objects?{q}")
 }
 
 fn validate_key<'a>(raw: &'a str, org: &str, user: &str) -> Result<&'a str, ApiError> {
@@ -110,6 +123,14 @@ async fn upload_object(
   body: Bytes,
 ) -> Result<Json<UploadResult>, ApiError> {
   let (client, bucket) = s3(&state)?;
+
+  if let Some(lid) = q.listing_id {
+    let _listing = crate::repositories::listings::get_by_id(&state.pool, org_id.as_ref(), lid)
+      .await
+      .map_err(error::db_error)?
+      .ok_or_else(|| error::not_found("Listing not found"))?;
+  }
+
   let byte_size = body.len() as u64;
   if byte_size == 0 || byte_size > MAX_BYTES {
     return Err(error::bad_request("body size out of range"));
@@ -141,6 +162,7 @@ async fn upload_object(
     content_type,
     len_i64,
     &safe_name,
+    q.listing_id,
   )
   .await
   .map_err(|e| {
@@ -151,23 +173,57 @@ async fn upload_object(
   Ok(Json(UploadResult { key, byte_size }))
 }
 
-async fn download_redirect(
+async fn download_object(
   State(state): State<AppState>,
   OrgId(org_id): OrgId,
   UserId(user_id): UserId,
   Query(q): Query<KeyQuery>,
-) -> Result<Redirect, ApiError> {
+) -> Result<Response, ApiError> {
   let (client, bucket) = s3(&state)?;
   let key = validate_key(&q.key, &org_id, &user_id)?;
 
-  let presigned = crate::s3::presign_get(client, bucket, key, PRESIGN_SECS)
+  let out = client
+    .get_object()
+    .bucket(bucket)
+    .key(key)
+    .send()
     .await
     .map_err(|e| {
-      tracing::error!(key = %key, %e, "presign get");
+      tracing::error!(key = %key, %e, "get_object");
       error::internal(e)
     })?;
 
-  Ok(Redirect::temporary(presigned.uri()))
+  if let Some(len) = out.content_length() {
+    if len > 0 && len as u64 > MAX_BYTES {
+      return Err(error::bad_request("object too large"));
+    }
+  }
+
+  let content_type = out
+    .content_type()
+    .filter(|s| !s.is_empty())
+    .map(|s| s.to_string())
+    .unwrap_or_else(|| "application/octet-stream".to_string());
+
+  let body = out
+    .body
+    .collect()
+    .await
+    .map_err(|e| {
+      tracing::error!(key = %key, %e, "get_object body");
+      error::internal(e)
+    })?
+    .into_bytes();
+
+  if body.len() as u64 > MAX_BYTES {
+    return Err(error::bad_request("object too large"));
+  }
+
+  Response::builder()
+    .status(StatusCode::OK)
+    .header(header::CONTENT_TYPE, content_type)
+    .body(Body::from(body))
+    .map_err(|e| error::internal(e))
 }
 
 async fn delete_object(

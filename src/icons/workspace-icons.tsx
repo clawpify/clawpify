@@ -140,6 +140,16 @@ export function FilterIcon({ className = "shrink-0 text-zinc-500", size = 20 }: 
   );
 }
 
+export function EllipsisHorizontalIcon({ className = "shrink-0 text-zinc-500", size = 20 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className={className}>
+      <circle cx="5" cy="12" r="1.5" />
+      <circle cx="12" cy="12" r="1.5" />
+      <circle cx="19" cy="12" r="1.5" />
+    </svg>
+  );
+}
+
 export function SortIcon({ className = "shrink-0 text-zinc-500", size = 20 }: IconProps) {
   return (
     <svg width={size} height={size} {...iconProps} className={className}>
@@ -172,6 +182,22 @@ export function ChevronDownIcon({ className = "shrink-0 text-zinc-500", size = 2
   return (
     <svg width={size} height={size} {...iconProps} className={className}>
       <path d="m6 9 6 6 6-6" />
+    </svg>
+  );
+}
+
+export function ChevronLeftIcon({ className = "shrink-0 text-zinc-500", size = 20 }: IconProps) {
+  return (
+    <svg width={size} height={size} {...iconProps} className={className}>
+      <path d="m15 18-6-6 6-6" />
+    </svg>
+  );
+}
+
+export function ChevronRightIcon({ className = "shrink-0 text-zinc-500", size = 20 }: IconProps) {
+  return (
+    <svg width={size} height={size} {...iconProps} className={className}>
+      <path d="m9 18 6-6-6-6" />
     </svg>
   );
 }

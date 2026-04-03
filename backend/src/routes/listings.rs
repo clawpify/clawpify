@@ -15,8 +15,10 @@ use crate::dto::listings::{CreateListingRequest, UpdateListingRequest};
 use crate::error::{self, ApiError};
 use crate::middleware as mw;
 use crate::models::consignment_listing::ConsignmentListing;
+use crate::models::stored_image::ListingImageWithUrl;
 use crate::repositories::contracts as contract_repo;
-use crate::repositories::{listings, pagination::Pagination};
+use crate::repositories::{listings, pagination::Pagination, stored_images};
+use super::s3::{storage_key_owned_by_user, stored_image_proxy_path};
 
 const LISTING_NOT_FOUND: &str = "Listing not found";
 const CONTRACT_NOT_FOUND: &str = "Contract not found";
@@ -28,6 +30,16 @@ struct ListListingsQuery {
   offset: Option<i64>,
 }
 
+#[derive(Deserialize)]
+struct AttachImagesBody {
+  storage_keys: Vec<String>,
+}
+
+#[derive(Deserialize)]
+struct ListingImageKeyQuery {
+  key: String,
+}
+
 pub fn routes() -> Router<AppState> {
   Router::new()
     .route("/listings", get(list_listings).post(create_listing))
@@ -36,6 +48,12 @@ pub fn routes() -> Router<AppState> {
       get(get_listing)
         .patch(update_listing)
         .delete(delete_listing),
+    )
+    .route(
+      "/listings/:id/images",
+      get(list_listing_images)
+        .post(attach_listing_images)
+        .delete(detach_listing_image),
     )
     .layer(DefaultBodyLimit::disable())
     .route_layer(middleware::from_fn(mw::require_internal_auth))
@@ -201,4 +219,93 @@ async fn delete_listing(
     return Err(error::not_found(LISTING_NOT_FOUND));
   }
   Ok(Json(serde_json::json!({ "ok": true })))
+}
+
+async fn list_listing_images(
+  State(state): State<AppState>,
+  OrgId(org_id): OrgId,
+  Path(id): Path<Uuid>,
+) -> Result<Json<Vec<ListingImageWithUrl>>, ApiError> {
+  let _ = listings::get_by_id(&state.pool, org_id.as_ref(), id)
+    .await
+    .map_err(error::db_error)?
+    .ok_or_else(|| error::not_found(LISTING_NOT_FOUND))?;
+  let rows = stored_images::list_for_listing(&state.pool, org_id.as_ref(), id)
+    .await
+    .map_err(error::db_error)?;
+  let out: Vec<ListingImageWithUrl> = rows
+    .into_iter()
+    .map(|image| {
+      let url = stored_image_proxy_path(&image.storage_key);
+      ListingImageWithUrl { image, url }
+    })
+    .collect();
+  Ok(Json(out))
+}
+
+async fn attach_listing_images(
+  State(state): State<AppState>,
+  OrgId(org_id): OrgId,
+  UserId(user_id): UserId,
+  Path(id): Path<Uuid>,
+  Json(body): Json<AttachImagesBody>,
+) -> Result<StatusCode, ApiError> {
+  let _ = listings::get_by_id(&state.pool, org_id.as_ref(), id)
+    .await
+    .map_err(error::db_error)?
+    .ok_or_else(|| error::not_found(LISTING_NOT_FOUND))?;
+
+  if body.storage_keys.is_empty() {
+    return Err(error::bad_request("storage_keys required"));
+  }
+
+  let mut tx = state.pool.begin().await.map_err(error::db_error)?;
+  for raw in &body.storage_keys {
+    let key = raw.trim();
+    if key.is_empty() {
+      return Err(error::bad_request("empty storage_key"));
+    }
+    if !storage_key_owned_by_user(key, org_id.as_ref(), user_id.as_ref()) {
+      return Err(error::bad_request("forbidden storage_key"));
+    }
+    let ok = stored_images::attach_to_listing(&mut *tx, org_id.as_ref(), key, id)
+      .await
+      .map_err(error::db_error)?;
+    if !ok {
+      return Err(error::bad_request(
+        "storage_key not found or not attachable",
+      ));
+    }
+  }
+  tx.commit().await.map_err(error::db_error)?;
+  Ok(StatusCode::NO_CONTENT)
+}
+
+async fn detach_listing_image(
+  State(state): State<AppState>,
+  OrgId(org_id): OrgId,
+  UserId(user_id): UserId,
+  Path(id): Path<Uuid>,
+  Query(q): Query<ListingImageKeyQuery>,
+) -> Result<StatusCode, ApiError> {
+  let _ = listings::get_by_id(&state.pool, org_id.as_ref(), id)
+    .await
+    .map_err(error::db_error)?
+    .ok_or_else(|| error::not_found(LISTING_NOT_FOUND))?;
+
+  let key = q.key.trim();
+  if key.is_empty() {
+    return Err(error::bad_request("key required"));
+  }
+  if !storage_key_owned_by_user(key, org_id.as_ref(), user_id.as_ref()) {
+    return Err(error::bad_request("forbidden key"));
+  }
+
+  let ok = stored_images::detach_from_listing(&state.pool, org_id.as_ref(), key, id)
+    .await
+    .map_err(error::db_error)?;
+  if !ok {
+    return Err(error::not_found("Image not found on this listing"));
+  }
+  Ok(StatusCode::NO_CONTENT)
 }

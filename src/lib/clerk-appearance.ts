@@ -24,7 +24,8 @@ export const clerkAppearance = {
     identityPreviewEditButton: "text-zinc-900",
   },
   options: {
-    logoImageUrl: "/logo.svg",
+    /** Same asset as `<link rel="icon">` — used for org/space setup and auth cards. */
+    logoImageUrl: "/favicon-32.png",
     logoLinkUrl: "/",
     socialButtonsVariant: "blockButton" as const,
     socialButtonsPlacement: "top" as const,

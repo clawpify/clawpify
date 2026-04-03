@@ -1,6 +1,7 @@
 import { useAuth } from "@clerk/react";
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { WorkspaceHeaderProvider } from "../context/WorkspaceHeaderContext";
+import { ClawpifyLoadingScreen } from "./ClawpifyLoadingScreen";
 import { WorkspaceMainHeader } from "./WorkspaceMainHeader";
 import { WorkspaceSidebar } from "./WorkspaceSidebar";
 
@@ -27,11 +28,7 @@ function WorkspaceLayoutWithClerkAuth() {
   const location = useLocation();
 
   if (!isLoaded) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-[#edeef0]">
-        <p className="text-sm text-zinc-500">Loading…</p>
-      </div>
-    );
+    return <ClawpifyLoadingScreen variant="fullscreen" />;
   }
 
   if (!isSignedIn) {

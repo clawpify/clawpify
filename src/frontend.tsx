@@ -3,17 +3,20 @@ import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import { App } from "./App.tsx";
 import { ClerkShell } from "./ClerkShell.tsx";
+import { ToastProvider } from "./lib/toast.tsx";
 import "./lib/chartConfig";
 
 const elem = document.getElementById("root")!;
 
 const app = (
   <StrictMode>
-    <BrowserRouter>
-      <ClerkShell>
-        <App />
-      </ClerkShell>
-    </BrowserRouter>
+    <ToastProvider>
+      <BrowserRouter>
+        <ClerkShell>
+          <App />
+        </ClerkShell>
+      </BrowserRouter>
+    </ToastProvider>
   </StrictMode>
 );
 

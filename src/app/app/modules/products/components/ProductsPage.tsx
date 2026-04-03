@@ -11,6 +11,9 @@ import { ProductsEmptyState } from "./ProductsEmptyState";
 import { ProductsInventoryTable } from "./ProductsInventoryTable";
 import { ProductsInventoryToolbar } from "./ProductsInventoryToolbar";
 import { ProductsListingDetail } from "./ProductsListingDetail";
+import { ClawpifyLoadingScreen } from "../../../components/ClawpifyLoadingScreen";
+import { usePrefetchAuthImageUrls } from "@/lib/authenticatedMedia";
+import { listingPrimaryImageUrl } from "../utils/listingMedia";
 
 function isTypingTarget(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
@@ -35,6 +38,16 @@ export function ProductsPage() {
     () => filterProductListings(listings, statusTab, searchQuery),
     [listings, statusTab, searchQuery]
   );
+
+  const tableThumbPrefetchUrls = useMemo(() => {
+    if (loading) return [];
+    return displayed
+      .slice(0, 48)
+      .map((l) => listingPrimaryImageUrl(l))
+      .filter((u): u is string => Boolean(u));
+  }, [loading, displayed]);
+
+  usePrefetchAuthImageUrls(tableThumbPrefetchUrls);
 
   const selectedListing = useMemo(
     () => (listingId ? listings.find((l) => l.id === listingId) : undefined),
@@ -106,11 +119,7 @@ export function ProductsPage() {
     </>
   );
 
-  const loadingBody = (
-    <div className="flex flex-1 items-center justify-center px-6 py-12">
-      <p className="text-sm text-zinc-500">{copy.products.loading}</p>
-    </div>
-  );
+  const loadingBody = <ClawpifyLoadingScreen variant="fill" message={copy.products.loading} />;
 
   const errorBody = (
     <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 py-12">
@@ -227,17 +236,12 @@ export function ProductsPage() {
           style={{ fontFamily: "var(--workspace-font)" }}
         >
           <header className="flex shrink-0 flex-wrap items-center gap-x-2 gap-y-1 border-b border-zinc-100 py-3">
-            <button
-              type="button"
-              onClick={() => navigate("/app/products")}
-              className="text-sm font-medium text-zinc-600 underline-offset-4 transition hover:text-zinc-900 hover:underline"
+            <Link
+              to="/app/products"
+              className="text-sm font-medium text-zinc-500 underline-offset-4 transition hover:text-zinc-900 hover:underline"
             >
-              {copy.products.detailBackToProducts}
-            </button>
-            <span className="text-zinc-300" aria-hidden>
-              ·
-            </span>
-            <span className="text-sm text-zinc-500">{copy.products.pageHeading}</span>
+              {copy.products.pageHeading}
+            </Link>
             <span className="text-zinc-300" aria-hidden>
               /
             </span>
