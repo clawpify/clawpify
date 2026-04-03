@@ -12,6 +12,9 @@ export async function loadBundledFrontend(entryHtmlPath: string): Promise<{
       clientDefines[`process.env.${key}`] = JSON.stringify(value);
     }
   }
+  clientDefines["process.env.RUST_API_URL"] = JSON.stringify(
+    process.env.RUST_API_URL ?? ""
+  );
 
   const frontendBuild = await Bun.build({
     entrypoints: [entryHtmlPath],
@@ -22,9 +25,7 @@ export async function loadBundledFrontend(entryHtmlPath: string): Promise<{
     plugins: [tailwindPlugin],
   });
 
-  if (!frontendBuild.success) {
-    throw new Error("Failed to build frontend bundle from index.html");
-  }
+  if (!frontendBuild.success) throw new Error("Failed to build frontend bundle from index.html");
 
   const builtAssets = new Map<string, Blob>();
   let mainBundle: Blob | null = null;
@@ -40,17 +41,13 @@ export async function loadBundledFrontend(entryHtmlPath: string): Promise<{
     builtAssets.set(`/${fileName}`, output);
   }
 
-  if (!htmlTemplate) {
-    throw new Error("Missing built HTML output");
-  }
+  if (!htmlTemplate) throw new Error("Missing built HTML output");
 
   const rawHtml = htmlTemplate
     .replaceAll('href="./', 'href="/')
     .replaceAll('src="./', 'src="/');
 
-  if (mainBundle) {
-    builtAssets.set("/frontend.tsx", mainBundle);
-  }
+  if (mainBundle) builtAssets.set("/frontend.tsx", mainBundle);
 
   return { builtAssets, rawHtml };
 }
