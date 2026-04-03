@@ -1,4 +1,3 @@
-import { Link } from "react-router-dom";
 import type { HeroProps } from "../types";
 import { landingCopy, landingPalette } from "../utils";
 import { HeroFloatingProducts } from "./HeroFloatingProducts";
@@ -24,15 +23,6 @@ export function Hero({ className = "" }: HeroProps) {
 
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <HeroFloatingProducts className="relative h-full min-h-[280px] w-full md:min-h-[340px]" />
-      </div>
-
-      <div className="pointer-events-auto absolute right-4 top-4 z-20 flex items-center gap-2 md:right-8 md:top-5">
-        <Link
-          to="/sign-in"
-          className="landing-sans-copy rounded-full border border-zinc-200 bg-white/90 px-4 py-2 text-sm font-medium text-zinc-800 shadow-sm backdrop-blur-sm transition hover:bg-white"
-        >
-          {hero.ctaLabel}
-        </Link>
       </div>
 
       <header

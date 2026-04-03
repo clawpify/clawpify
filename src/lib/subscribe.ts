@@ -3,13 +3,12 @@ import type { SubscribeRequest, SubscribeResponse } from "../types/subscribe";
 
 export type { SubscribeRequest, SubscribeResponse };
 
+const SUBSCRIBE_ORIGIN = "https://clawpify-production.up.railway.app";
+
 export async function subscribe(
   body: SubscribeRequest
 ): Promise<SubscribeResponse> {
-  const base = (typeof process !== "undefined" ? process.env.RUST_API_URL ?? "" : "")
-    .trim()
-    .replace(/\/$/, "");
-  const res = await fetch(`${base}/api/subscribers`, {
+  const res = await fetch(`${SUBSCRIBE_ORIGIN}/api/subscribers`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
