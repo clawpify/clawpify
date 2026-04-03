@@ -71,7 +71,7 @@ fn validate_key<'a>(raw: &'a str, org: &str, user: &str) -> Result<&'a str, ApiE
 fn s3<'a>(state: &'a AppState) -> Result<(&'a aws_sdk_s3::Client, &'a str), ApiError> {
   match (&state.s3_client, &state.s3_bucket) {
     (Some(c), Some(b)) => Ok((c, b.as_str())),
-    _ => Err(error::service_unavailable("Object storage not configured (set BUCKET_* env)")),
+    _ => Err(error::service_unavailable("Object storage not configured")),
   }
 }
 

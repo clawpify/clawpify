@@ -18,7 +18,7 @@ impl AppState {
         if !missing.is_empty() {
           tracing::warn!(
             ?missing,
-            "S3 disabled (503 on POST upload / GET / DELETE /api/v1/s3/objects): set BUCKET_* env vars"
+            "S3 disabled (503 on POST upload / GET / DELETE /api/v1/s3/objects): set object storage env vars"
           );
         }
         (None, None)

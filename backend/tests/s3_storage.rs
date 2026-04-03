@@ -61,10 +61,10 @@ async fn s3_upload_service_unavailable_without_bucket_env(pool: PgPool) {
 async fn s3_e2e_ai_image_upload_download_delete(pool: PgPool) {
   const REQUIRED: &[&str] = &[
     "OPENAI_API_KEY",
-    "BUCKET_ENDPOINT_URL",
-    "BUCKET_REGION",
-    "BUCKET_NAME",
-    "BUCKET_ID",
+    "ENDPOINT",
+    "REGION",
+    "BUCKET",
+    "RAILWAY_BUCKET_ID",
     "BUCKET_SECRET",
   ];
   let missing: Vec<&str> = REQUIRED

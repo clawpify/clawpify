@@ -4,6 +4,7 @@ import { getAuthOptional, requireAuth, AuthError } from "./lib/auth";
 import { createProxyHandler, proxyToRust, proxyToRustPublic } from "./utils/networkFns";
 import { generateRobotsTxt, generateSitemapXml, injectSeoMeta } from "./lib/seo";
 import { suggestListingSku } from "./app/app/modules/products/utils/suggestListingSku";
+import { logAndValidateRustProxy } from "./proxy-safety";
 
 const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 3001;
 
@@ -656,9 +657,16 @@ const handleProductsProcess = async (req: Request) => {
   }
 };
 
+/** Does not call Rust — use for Railway/load balancer liveness so health probes cannot proxy-loop. */
+const handleHealthz = () =>
+  new Response(JSON.stringify({ ok: true, service: "clawpify-bun" }), {
+    headers: { "Content-Type": "application/json; charset=utf-8" },
+  });
+
 const staticRoutes = {
   "/robots.txt": handleRobotsTxt,
   "/sitemap.xml": handleSitemapXml,
+  "/healthz": handleHealthz,
   "/image/*": handleImageAsset,
 };
 
@@ -666,6 +674,8 @@ const shieldHandler = authProxyHandler("/api/shield");
 const agentActivityHandler = authProxyHandler("/api/agent-activity");
 const llmAgentsHandler = authProxyHandler("/api/llm/agents");
 const llmAgentsStreamHandler = authProxyHandler("/api/llm/agents/stream");
+
+logAndValidateRustProxy(port);
 
 const apiRoutes = {
   "/api/health": {
