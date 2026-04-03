@@ -1,7 +1,7 @@
 export const landingCopy = {
   nav: {
-    ctaLabel: "Open app",
-    signedInCtaLabel: "Open app",
+    ctaLabel: "Sign in",
+    signedInCtaLabel: "Sign in",
     links: [
       { label: "Features", href: "/#features" },
       { label: "About", href: "/about" },

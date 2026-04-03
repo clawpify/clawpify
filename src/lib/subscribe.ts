@@ -24,7 +24,15 @@ export async function subscribe(
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error((err as { error?: string }).error || `Request failed: ${res.status}`);
+    const e = err as { error?: string | { message?: string } };
+    const nested =
+      typeof e.error === "object" &&
+      e.error !== null &&
+      "message" in e.error
+        ? (e.error as { message?: string }).message
+        : undefined;
+    const flat = typeof e.error === "string" ? e.error : undefined;
+    throw new Error(nested || flat || `Request failed: ${res.status}`);
   }
   return res.json() as Promise<SubscribeResponse>;
 }

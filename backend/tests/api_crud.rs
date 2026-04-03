@@ -26,6 +26,18 @@ type HmacSha1 = Hmac<Sha1>;
 /// Serialize Twilio env mutations — integration tests may run in parallel by default.
 static TWILIO_TEST_LOCK: Mutex<()> = Mutex::new(());
 
+/// Serialize waitlist env (`WAITLIST_*`) mutations across parallel `#[sqlx::test]`s.
+static WAITLIST_ENV_LOCK: Mutex<()> = Mutex::new(());
+
+struct ClearWaitlistTestEnv;
+
+impl Drop for ClearWaitlistTestEnv {
+  fn drop(&mut self) {
+    std::env::remove_var("WAITLIST_IP_PEPPER");
+    std::env::remove_var("WAITLIST_MAX_SIGNUPS_PER_IP_PER_DAY");
+  }
+}
+
 fn listings_uri(path_and_query: &str) -> String {
   format!("/api/v1/listings{path_and_query}")
 }
@@ -324,6 +336,7 @@ async fn health_ok(_pool: PgPool) {
 #[sqlx::test(migrations = "../migrations")]
 async fn subscribers_validation_and_subscribe(pool: PgPool) {
   let app = api_router(pool.clone());
+  let client_ip = "198.51.100.10";
 
   let res = app
     .clone()
@@ -332,6 +345,7 @@ async fn subscribers_validation_and_subscribe(pool: PgPool) {
         .method("POST")
         .uri("/api/v1/subscribers")
         .header(header::CONTENT_TYPE, "application/json")
+        .header("x-client-ip", client_ip)
         .body(Body::from(json!({ "email": "" }).to_string()))
         .unwrap(),
     )
@@ -346,6 +360,7 @@ async fn subscribers_validation_and_subscribe(pool: PgPool) {
         .method("POST")
         .uri("/api/v1/subscribers")
         .header(header::CONTENT_TYPE, "application/json")
+        .header("x-client-ip", client_ip)
         .body(Body::from(json!({ "email": "not-an-email" }).to_string()))
         .unwrap(),
     )
@@ -361,6 +376,7 @@ async fn subscribers_validation_and_subscribe(pool: PgPool) {
         .method("POST")
         .uri("/api/v1/subscribers")
         .header(header::CONTENT_TYPE, "application/json")
+        .header("x-client-ip", client_ip)
         .body(Body::from(json!({ "email": email }).to_string()))
         .unwrap(),
     )
@@ -377,6 +393,7 @@ async fn subscribers_validation_and_subscribe(pool: PgPool) {
         .method("POST")
         .uri("/api/v1/subscribers")
         .header(header::CONTENT_TYPE, "application/json")
+        .header("x-client-ip", client_ip)
         .body(Body::from(json!({ "email": email }).to_string()))
         .unwrap(),
     )
@@ -386,6 +403,51 @@ async fn subscribers_validation_and_subscribe(pool: PgPool) {
   let v: Value = json_from_body(res.into_body()).await;
   assert_eq!(v["ok"], true);
   assert_eq!(v["already_subscribed"], true);
+}
+
+#[sqlx::test(migrations = "../migrations")]
+async fn waitlist_per_ip_daily_cap(pool: PgPool) {
+  let _mutex = WAITLIST_ENV_LOCK.lock().expect("waitlist env lock");
+  let _env_cleanup = ClearWaitlistTestEnv;
+  std::env::set_var("WAITLIST_IP_PEPPER", "integration-test-waitlist-pepper");
+  std::env::set_var("WAITLIST_MAX_SIGNUPS_PER_IP_PER_DAY", "2");
+
+  let app = api_router(pool);
+  let client_ip = "198.51.100.99";
+
+  for i in 1u8..=2u8 {
+    let email = format!("waitlist-ip-cap-{i}@example.com");
+    let res = app
+      .clone()
+      .oneshot(
+        Request::builder()
+          .method("POST")
+          .uri("/api/v1/subscribers")
+          .header(header::CONTENT_TYPE, "application/json")
+          .header("x-client-ip", client_ip)
+          .body(Body::from(json!({ "email": email }).to_string()))
+          .unwrap(),
+      )
+      .await
+      .expect("subscribe");
+    assert_eq!(res.status(), StatusCode::OK, "signup {i}");
+  }
+
+  let res = app
+    .oneshot(
+      Request::builder()
+        .method("POST")
+        .uri("/api/v1/subscribers")
+        .header(header::CONTENT_TYPE, "application/json")
+        .header("x-client-ip", client_ip)
+        .body(Body::from(
+          json!({ "email": "waitlist-ip-cap-3@example.com" }).to_string(),
+        ))
+        .unwrap(),
+    )
+    .await
+    .expect("over cap");
+  assert_eq!(res.status(), StatusCode::TOO_MANY_REQUESTS);
 }
 
 #[sqlx::test(migrations = "../migrations")]
