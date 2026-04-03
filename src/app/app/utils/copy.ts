@@ -182,6 +182,8 @@ export const copy = {
     detailSidebarLabels: "Category",
     detailLabelsEmpty: "No category yet.",
     detailAddLabelAria: "Add category",
+    detailCategoryDuplicate: "That category is already set.",
+    detailPriceInvalid: "Enter a valid price (e.g. 19.99).",
     detailSidebarRailAria: "Listing metadata",
     detailNoImages: "Add photos for this listing",
     detailMediaAdd: "Add media",

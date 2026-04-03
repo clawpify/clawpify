@@ -1,11 +1,15 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useToast } from "../../../../../lib/toast";
 import { copy } from "../../../utils/copy";
 import { useProducts } from "../context/ProductsContext";
 import type { ConsignmentListingDto } from "../types";
 import { htmlToMarkdown, markdownToSafeHtml } from "../utils/listingMarkdown";
 import { buildListingTimelineEvents } from "../utils/buildListingTimelineEvents";
-import { formatListingPrice } from "../utils/formatListingPrice";
+import {
+  centsToPriceInputString,
+  formatListingPrice,
+  parsePriceInputToCents,
+} from "../utils/formatListingPrice";
 import { statusDotClass } from "../utils/productStatusTab";
 import { PlusIcon } from "../../../../../icons/workspace-icons";
 import { ListingMediaSection } from "./listing-media";
@@ -29,16 +33,6 @@ function tagDotClass(tag: string): string {
   return TAG_DOT_CLASSES[h % TAG_DOT_CLASSES.length] ?? "bg-zinc-400";
 }
 
-function vendorLabel(listing: ConsignmentListingDto): string {
-  const v = listing.vendor?.trim();
-  return v || copy.products.detailNone;
-}
-
-function skuLabel(listing: ConsignmentListingDto): string {
-  const s = listing.sku?.trim();
-  return s || copy.products.detailNone;
-}
-
 function PropertyRow({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="grid grid-cols-[4.75rem_minmax(0,1fr)] items-start gap-x-2 border-b border-zinc-100/80 py-1.5 last:border-b-0">
@@ -58,29 +52,13 @@ function ListingStatusInline({ status }: { status: string }) {
   );
 }
 
-function RailSectionCaret({ className }: { className?: string }) {
-  return (
-    <svg
-      className={className}
-      width="10"
-      height="6"
-      viewBox="0 0 10 6"
-      fill="currentColor"
-      aria-hidden
-    >
-      <path d="M0 0.5L5 5.5L10 0.5H0Z" />
-    </svg>
-  );
-}
-
 function DetailRailCard({ title, children }: { title: string; children: ReactNode }) {
   return (
     <div
       className={`overflow-hidden rounded-lg border border-zinc-200/80 bg-white ${RAIL_CARD_SHADOW}`}
     >
-      <h3 className="flex items-center gap-0.5 border-b border-zinc-200/80 px-2 py-2 text-[13px] font-medium text-zinc-600">
-        <span>{title}</span>
-        <RailSectionCaret className="mt-px shrink-0 text-zinc-400 opacity-70" />
+      <h3 className="border-b border-zinc-200/80 px-2 py-2 text-[13px] font-medium text-zinc-600">
+        {title}
       </h3>
       {children}
     </div>
@@ -97,7 +75,16 @@ export function ProductsListingDetail({ listing }: Props) {
     htmlToMarkdown(listing.description_html ?? "")
   );
   const timeline = useMemo(() => buildListingTimelineEvents(listing), [listing]);
-  const tags = listing.tags ?? [];
+  const [tagsDraft, setTagsDraft] = useState<string[]>(() => [...(listing.tags ?? [])]);
+  const [lastSavedTags, setLastSavedTags] = useState<string[]>(() => [...(listing.tags ?? [])]);
+  const [lastSavedPriceCents, setLastSavedPriceCents] = useState(listing.price_cents);
+  const [addingCategory, setAddingCategory] = useState(false);
+  const [categoryInput, setCategoryInput] = useState("");
+  const categoryInputRef = useRef<HTMLInputElement>(null);
+  const categoryEscapeRef = useRef(false);
+  const [priceDraft, setPriceDraft] = useState(() => centsToPriceInputString(listing.price_cents));
+  const [skuDraft, setSkuDraft] = useState(() => listing.sku ?? "");
+  const [lastSavedSku, setLastSavedSku] = useState(() => listing.sku ?? "");
 
   useEffect(() => {
     const md = htmlToMarkdown(listing.description_html ?? "");
@@ -105,38 +92,119 @@ export function ProductsListingDetail({ listing }: Props) {
     setMdDraft(md);
     setLastSavedTitle(listing.title);
     setLastSavedMarkdown(md);
+    setLastSavedPriceCents(listing.price_cents);
+    setPriceDraft(centsToPriceInputString(listing.price_cents));
+    const nextTags = [...(listing.tags ?? [])];
+    setTagsDraft(nextTags);
+    setLastSavedTags(nextTags);
+    const nextSku = listing.sku ?? "";
+    setSkuDraft(nextSku);
+    setLastSavedSku(nextSku);
   }, [listing.id]);
+
+  useEffect(() => {
+    if (addingCategory) {
+      categoryInputRef.current?.focus();
+    }
+  }, [addingCategory]);
 
   useEffect(() => () => setActionToast(null), [setActionToast]);
 
+  const closeCategoryInput = useCallback(() => {
+    setAddingCategory(false);
+    setCategoryInput("");
+  }, []);
+
+  const submitCategory = useCallback(() => {
+    const t = categoryInput.trim();
+    if (!t) {
+      closeCategoryInput();
+      return;
+    }
+    const lower = t.toLowerCase();
+    let duplicate = false;
+    setTagsDraft((prev) => {
+      if (prev.some((tag) => tag.toLowerCase() === lower)) {
+        duplicate = true;
+        return prev;
+      }
+      return [...prev, t];
+    });
+    if (duplicate) showToast(copy.products.detailCategoryDuplicate);
+    closeCategoryInput();
+  }, [categoryInput, closeCategoryInput, showToast]);
+
+  const savedPriceStr = centsToPriceInputString(lastSavedPriceCents);
+  const parsedPriceDraft = parsePriceInputToCents(priceDraft);
+  const priceDraftIsDirty =
+    priceDraft.trim() !== savedPriceStr &&
+    (parsedPriceDraft === null || parsedPriceDraft !== lastSavedPriceCents);
+  const tagsDraftIsDirty =
+    tagsDraft.length !== lastSavedTags.length || tagsDraft.some((t, i) => t !== lastSavedTags[i]);
+  const skuDraftIsDirty = skuDraft.trim() !== lastSavedSku.trim();
+
   const hasUnsavedEdits =
-    titleDraft.trim() !== lastSavedTitle.trim() || mdDraft !== lastSavedMarkdown;
+    titleDraft.trim() !== lastSavedTitle.trim() ||
+    mdDraft !== lastSavedMarkdown ||
+    priceDraftIsDirty ||
+    tagsDraftIsDirty ||
+    skuDraftIsDirty;
+
+  const priceBlocksPublish = priceDraftIsDirty && parsedPriceDraft === null;
 
   const onCancelEdits = useCallback(() => {
     setTitleDraft(lastSavedTitle);
     setMdDraft(lastSavedMarkdown);
-  }, [lastSavedTitle, lastSavedMarkdown]);
+    setPriceDraft(centsToPriceInputString(lastSavedPriceCents));
+    setTagsDraft([...lastSavedTags]);
+    setSkuDraft(lastSavedSku);
+    closeCategoryInput();
+    setCategoryInput("");
+  }, [
+    lastSavedTitle,
+    lastSavedMarkdown,
+    lastSavedPriceCents,
+    lastSavedTags,
+    lastSavedSku,
+    closeCategoryInput,
+  ]);
 
   const onSaveEdits = useCallback(async () => {
+    const cents = parsePriceInputToCents(priceDraft);
+    if (cents === null) {
+      showToast(copy.products.detailPriceInvalid);
+      return;
+    }
     try {
       const updated = await updateListing(listing.id, {
         title: titleDraft.trim(),
         description_html: markdownToSafeHtml(mdDraft),
+        price_cents: cents,
+        tags: tagsDraft,
+        sku: skuDraft.trim(),
       });
       const md = htmlToMarkdown(updated.description_html ?? "");
       setTitleDraft(updated.title);
       setMdDraft(md);
       setLastSavedTitle(updated.title);
       setLastSavedMarkdown(md);
+      setLastSavedPriceCents(updated.price_cents);
+      setPriceDraft(centsToPriceInputString(updated.price_cents));
+      const savedTags = [...(updated.tags ?? [])];
+      setTagsDraft(savedTags);
+      setLastSavedTags(savedTags);
+      const nextSku = updated.sku ?? "";
+      setSkuDraft(nextSku);
+      setLastSavedSku(nextSku);
       showToast(copy.products.detailListingSaved);
     } catch (e) {
       showToast(
         `${copy.products.detailListingSaveFailed} ${e instanceof Error ? e.message : "Unknown error"}`
       );
     }
-  }, [updateListing, listing.id, titleDraft, mdDraft, showToast]);
+  }, [updateListing, listing.id, titleDraft, mdDraft, priceDraft, tagsDraft, skuDraft, showToast]);
 
-  const saveDisabled = updatingListing || !hasUnsavedEdits;
+  const saveDisabled = updatingListing || !hasUnsavedEdits || priceBlocksPublish;
 
   useEffect(() => {
     if (!hasUnsavedEdits) {
@@ -189,7 +257,7 @@ export function ProductsListingDetail({ listing }: Props) {
             value={mdDraft}
             onChange={(e) => setMdDraft(e.target.value)}
             rows={8}
-            className="w-full min-h-[10rem] resize-y border-0 bg-transparent px-0 py-2 text-base leading-[1.65] text-zinc-600 shadow-none outline-none ring-0 transition placeholder:text-zinc-400 focus-visible:outline-none focus-visible:ring-0"
+            className="h-[13.5rem] w-full resize-none overflow-y-auto border-0 bg-transparent px-0 py-2 text-base leading-[1.65] text-zinc-600 shadow-none outline-none ring-0 transition placeholder:text-zinc-400 focus-visible:outline-none focus-visible:ring-0"
             placeholder={copy.products.createModalDescriptionPlaceholder}
             aria-label={copy.products.createModalDescriptionPlaceholder}
           />
@@ -231,24 +299,51 @@ export function ProductsListingDetail({ listing }: Props) {
               <ListingStatusInline status={listing.status} />
             </PropertyRow>
             <PropertyRow label={copy.products.detailSidebarPrice}>
-              <span className="tabular-nums font-medium">
-                {formatListingPrice(listing.price_cents, listing.currency_code)}
-              </span>
+              <input
+                type="text"
+                inputMode="decimal"
+                value={priceDraft}
+                onChange={(e) => setPriceDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    e.currentTarget.blur();
+                  }
+                }}
+                disabled={updatingListing}
+                aria-label={copy.products.detailSidebarPrice}
+                title={formatListingPrice(lastSavedPriceCents, listing.currency_code)}
+                className="w-full min-w-0 border-0 bg-transparent p-0 text-[13px] font-medium tabular-nums leading-snug text-zinc-900 shadow-none outline-none ring-0 placeholder:text-zinc-400 focus-visible:outline-none focus-visible:ring-0 disabled:opacity-50"
+                autoComplete="off"
+              />
             </PropertyRow>
-            <PropertyRow label={copy.products.detailSidebarSku}>{skuLabel(listing)}</PropertyRow>
-            <PropertyRow label={copy.products.detailSidebarVendor}>{vendorLabel(listing)}</PropertyRow>
-            <PropertyRow label={copy.products.detailSidebarChannels}>
-              <span className="text-zinc-500">{copy.products.detailNone}</span>
+            <PropertyRow label={copy.products.detailSidebarSku}>
+              <input
+                type="text"
+                value={skuDraft}
+                onChange={(e) => setSkuDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    e.currentTarget.blur();
+                  }
+                }}
+                disabled={updatingListing}
+                aria-label={copy.products.detailSidebarSku}
+                placeholder={copy.products.createModalSkuPlaceholder}
+                className="w-full min-w-0 border-0 bg-transparent p-0 text-[13px] font-medium leading-snug text-zinc-900 shadow-none outline-none ring-0 placeholder:text-zinc-400 focus-visible:outline-none focus-visible:ring-0 disabled:opacity-50"
+                autoComplete="off"
+              />
             </PropertyRow>
           </div>
         </DetailRailCard>
 
         <DetailRailCard title={copy.products.detailSidebarLabels}>
           <div className="flex flex-wrap items-center gap-1.5 px-2 py-2">
-            {tags.length === 0 ? (
+            {tagsDraft.length === 0 && !addingCategory ? (
               <span className="text-[13px] text-zinc-400">{copy.products.detailLabelsEmpty}</span>
             ) : (
-              tags.map((tag) => (
+              tagsDraft.map((tag) => (
                 <span
                   key={tag}
                   className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-zinc-200/90 bg-zinc-50/90 px-2 py-0.5 text-[12px] font-medium text-zinc-700"
@@ -258,10 +353,43 @@ export function ProductsListingDetail({ listing }: Props) {
                 </span>
               ))
             )}
+            {addingCategory ? (
+              <input
+                ref={categoryInputRef}
+                value={categoryInput}
+                onChange={(e) => setCategoryInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    submitCategory();
+                  } else if (e.key === "Escape") {
+                    e.preventDefault();
+                    categoryEscapeRef.current = true;
+                    closeCategoryInput();
+                  }
+                }}
+                onBlur={() => {
+                  queueMicrotask(() => {
+                    if (categoryEscapeRef.current) {
+                      categoryEscapeRef.current = false;
+                      return;
+                    }
+                    submitCategory();
+                  });
+                }}
+                disabled={updatingListing}
+                placeholder={copy.products.createModalCategoryPlaceholder}
+                aria-label={copy.products.detailAddLabelAria}
+                className="h-6 min-w-[6rem] max-w-[12rem] flex-1 rounded-md border border-zinc-200/90 bg-white px-2 text-[12px] text-zinc-900 shadow-none outline-none ring-0 placeholder:text-zinc-400 focus-visible:border-zinc-300 focus-visible:ring-1 focus-visible:ring-zinc-200"
+                autoComplete="off"
+              />
+            ) : null}
             <button
               type="button"
               aria-label={copy.products.detailAddLabelAria}
-              className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-zinc-400 transition hover:bg-zinc-100 hover:text-zinc-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-400"
+              disabled={updatingListing || addingCategory}
+              onClick={() => setAddingCategory(true)}
+              className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-zinc-400 transition hover:bg-zinc-100 hover:text-zinc-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-400 disabled:pointer-events-none disabled:opacity-40"
             >
               <PlusIcon size={16} className="text-current" />
             </button>

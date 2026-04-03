@@ -11,3 +11,15 @@ export function formatListingPrice(cents: number, currencyCode: string): string 
     return `${(cents / 100).toFixed(2)} ${currencyCode}`;
   }
 }
+
+export function centsToPriceInputString(cents: number): string {
+  return (cents / 100).toFixed(2);
+}
+
+export function parsePriceInputToCents(raw: string): number | null {
+  const t = raw.trim().replace(/,/g, "");
+  if (t === "") return null;
+  const n = Number.parseFloat(t);
+  if (!Number.isFinite(n) || n < 0) return null;
+  return Math.max(0, Math.round(n * 100));
+}
