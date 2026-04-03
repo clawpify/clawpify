@@ -7,7 +7,7 @@ export async function subscribe(
   body: SubscribeRequest
 ): Promise<SubscribeResponse> {
   const base = process.env.RUST_API_URL ?? "";
-  const url = new URL(`${base}/api/subscribers`);
+  const url = new URL(`${base}/api/waitlist`);
   const res = await fetch(url.toString(), {
     method: "POST",
     headers: { "Content-Type": "application/json" },

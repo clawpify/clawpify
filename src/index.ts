@@ -56,17 +56,17 @@ const handleImageAsset = async (req: Request) => {
 
 const handleHealth = (req: Request) => forwardPublic(req);
 
-const handleSubscribersPost = async (req: Request) => {
+const handleWaitlistPost = async (req: Request) => {
   const clientIP = serverRef?.requestIP(req)?.address ?? "unknown";
   try {
     return await forwardPublic(req, { clientIP });
   } catch (e) {
     console.error(
-      "POST /api/subscribers proxy failed (check RUST_API_URL reaches the Rust service, or set BUN_PUBLIC_API_BASE for direct browser calls):",
+      "POST /api/waitlist proxy failed (check RUST_API_URL reaches the Rust service, or set BUN_PUBLIC_API_BASE for direct browser calls):",
       e
     );
     return Response.json(
-      { error: "Subscription service is temporarily unavailable." },
+      { error: "Waitlist is temporarily unavailable." },
       { status: 502 }
     );
   }
@@ -78,86 +78,61 @@ const handleHealthz = () =>
     headers: { "Content-Type": "application/json; charset=utf-8" },
   });
 
-const staticRoutes = {
+/** GET + POST share one proxied handler instance. */
+const agentActivityProxy = authProxyHandler("/api/agent-activity");
+
+logAndValidateRustProxy(port);
+
+const routes = {
   "/robots.txt": handleRobotsTxt,
   "/sitemap.xml": handleSitemapXml,
   "/healthz": handleHealthz,
   "/image/*": handleImageAsset,
-};
 
-const shieldHandler = authProxyHandler("/api/shield");
-const agentActivityHandler = authProxyHandler("/api/agent-activity");
-const llmAgentsHandler = authProxyHandler("/api/llm/agents");
-const llmAgentsStreamHandler = authProxyHandler("/api/llm/agents/stream");
-
-logAndValidateRustProxy(port);
-
-const apiRoutes = {
   "/api/health": {
-    async GET(req: Request) {
-      return handleHealth(req);
-    },
+    GET: handleHealth,
   },
   "/api/shield": {
-    async PUT(req: Request) {
-      return shieldHandler(req);
-    },
+    PUT: authProxyHandler("/api/shield"),
   },
   "/api/llm/agents": {
-    async POST(req: Request) {
-      return llmAgentsHandler(req);
-    },
+    POST: authProxyHandler("/api/llm/agents"),
   },
   "/api/llm/agents/stream": {
-    async POST(req: Request) {
-      return llmAgentsStreamHandler(req);
-    },
+    POST: authProxyHandler("/api/llm/agents/stream"),
   },
   "/api/agent-activity": {
-    async GET(req: Request) {
-      return agentActivityHandler(req);
-    },
-    async POST(req: Request) {
-      return agentActivityHandler(req);
-    },
+    GET: agentActivityProxy,
+    POST: agentActivityProxy,
   },
-  "/api/subscribers": {
-    async POST(req: Request) {
-      return handleSubscribersPost(req);
-    },
+  "/api/waitlist": {
+    POST: handleWaitlistPost,
   },
   "/api/user/complete-onboarding": {
-    async POST(req: Request) {
-      return handleCompleteOnboarding(req);
-    },
+    POST: handleCompleteOnboarding,
   },
   "/api/consignors/provision": {
-    async POST(req: Request) {
-      return handleProvisionConsignor(req);
-    },
+    POST: handleProvisionConsignor,
   },
   "/api/products/process": {
-    async POST(req: Request) {
-      return handleProductsProcess(req);
-    },
+    POST: handleProductsProcess,
   },
 };
+
+const AUTH_PROXY_PREFIXES = [
+  "/api/consignors",
+  "/api/contracts",
+  "/api/listings",
+  "/api/intake",
+] as const;
 
 const server = serve({
   port,
-  routes: {
-    ...staticRoutes,
-    ...apiRoutes,
-  },
+  routes,
 
   fetch(req) {
     const pathname = pathnameOf(req);
-    if (
-      pathname.startsWith("/api/consignors") ||
-      pathname.startsWith("/api/contracts") ||
-      pathname.startsWith("/api/listings") ||
-      pathname.startsWith("/api/intake")
-    ) {
+    if (AUTH_PROXY_PREFIXES.some((p) => pathname.startsWith(p))) {
       return authProxyHandler(pathnameOf)(req);
     }
     const asset = builtAssets.get(pathname);

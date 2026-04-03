@@ -44,7 +44,7 @@ pub fn routes() -> Router<AppState> {
   );
 
   Router::new()
-    .route("/subscribers", post(subscribe))
+    .route("/waitlist", post(subscribe))
     .layer(GovernorLayer {
       config: governor_conf,
     })

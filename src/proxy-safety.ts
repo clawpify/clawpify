@@ -32,7 +32,7 @@ function bunServicePublicHosts(): Set<string> {
 }
 
 /**
- * Log resolved upstream (for correlating spikes with `/api/health` / `/api/subscribers` proxy paths)
+ * Log resolved upstream (for correlating spikes with `/api/health` / `/api/waitlist` proxy paths)
  * and exit if RUST_API_URL targets the same host as this Bun service (loop).
  */
 export function logAndValidateRustProxy(listenPort: number): void {
@@ -53,7 +53,7 @@ export function logAndValidateRustProxy(listenPort: number): void {
   console.log(
     `[proxy] Rust upstream ${schemeHostPort}` +
       (usingInternal ? " (RUST_API_URL_INTERNAL)" : " (RUST_API_URL)") +
-      ` | Bun PORT=${listenPort} | proxied routes include GET /api/health, POST /api/subscribers`
+      ` | Bun PORT=${listenPort} | proxied routes include GET /api/health, POST /api/waitlist`
   );
 
   if (

@@ -1,4 +1,4 @@
-//! HTTP integration tests for API routes (listings, intake, health, subscribers,
+//! HTTP integration tests for API routes (listings, intake, health, waitlist,
 //! activity, LLM validation, Twilio webhook edge cases).
 
 mod common;
@@ -343,7 +343,7 @@ async fn subscribers_validation_and_subscribe(pool: PgPool) {
     .oneshot(
       Request::builder()
         .method("POST")
-        .uri("/api/v1/subscribers")
+        .uri("/api/v1/waitlist")
         .header(header::CONTENT_TYPE, "application/json")
         .header("x-client-ip", client_ip)
         .body(Body::from(json!({ "email": "" }).to_string()))
@@ -358,7 +358,7 @@ async fn subscribers_validation_and_subscribe(pool: PgPool) {
     .oneshot(
       Request::builder()
         .method("POST")
-        .uri("/api/v1/subscribers")
+        .uri("/api/v1/waitlist")
         .header(header::CONTENT_TYPE, "application/json")
         .header("x-client-ip", client_ip)
         .body(Body::from(json!({ "email": "not-an-email" }).to_string()))
@@ -374,7 +374,7 @@ async fn subscribers_validation_and_subscribe(pool: PgPool) {
     .oneshot(
       Request::builder()
         .method("POST")
-        .uri("/api/v1/subscribers")
+        .uri("/api/v1/waitlist")
         .header(header::CONTENT_TYPE, "application/json")
         .header("x-client-ip", client_ip)
         .body(Body::from(json!({ "email": email }).to_string()))
@@ -391,7 +391,7 @@ async fn subscribers_validation_and_subscribe(pool: PgPool) {
     .oneshot(
       Request::builder()
         .method("POST")
-        .uri("/api/v1/subscribers")
+        .uri("/api/v1/waitlist")
         .header(header::CONTENT_TYPE, "application/json")
         .header("x-client-ip", client_ip)
         .body(Body::from(json!({ "email": email }).to_string()))
@@ -422,7 +422,7 @@ async fn waitlist_per_ip_daily_cap(pool: PgPool) {
       .oneshot(
         Request::builder()
           .method("POST")
-          .uri("/api/v1/subscribers")
+          .uri("/api/v1/waitlist")
           .header(header::CONTENT_TYPE, "application/json")
           .header("x-client-ip", client_ip)
           .body(Body::from(json!({ "email": email }).to_string()))
@@ -437,7 +437,7 @@ async fn waitlist_per_ip_daily_cap(pool: PgPool) {
     .oneshot(
       Request::builder()
         .method("POST")
-        .uri("/api/v1/subscribers")
+        .uri("/api/v1/waitlist")
         .header(header::CONTENT_TYPE, "application/json")
         .header("x-client-ip", client_ip)
         .body(Body::from(
