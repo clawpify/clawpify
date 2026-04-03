@@ -3,6 +3,8 @@
  * (same host as this Bun service) causes recursive fetches and runaway metrics.
  */
 
+import { rustApiBaseUrl } from "./utils/networkFns";
+
 function trimTrailingSlash(s: string): string {
   return s.replace(/\/+$/, "");
 }
@@ -25,6 +27,7 @@ function bunServicePublicHosts(): Set<string> {
   addHostname(hosts, process.env.BUN_SERVICE_URL);
   addHostname(hosts, process.env.RAILWAY_STATIC_URL);
   addHostname(hosts, process.env.RAILWAY_PUBLIC_DOMAIN);
+  addHostname(hosts, process.env.BUN_PUBLIC_BASE_URL);
   return hosts;
 }
 
@@ -33,14 +36,14 @@ function bunServicePublicHosts(): Set<string> {
  * and exit if RUST_API_URL targets the same host as this Bun service (loop).
  */
 export function logAndValidateRustProxy(listenPort: number): void {
-  const raw = process.env.RUST_API_URL?.trim();
-  const effective = raw && raw.length > 0 ? raw : "http://127.0.0.1:3000";
+  const usingInternal = Boolean(process.env.RUST_API_URL_INTERNAL?.trim());
+  const effective = rustApiBaseUrl();
 
   let rust: URL;
   try {
     rust = new URL(effective);
   } catch {
-    console.error("[fatal] RUST_API_URL is not a valid URL:", effective);
+    console.error("[fatal] Rust upstream base URL is not valid:", effective);
     process.exit(1);
   }
 
@@ -48,8 +51,21 @@ export function logAndValidateRustProxy(listenPort: number): void {
   const schemeHostPort = `${rust.protocol}//${rust.host}`;
 
   console.log(
-    `[proxy] Rust upstream ${schemeHostPort} | Bun PORT=${listenPort} | proxied routes include GET /api/health, POST /api/subscribers`
+    `[proxy] Rust upstream ${schemeHostPort}` +
+      (usingInternal ? " (RUST_API_URL_INTERNAL)" : " (RUST_API_URL)") +
+      ` | Bun PORT=${listenPort} | proxied routes include GET /api/health, POST /api/subscribers`
   );
+
+  if (
+    process.env.NODE_ENV === "production" &&
+    !usingInternal &&
+    rustHost.endsWith(".up.railway.app")
+  ) {
+    console.warn(
+      "[warn] RUST_API_URL is a public *.up.railway.app host. If that hostname is *this* Bun app, proxies will fail. " +
+        "Set RUST_API_URL_INTERNAL=http://<your-rust-service>.railway.internal:<PORT> on the Bun service."
+    );
+  }
 
   const railwayInternal = rustHost.endsWith(".railway.internal");
   const isLocal = rustHost === "localhost" || rustHost === "127.0.0.1";

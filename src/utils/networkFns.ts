@@ -1,6 +1,17 @@
 import type { AuthPayload } from "../types/auth";
 
-const RUST_API_URL = process.env.RUST_API_URL ?? "http://127.0.0.1:3000";
+/**
+ * Base URL for Bun → Rust proxy. Prefer `RUST_API_URL_INTERNAL` (e.g.
+ * `http://<rust-service>.railway.internal:<PORT>`) so `RUST_API_URL` is not
+ * forced to be a public `*.up.railway.app` host that may be this Bun app.
+ */
+export function rustApiBaseUrl(): string {
+  const internal = process.env.RUST_API_URL_INTERNAL?.trim();
+  if (internal) return internal.replace(/\/+$/, "");
+  const pub = process.env.RUST_API_URL?.trim();
+  if (pub) return pub.replace(/\/+$/, "");
+  return "http://127.0.0.1:3000";
+}
 
 function rustProxyFetchInit(req: Request, headers: Headers): RequestInit {
   const raw = process.env.RUST_PROXY_TIMEOUT_MS;
@@ -54,7 +65,7 @@ export async function proxyToRust(
   auth: AuthPayload
 ): Promise<Response> {
   const url = new URL(req.url);
-  const backendUrl = `${RUST_API_URL}${path}${url.search}`;
+  const backendUrl = `${rustApiBaseUrl()}${path}${url.search}`;
   const headers = new Headers(req.headers);
 
   const selectedOrgId = normalizeOrgId(req.headers.get("X-Selected-Org-Id"));
@@ -97,7 +108,7 @@ export async function proxyToRustPublic(
   opts?: { clientIP?: string; auth?: AuthPayload }
 ): Promise<Response> {
   const url = new URL(req.url);
-  const backendUrl = `${RUST_API_URL}${path}${url.search}`;
+  const backendUrl = `${rustApiBaseUrl()}${path}${url.search}`;
   const headers = new Headers(req.headers);
 
   if (opts?.clientIP) headers.set("X-Client-IP", opts.clientIP);
