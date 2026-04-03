@@ -1,5 +1,29 @@
 const RUST_API_URL = process.env.RUST_API_URL ?? "http://127.0.0.1:3000";
 
+function rustProxyFetchInit(req: Request, headers: Headers): RequestInit {
+  const raw = process.env.RUST_PROXY_TIMEOUT_MS;
+  const parsed = raw != null && raw !== "" ? parseInt(raw, 10) : 25_000;
+  const ms = Number.isFinite(parsed) && parsed > 0 ? parsed : 25_000;
+  return {
+    method: req.method,
+    headers,
+    body: req.method !== "GET" && req.method !== "HEAD" ? req.body : undefined,
+    signal: AbortSignal.timeout(ms),
+  };
+}
+
+async function forwardOr502(backendUrl: string, init: RequestInit): Promise<Response> {
+  try {
+    return await fetch(backendUrl, init);
+  } catch (e) {
+    const aborted =
+      e instanceof Error &&
+      (e.name === "AbortError" || e.message?.includes("The operation was aborted"));
+    const message = aborted ? "Rust API request timed out" : "Rust API unreachable";
+    return Response.json({ error: message }, { status: 502 });
+  }
+}
+
 export type AuthPayload = {
   userId: string;
   orgId?: string;
@@ -52,11 +76,7 @@ export async function proxyToRust(
   headers.set("X-Internal-Org-Id", internalOrgScope(authForProxy));
   if (auth.orgRole) headers.set("X-Internal-Org-Role", auth.orgRole);
 
-  const res = await fetch(backendUrl, {
-    method: req.method,
-    headers,
-    body: req.method !== "GET" && req.method !== "HEAD" ? req.body : undefined,
-  });
+  const res = await forwardOr502(backendUrl, rustProxyFetchInit(req, headers));
 
   return new Response(res.body, {
     status: res.status,
@@ -91,11 +111,7 @@ export async function proxyToRustPublic(
     if (opts.auth.orgRole) headers.set("X-Internal-Org-Role", opts.auth.orgRole);
   }
 
-  const res = await fetch(backendUrl, {
-    method: req.method,
-    headers,
-    body: req.method !== "GET" && req.method !== "HEAD" ? req.body : undefined,
-  });
+  const res = await forwardOr502(backendUrl, rustProxyFetchInit(req, headers));
 
   return new Response(res.body, {
     status: res.status,

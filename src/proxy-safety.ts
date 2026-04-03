@@ -55,15 +55,25 @@ export function logAndValidateRustProxy(listenPort: number): void {
     );
   }
 
+  // Public Railway edge URLs for RUST_API_URL almost always mean either the Bun app URL
+  // (infinite proxy loop) or avoidable latency. Require private networking unless opted in.
   if (
     process.env.NODE_ENV === "production" &&
-    rust.protocol === "https:" &&
     rustHost.endsWith(".railway.app") &&
     !railwayInternal
   ) {
-    console.warn(
-      "[warn] RUST_API_URL uses a public *.railway.app URL. Confirm that host is the Rust API, not this Bun app, to avoid proxy loops and 502s."
-    );
+    if (process.env.ALLOW_RAILWAY_PUBLIC_RUST_URL === "1") {
+      console.warn(
+        "[warn] ALLOW_RAILWAY_PUBLIC_RUST_URL=1: using public *.railway.app for RUST_API_URL — ensure this is the Rust service hostname, not the Bun app."
+      );
+    } else {
+      console.error(
+        "[fatal] RUST_API_URL must use Railway private networking in production, e.g. " +
+          "http://<your-rust-service-name>.railway.internal:<PORT> (not *.up.railway.app on the Bun service). " +
+          "Override only if Rust is genuinely public-only: ALLOW_RAILWAY_PUBLIC_RUST_URL=1"
+      );
+      process.exit(1);
+    }
   }
 
   const bunPublic = bunPublicUrlFromEnv();
