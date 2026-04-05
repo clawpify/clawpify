@@ -1,5 +1,6 @@
 mod activity;
 mod app_redirect;
+mod spa_hop;
 mod consignors;
 mod contracts;
 mod ebay;
@@ -21,6 +22,7 @@ use sqlx::PgPool;
 fn core_routes() -> Router<AppState> {
   Router::new()
     .merge(health::routes())
+    .merge(spa_hop::routes())
     .merge(app_redirect::routes())
     .route(
       "/openapi.json",

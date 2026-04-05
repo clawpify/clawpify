@@ -1,5 +1,3 @@
-use std::env::VarError;
-
 #[derive(Debug, Clone)]
 pub struct EbayConfig {
   /* whether to use the sandbox environment */
@@ -16,24 +14,31 @@ pub struct EbayConfig {
   pub oauth_success_redirect: String,
 }
 
-fn env_var(key: &'static str) -> Result<String, VarError> {
-  std::env::var(key)
+fn require_env(key: &'static str) -> Result<String, &'static str> {
+  std::env::var(key).map_err(|_| key)
 }
 
 impl EbayConfig {
-  pub fn from_env() -> Result<Self, VarError> {
+  /// Loads config from env. On error, returns the **name of the first missing variable**
+  /// (or a short hint for the scopes pair).
+  pub fn from_env() -> Result<Self, &'static str> {
     let sandbox = matches!(
       env_flag("EBAY_USE_SANDBOX").as_deref(),
       Some("1") | Some("true") | Some("yes"),
     );
 
-    let oauth_scope = env_var("EBAY_OAUTH_SCOPES").or_else(|_| env_var("EBAY_OAUTH_SCOPE"))?;
+    let client_id = require_env("EBAY_CLIENT_ID")?;
+    let client_secret = require_env("EBAY_CLIENT_SECRET")?;
+    let oauth_redirect_uri = require_env("EBAY_OAUTH_REDIRECT_URI")?;
+    let oauth_scope = require_env("EBAY_OAUTH_SCOPES")
+      .or_else(|_| require_env("EBAY_OAUTH_SCOPE"))
+      .map_err(|_| "EBAY_OAUTH_SCOPES (or EBAY_OAUTH_SCOPE as fallback)")?;
 
     Ok(Self {
       sandbox,
-      client_id: env_var("EBAY_CLIENT_ID")?,
-      client_secret: env_var("EBAY_CLIENT_SECRET")?,
-      oauth_redirect_uri: env_var("EBAY_OAUTH_REDIRECT_URI")?,
+      client_id,
+      client_secret,
+      oauth_redirect_uri,
       oauth_scope,
       oauth_success_redirect: std::env::var("EBAY_OAUTH_SUCCESS_REDIRECT")
         .unwrap_or_else(|_| "http://localhost:3001/app".into()),

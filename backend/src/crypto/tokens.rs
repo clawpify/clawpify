@@ -16,7 +16,13 @@ pub struct TokenCrypto {
 impl TokenCrypto {
   pub fn from_env() -> Result<Self, TokenCryptoError> {
     let hex = std::env::var("CHANNEL_ENCRYPTION_KEY").map_err(|_| TokenCryptoError::MissingKey)?;
-    let raw = hex::decode(hex.trim()).map_err(|_| TokenCryptoError::BadKey)?;
+    let trim = hex.trim().trim_start_matches("0x");
+    // Keep only hex digits so stray spaces / punctuation from copy-paste don't break decoding.
+    let digits: String = trim.chars().filter(|c| c.is_ascii_hexdigit()).collect();
+    if digits.len() != 64 {
+      return Err(TokenCryptoError::BadKey);
+    }
+    let raw = hex::decode(&digits).map_err(|_| TokenCryptoError::BadKey)?;
     if raw.len() != 32 {
       return Err(TokenCryptoError::BadKey);
     }

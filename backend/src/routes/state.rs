@@ -32,13 +32,34 @@ impl AppState {
       }
     };
 
-    let ebay_config = EbayConfig::from_env().ok();
-    let token_crypto = TokenCrypto::from_env().ok();
+    let ebay_config = match EbayConfig::from_env() {
+      Ok(c) => Some(c),
+      Err(missing) => {
+        tracing::warn!(
+          missing,
+          "eBay OAuth disabled: set this environment variable (see backend/.env.example); \
+           EBAY_DEV_ID is not used by this backend"
+        );
+        None
+      }
+    };
+    let token_crypto = match TokenCrypto::from_env() {
+      Ok(c) => Some(c),
+      Err(crate::crypto::tokens::TokenCryptoError::MissingKey) => {
+        tracing::warn!("CHANNEL_ENCRYPTION_KEY is not set; encrypted channel tokens (eBay, etc.) will not work");
+        None
+      }
+      Err(crate::crypto::tokens::TokenCryptoError::BadKey) => {
+        tracing::warn!(
+          "CHANNEL_ENCRYPTION_KEY is invalid (need exactly 64 hex characters = 32 bytes; run: openssl rand -hex 32)"
+        );
+        None
+      }
+      Err(crate::crypto::tokens::TokenCryptoError::Encrypt(_)) => None,
+    };
 
     if ebay_config.is_some() && token_crypto.is_none() {
-      tracing::warn!(
-        "eBay OAuth env vars are set but CHANNEL_ENCRYPTION_KEY is missing; eBay token storage will fail"
-      );
+      tracing::warn!("eBay OAuth is configured but TokenCrypto failed; fix CHANNEL_ENCRYPTION_KEY or omit eBay env until fixed");
     }
 
     let app_public_origin = std::env::var("APP_PUBLIC_ORIGIN")
