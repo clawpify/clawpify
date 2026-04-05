@@ -1,11 +1,12 @@
-import { useLocation } from "react-router-dom";
-import { useEffect } from "react";
-import { useAuth, useOrganizationList } from "@clerk/react";
+import { lazy, Suspense, useLocation } from "react";
 import "./index.css";
 import { pathRequiresClerk } from "./lib/path-requires-clerk.ts";
 import { AppShell } from "./shell/AppShell";
-import { AppTopNav } from "./shell/AppTopNav";
 import { AppRoutes } from "./shell/AppRoutes";
+
+const ClerkAppChrome = lazy(() =>
+  import("./shell/ClerkAppChrome.tsx").then((m) => ({ default: m.ClerkAppChrome })),
+);
 
 export function App() {
   const { pathname } = useLocation();
@@ -14,35 +15,17 @@ export function App() {
 
   return (
     <AppShell fullBleed={fullBleed}>
-      {clerk && <EnsureActiveOrganization />}
-      {!fullBleed && clerk && <AppTopNav />}
+      {clerk && (
+        <Suspense fallback={null}>
+          <ClerkAppChrome fullBleed={fullBleed} />
+        </Suspense>
+      )}
       <AppRoutes />
     </AppShell>
   );
 }
 
 export default App;
-
-function EnsureActiveOrganization() {
-  const { userId, orgId } = useAuth();
-  const { isLoaded, setActive, userMemberships } = useOrganizationList({
-    userMemberships: true,
-  });
-
-  useEffect(() => {
-    if (!userId || orgId || !isLoaded || !setActive) return;
-
-    const firstMembership = userMemberships.data?.[0];
-    const firstOrgId = firstMembership?.organization.id;
-    if (!firstOrgId) return;
-
-    void setActive({ organization: firstOrgId }).catch((error) => {
-      console.error("Failed to auto-activate organization", error);
-    });
-  }, [isLoaded, orgId, setActive, userId, userMemberships.data]);
-
-  return null;
-}
 
 function isFullBleedShell(p: string): boolean {
   if (p === "/" || p === "/about" || p === "/privacy") return true;

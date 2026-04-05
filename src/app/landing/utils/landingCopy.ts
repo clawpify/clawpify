@@ -83,27 +83,27 @@ export const landingCopy = {
       providers: [
         {
           key: "openai",
-          href: "https://chat.openai.com/?q=tell+me+about+clawpify.com",
+          href: "https://chat.openai.com/?q=What+is+Clawpify%3F+Consignment+and+resale+shop+software+for+inventory%2C+consignors%2C+and+listings.",
           ariaLabel: "ChatGPT",
         },
         {
           key: "perplexity",
-          href: "https://www.perplexity.ai/search?q=what+is+clawpify.com",
+          href: "https://www.perplexity.ai/search?q=Clawpify+consignment+resale+shop+software+inventory+listings",
           ariaLabel: "Perplexity",
         },
         {
           key: "claude",
-          href: "https://claude.ai/new?q=tell+me+about+clawpify.com",
+          href: "https://claude.ai/new?q=What+is+Clawpify%3F+Consignment+and+resale+operations+software+for+inventory%2C+consignors%2C+and+listings.",
           ariaLabel: "Claude",
         },
         {
           key: "gemini",
-          href: "https://gemini.google.com/app?q=tell+me+about+clawpify.com",
+          href: "https://gemini.google.com/app?q=Clawpify+software+for+consignment+shops+inventory+and+listings",
           ariaLabel: "Gemini",
         },
         {
           key: "grok",
-          href: "https://grok.x.ai/?q=tell+me+about+clawpify.com",
+          href: "https://grok.x.ai/?q=What+does+Clawpify+do%3F+Consignment+shop+inventory+and+listings",
           ariaLabel: "Grok",
         },
       ],

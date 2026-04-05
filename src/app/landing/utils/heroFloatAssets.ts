@@ -11,22 +11,22 @@ export function landingPublicImageUrl(filename: string): string {
 }
 
 export const LANDING_PRODUCT_IMAGE_FILENAMES = [
-  "product-chair.png",
-  "nintendo.png",
-  "product-sweater.png",
-  "mactintosh.png",
-  "product-fridge.png",
-  "product-hockey.png",
+  "product-chair.webp",
+  "nintendo.webp",
+  "product-sweater.webp",
+  "mactintosh.webp",
+  "product-fridge.webp",
+  "product-hockey.webp",
 ] as const;
 
 export const LANDING_INVENTORY_FEATURE_IMAGE_FILENAMES = [
-  "product-chair.png",
-  "nintendo.png",
-  "product-sweater.png",
-  "mactintosh.png",
-  "product-fridge.png",
-  "product-hockey.png",
-  "car.png",
+  "product-chair.webp",
+  "nintendo.webp",
+  "product-sweater.webp",
+  "mactintosh.webp",
+  "product-fridge.webp",
+  "product-hockey.webp",
+  "car.webp",
 ] as const;
 
 const HERO_PRODUCT_IMAGES = LANDING_PRODUCT_IMAGE_FILENAMES;

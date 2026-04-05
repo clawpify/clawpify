@@ -66,3 +66,53 @@ pub async fn upsert_shopify(
   .fetch_one(pool)
   .await
 }
+
+pub async fn get_ebay_secrets(
+  pool: &PgPool,
+  org_id: &str,
+) -> Result<Option<ChannelConnectionSecrets>, sqlx::Error> {
+  sqlx::query_as::<_, ChannelConnectionSecrets>(
+    r#"SELECT id, org_id, channel, shop_domain, scopes, access_token_ciphertext, access_token_nonce
+       FROM channel_connections
+       WHERE org_id = $1 AND channel = 'ebay'"#,
+  )
+  .bind(org_id)
+  .fetch_optional(pool)
+  .await
+}
+
+pub async fn upsert_ebay(
+  pool: &PgPool,
+  org_id: &str,
+  scopes: Option<&str>,
+  access_token_ciphertext: &[u8],
+  access_token_nonce: &[u8],
+  token_expires_at: Option<chrono::DateTime<chrono::Utc>>,
+) -> Result<ChannelConnection, sqlx::Error> {
+  sqlx::query("INSERT INTO organizations (id) VALUES ($1) ON CONFLICT (id) DO NOTHING")
+    .bind(org_id)
+    .execute(pool)
+    .await?;
+
+  sqlx::query_as::<_, ChannelConnection>(
+    r#"INSERT INTO channel_connections (
+          org_id, channel, shop_domain, scopes,
+          access_token_ciphertext, access_token_nonce, token_expires_at, updated_at
+        )
+        VALUES ($1, 'ebay', '', $2, $3, $4, $5, NOW())
+        ON CONFLICT (org_id, channel) DO UPDATE SET
+          scopes = EXCLUDED.scopes,
+          access_token_ciphertext = EXCLUDED.access_token_ciphertext,
+          access_token_nonce = EXCLUDED.access_token_nonce,
+          token_expires_at = EXCLUDED.token_expires_at,
+          updated_at = NOW()
+        RETURNING id, org_id, channel, shop_domain, scopes, token_expires_at, created_at, updated_at"#,
+  )
+  .bind(org_id)
+  .bind(scopes)
+  .bind(access_token_ciphertext)
+  .bind(access_token_nonce)
+  .bind(token_expires_at)
+  .fetch_one(pool)
+  .await
+}

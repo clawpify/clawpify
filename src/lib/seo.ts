@@ -1,6 +1,6 @@
 const BASE_URL = process.env.BUN_PUBLIC_BASE_URL || "https://clawpify.com";
 
-const DEFAULT_OG_IMAGE = `${BASE_URL}/image/dollars.png`;
+const DEFAULT_OG_IMAGE = `${BASE_URL}/image/dollars-og.jpg`;
 const DEFAULT_ORG_LOGO = `${BASE_URL}/apple-touch-icon.png`;
 
 type RouteMeta = {
@@ -25,7 +25,7 @@ const ORG_KNOWS_ABOUT = [
 const defaultMeta: RouteMeta = {
   title: "Clawpify — Software for consignment shops",
   description:
-    "Count inventory, track consignor splits, and cross-post listings from one workspace. Connect Shopify, WooCommerce, or custom storefronts. Built for shops navigating AI discovery and agent commerce.",
+    "Count inventory, track consignor splits, and cross-post listings from one workspace. Connect Shopify, WooCommerce, or custom storefronts.",
 };
 
 const routeMeta: Record<string, RouteMeta> = {
@@ -33,7 +33,7 @@ const routeMeta: Record<string, RouteMeta> = {
   "/about": {
     title: "About - Clawpify",
     description:
-      "Who we are: consignment shop software for inventory, consignor agreements, and listings — and how we're thinking about Shopify UCP and agentic commerce.",
+      "Consignment and resale shop software for inventory, consignor agreements, and multi-channel listings. Background on how we think about evolving storefront and checkout protocols.",
   },
   "/privacy": {
     title: "Privacy Policy - Clawpify",
@@ -41,9 +41,9 @@ const routeMeta: Record<string, RouteMeta> = {
       "How Clawpify collects, uses, and shares personal information when you use our product and website.",
   },
   "/blog": {
-    title: "Blog - Clawpify",
+    title: "Writing - Clawpify",
     description:
-      "Writing on consignment operations, listings, and the shift toward AI-driven commerce.",
+      "Notes on consignment and resale operations, listings, channels, and how product discovery is changing for merchants.",
   },
 };
 
@@ -162,7 +162,7 @@ function buildJsonLd(pathname: string): string {
     schemas.push({
       "@context": "https://schema.org",
       "@type": "Blog",
-      name: "Clawpify Blog",
+      name: "Clawpify Writing",
       description: routeMeta["/blog"]!.description,
       url: `${BASE_URL}/blog`,
       publisher: {
@@ -196,9 +196,9 @@ function buildSeoBlock(pathname: string): string {
     <meta property="og:description" content="${escapeAttr(meta.description)}" />
     <meta property="og:url" content="${canonical}" />
     <meta property="og:image" content="${ogImage}" />
-    <meta property="og:image:width" content="2715" />
-    <meta property="og:image:height" content="2479" />
-    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="1096" />
+    <meta property="og:image:type" content="image/jpeg" />
     <meta property="og:image:alt" content="${escapeAttr(meta.title)}" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:site" content="@clawpify" />
@@ -248,7 +248,7 @@ export function generateLlmsTxt(): string {
 
 ## Summary
 
-Clawpify is consignment and resale **operations software**: inventory across floor, online, and sold states; consignor agreements and payout splits; and drafting with cross-posting of listings to multiple sales channels. It is **not** a Shopify-only "shopping agent" or narrow prompt-optimization widget—think back-office consignment workflows first, with storefront connections as part of the stack.
+Clawpify is consignment and resale **operations software**: inventory across floor, online, and sold states; consignor agreements and payout splits; and drafting with cross-posting of listings to multiple sales channels. It is **not** a dedicated "AI shopping SEO" or prompt-conversion tool, and not a Shopify-only shopping-agent toy—think back-office consignment workflows first, with storefront connections as part of the stack.
 
 ## Integrations
 
@@ -260,7 +260,7 @@ Clawpify is consignment and resale **operations software**: inventory across flo
 
 - ${BASE_URL}/ — Home
 - ${BASE_URL}/about — About
-- ${BASE_URL}/blog — Blog / Writing
+- ${BASE_URL}/blog — Writing
 - ${BASE_URL}/privacy — Privacy policy
 
 ## Contact and social

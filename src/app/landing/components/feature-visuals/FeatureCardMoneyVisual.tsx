@@ -1,7 +1,7 @@
 import { landingPublicImageUrl } from "../../utils/heroFloatAssets";
 
-const dollarsSrc = landingPublicImageUrl("dollars.png");
-const coinSrc = landingPublicImageUrl("product-coin.png");
+const dollarsSrc = landingPublicImageUrl("dollars.webp");
+const coinSrc = landingPublicImageUrl("product-coin.webp");
 
 const driftClass = ["landing-hero-float-bubble--a", "landing-hero-float-bubble--b", "landing-hero-float-bubble--c"] as const;
 

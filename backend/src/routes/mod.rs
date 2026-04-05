@@ -1,6 +1,8 @@
 mod activity;
+mod app_redirect;
 mod consignors;
 mod contracts;
+mod ebay;
 pub mod extractors;
 mod health;
 mod intake;
@@ -19,6 +21,7 @@ use sqlx::PgPool;
 fn core_routes() -> Router<AppState> {
   Router::new()
     .merge(health::routes())
+    .merge(app_redirect::routes())
     .route(
       "/openapi.json",
       get(|| async { axum::Json(health::openapi_spec()) }),
@@ -32,6 +35,7 @@ fn core_routes() -> Router<AppState> {
     .merge(subscribers::routes())
     .merge(llm::routes())
     .merge(s3::routes())
+    .merge(ebay::routes())
 }
 
 /// API tree with [`AppState`] (database pool + future shared deps).
