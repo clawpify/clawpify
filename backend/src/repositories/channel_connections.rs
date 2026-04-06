@@ -19,7 +19,7 @@ pub async fn get_shopify_secrets(
   org_id: &str,
 ) -> Result<Option<ChannelConnectionSecrets>, sqlx::Error> {
   sqlx::query_as::<_, ChannelConnectionSecrets>(
-    r#"SELECT id, org_id, channel, shop_domain, scopes, access_token_ciphertext, access_token_nonce
+    r#"SELECT id, org_id, channel, shop_domain, scopes, access_token_ciphertext, access_token_nonce, token_expires_at
        FROM channel_connections
        WHERE org_id = $1 AND channel = 'shopify'"#,
   )
@@ -72,7 +72,7 @@ pub async fn get_ebay_secrets(
   org_id: &str,
 ) -> Result<Option<ChannelConnectionSecrets>, sqlx::Error> {
   sqlx::query_as::<_, ChannelConnectionSecrets>(
-    r#"SELECT id, org_id, channel, shop_domain, scopes, access_token_ciphertext, access_token_nonce
+    r#"SELECT id, org_id, channel, shop_domain, scopes, access_token_ciphertext, access_token_nonce, token_expires_at
        FROM channel_connections
        WHERE org_id = $1 AND channel = 'ebay'"#,
   )

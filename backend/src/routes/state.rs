@@ -51,11 +51,14 @@ impl AppState {
       }
       Err(crate::crypto::tokens::TokenCryptoError::BadKey) => {
         tracing::warn!(
-          "CHANNEL_ENCRYPTION_KEY is invalid (need exactly 64 hex characters = 32 bytes; run: openssl rand -hex 32)"
+          "CHANNEL_ENCRYPTION_KEY is invalid (need exactly 32 bytes: 64 hex chars, or base64 from openssl rand -base64 32)"
         );
         None
       }
-      Err(crate::crypto::tokens::TokenCryptoError::Encrypt(_)) => None,
+      Err(e) => {
+        tracing::warn!(?e, "TokenCrypto::from_env failed");
+        None
+      }
     };
 
     if ebay_config.is_some() && token_crypto.is_none() {

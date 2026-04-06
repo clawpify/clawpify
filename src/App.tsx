@@ -1,4 +1,5 @@
-import { lazy, Suspense, useLocation } from "react";
+import { lazy, Suspense } from "react";
+import { useLocation } from "react-router-dom";
 import "./index.css";
 import { pathRequiresClerk } from "./lib/path-requires-clerk.ts";
 import { AppShell } from "./shell/AppShell";

@@ -145,8 +145,8 @@ async fn ebay_oauth_callback(
     &state.pool,
     &payload.org_id,
     Some(cfg.oauth_scope.as_str()),
-    &ct,
-    &nonce,
+    ct.as_slice(),
+    nonce.as_slice(),
     Some(exp),
   )
   .await
