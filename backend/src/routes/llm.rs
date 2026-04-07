@@ -35,6 +35,17 @@ pub fn routes() -> Router<AppState> {
     .route_layer(middleware::from_fn(mw::require_internal_auth))
 }
 
+#[utoipa::path(
+  post,
+  path = "/llm/agents",
+  tag = "llm",
+  security(("internal_user" = [])),
+  request_body = LlmAgentsRequest,
+  responses(
+    (status = 200, description = "OK", body = LlmAgentsResponse),
+    (status = 400, description = "Bad request", body = ErrorEnvelope)
+  )
+)]
 async fn llm_agents(
   Json(body): Json<LlmAgentsRequest>,
 ) -> Result<Json<LlmAgentsResponse>, ApiError> {
@@ -56,6 +67,17 @@ async fn llm_agents(
   Ok(Json(LlmAgentsResponse { agents }))
 }
 
+#[utoipa::path(
+  post,
+  path = "/llm/agents/stream",
+  tag = "llm",
+  security(("internal_user" = [])),
+  request_body = LlmAgentsRequest,
+  responses(
+    (status = 200, description = "NDJSON stream (`application/x-ndjson`)", body = LlmStreamLine),
+    (status = 400, description = "Bad request", body = ErrorEnvelope)
+  )
+)]
 async fn llm_agents_stream(
   Json(body): Json<LlmAgentsRequest>,
 ) -> Result<Response, ApiError> {
@@ -91,5 +113,22 @@ async fn llm_agents_stream(
     [(header::CONTENT_TYPE, "application/x-ndjson")],
     Body::from_stream(stream),
   )
-    .into_response())
+  .into_response())
 }
+
+#[derive(utoipa::OpenApi)]
+#[openapi(
+  paths(llm_agents, llm_agents_stream),
+  components(schemas(
+    LlmAgentsRequest,
+    LlmAgentsResponse,
+    LlmStreamLine,
+    crate::llm::types::AgentRunConfig,
+    crate::llm::types::SubAgentSpec,
+    crate::llm::types::AgentJobResult,
+    crate::llm::types::ProviderId,
+    crate::llm::types::WebSearchToolConfig,
+    crate::llm::types::WebSearchUserLocation
+  ))
+)]
+pub struct LlmOpenApiDoc;

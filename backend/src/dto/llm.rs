@@ -1,9 +1,10 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use utoipa::ToSchema;
 
 use crate::llm::types::{AgentJobResult, AgentRunConfig, SubAgentSpec};
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, ToSchema)]
 pub struct LlmAgentsRequest {
   /* run config */
   #[serde(default)]
@@ -12,13 +13,13 @@ pub struct LlmAgentsRequest {
   pub agents: Vec<SubAgentSpec>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct LlmAgentsResponse {
   /* agents results */
   pub agents: Vec<AgentJobResult>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct LlmStreamLine {
   /* agent id */
   pub agent_id: String,

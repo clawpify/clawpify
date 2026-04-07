@@ -99,6 +99,46 @@ const handleImageAsset = async (req: Request) => {
 
 const handleHealth = (req: Request) => forwardPublic(req);
 
+/** Public OpenAPI + Swagger UI (Rust). Needed when traffic hits Bun/ngrok before Rust. */
+const isOpenApiOrSwaggerPath = (pathname: string) =>
+  pathname === "/api/v1/openapi.json" ||
+  pathname === "/api/openapi.json" ||
+  pathname.startsWith("/api/v1/swagger-ui") ||
+  pathname.startsWith("/api/swagger-ui");
+
+/** Scalar API Reference (CDN) — same-origin spec from `/api/v1/openapi.json` (proxied to Rust). */
+const handleApiReference = (req: Request) => {
+  if (req.method !== "GET" && req.method !== "HEAD") {
+    return new Response("Method Not Allowed", { status: 405 });
+  }
+  const specPath = "/api/v1/openapi.json";
+  const scalarConfig = JSON.stringify(
+    {
+      theme: "default",
+      spec: { url: specPath },
+      metaData: { title: "Clawpify API" },
+    },
+    null,
+    2,
+  );
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex" />
+  <title>Clawpify API Reference</title>
+</head>
+<body>
+  <script id="api-reference" type="application/json">${scalarConfig}</script>
+  <script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference"></script>
+</body>
+</html>`;
+  return new Response(html, {
+    headers: { "Content-Type": "text/html; charset=utf-8" },
+  });
+};
+
 const handleWaitlistPost = async (req: Request) => {
   const clientIP = serverRef?.requestIP(req)?.address ?? "unknown";
   try {
@@ -171,12 +211,51 @@ const AUTH_PROXY_PREFIXES = [
   "/api/s3",
 ] as const;
 
+/** eBay OAuth callback + SPA hop redirects (Rust `/api/v1/*` and legacy `/api/*`). */
+function isEbayOauthPublicPath(pathname: string): boolean {
+  if (
+    pathname === "/api/v1/oauth/ebay/callback" ||
+    pathname.startsWith("/api/v1/go/")
+  ) {
+    return true;
+  }
+  if (
+    pathname === "/api/oauth/ebay/callback" ||
+    pathname.startsWith("/api/go/")
+  ) {
+    return true;
+  }
+  return false;
+}
+
+/** Protected eBay OAuth GETs (Clerk Bearer via BFF). */
+function isEbayOauthAuthedGetPath(pathname: string): boolean {
+  return (
+    pathname === "/api/v1/oauth/ebay/start" ||
+    pathname === "/api/oauth/ebay/start" ||
+    pathname === "/api/v1/oauth/ebay/status" ||
+    pathname === "/api/oauth/ebay/status"
+  );
+}
+
 const server = serve({
   port,
   routes,
 
   async fetch(req) {
     const pathname = pathnameOf(req);
+    if (pathname === "/api-reference" || pathname === "/docs/api") {
+      return handleApiReference(req);
+    }
+    if (isOpenApiOrSwaggerPath(pathname)) {
+      return forwardPublic(req);
+    }
+    if (isEbayOauthPublicPath(pathname) && (req.method === "GET" || req.method === "HEAD")) {
+      return forwardPublic(req);
+    }
+    if (isEbayOauthAuthedGetPath(pathname) && (req.method === "GET" || req.method === "HEAD")) {
+      return authProxyHandler(pathnameOf)(req);
+    }
     if (AUTH_PROXY_PREFIXES.some((p) => pathname.startsWith(p))) {
       return authProxyHandler(pathnameOf)(req);
     }

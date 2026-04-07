@@ -1,7 +1,8 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use utoipa::ToSchema;
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ProviderId {
   /// JSON uses `"openai"` (not `open_a_i`, which raw snake_case would produce).
@@ -9,13 +10,13 @@ pub enum ProviderId {
   OpenAI,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
 pub struct AgentRunConfig {
   pub default_provider: ProviderId,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct WebSearchUserLocation {  
+#[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
+pub struct WebSearchUserLocation {
   #[serde(rename = "type")]
   pub location_type: String,
   /* country of the location */
@@ -29,7 +30,7 @@ pub struct WebSearchUserLocation {
 }
 
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
 pub struct WebSearchToolConfig {
   /* allow web search to be used */
   pub allowed_domains: Option<Vec<String>>,
@@ -39,7 +40,7 @@ pub struct WebSearchToolConfig {
   pub external_web_access: Option<bool>,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
 pub struct SubAgentSpec {
   /* agent name (for debugging) */
   pub id: String,
@@ -60,7 +61,7 @@ pub struct SubAgentSpec {
   pub order: Option<usize>,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
 pub struct AgentJobResult {
   pub id: String,
   pub provider: ProviderId,

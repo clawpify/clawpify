@@ -7,6 +7,7 @@ use axum::{
 };
 use serde::Deserialize;
 use sqlx::PgPool;
+use utoipa::ToSchema;
 use uuid::Uuid;
 
 use super::extractors::{OrgId, UserId};
@@ -15,7 +16,7 @@ use crate::dto::listings::{CreateListingRequest, UpdateListingRequest};
 use crate::error::{self, ApiError};
 use crate::middleware as mw;
 use crate::models::consignment_listing::ConsignmentListing;
-use crate::models::stored_image::ListingImageWithUrl;
+use crate::models::stored_image::{ListingImageWithUrl, StoredImage};
 use crate::repositories::contracts as contract_repo;
 use crate::repositories::{listings, pagination::Pagination, stored_images};
 use super::s3::{storage_key_owned_by_user, stored_image_proxy_path};
@@ -30,9 +31,9 @@ struct ListListingsQuery {
   offset: Option<i64>,
 }
 
-#[derive(Deserialize)]
-struct AttachImagesBody {
-  storage_keys: Vec<String>,
+#[derive(Deserialize, ToSchema)]
+pub struct AttachImagesBody {
+  pub storage_keys: Vec<String>,
 }
 
 #[derive(Deserialize)]
@@ -138,6 +139,22 @@ async fn align_contract_consignor_update(
   }
 }
 
+#[utoipa::path(
+  get,
+  path = "/listings",
+  tag = "listings",
+  security(("internal_user" = []), ("internal_org" = [])),
+  params(
+    ("status" = Option<String>, Query, description = "Filter by listing status"),
+    ("limit" = Option<i64>, Query, description = "Page size"),
+    ("offset" = Option<i64>, Query, description = "Page offset")
+  ),
+  responses(
+    (status = 200, description = "OK", body = [ConsignmentListing]),
+    (status = 401, description = "Unauthorized", body = ErrorEnvelope),
+    (status = 400, description = "Bad request", body = ErrorEnvelope)
+  )
+)]
 async fn list_listings(
   State(state): State<AppState>,
   OrgId(org_id): OrgId,
@@ -151,6 +168,18 @@ async fn list_listings(
   Ok(Json(rows))
 }
 
+#[utoipa::path(
+  post,
+  path = "/listings",
+  tag = "listings",
+  security(("internal_user" = []), ("internal_org" = [])),
+  request_body = CreateListingRequest,
+  responses(
+    (status = 201, description = "Created", body = ConsignmentListing),
+    (status = 401, description = "Unauthorized", body = ErrorEnvelope),
+    (status = 400, description = "Bad request", body = ErrorEnvelope)
+  )
+)]
 async fn create_listing(
   State(state): State<AppState>,
   OrgId(org_id): OrgId,
@@ -173,6 +202,17 @@ async fn create_listing(
   Ok((StatusCode::CREATED, Json(row)))
 }
 
+#[utoipa::path(
+  get,
+  path = "/listings/{id}",
+  tag = "listings",
+  security(("internal_user" = []), ("internal_org" = [])),
+  params(("id" = Uuid, Path, description = "Listing id")),
+  responses(
+    (status = 200, description = "OK", body = ConsignmentListing),
+    (status = 404, description = "Not found", body = ErrorEnvelope)
+  )
+)]
 async fn get_listing(
   State(state): State<AppState>,
   OrgId(org_id): OrgId,
@@ -185,6 +225,18 @@ async fn get_listing(
   Ok(Json(row))
 }
 
+#[utoipa::path(
+  patch,
+  path = "/listings/{id}",
+  tag = "listings",
+  security(("internal_user" = []), ("internal_org" = [])),
+  params(("id" = Uuid, Path, description = "Listing id")),
+  request_body = UpdateListingRequest,
+  responses(
+    (status = 200, description = "OK", body = ConsignmentListing),
+    (status = 404, description = "Not found", body = ErrorEnvelope)
+  )
+)]
 async fn update_listing(
   State(state): State<AppState>,
   OrgId(org_id): OrgId,
@@ -207,6 +259,17 @@ async fn update_listing(
   Ok(Json(row))
 }
 
+#[utoipa::path(
+  delete,
+  path = "/listings/{id}",
+  tag = "listings",
+  security(("internal_user" = []), ("internal_org" = [])),
+  params(("id" = Uuid, Path, description = "Listing id")),
+  responses(
+    (status = 200, description = "Deleted", body = serde_json::Value),
+    (status = 404, description = "Not found", body = ErrorEnvelope)
+  )
+)]
 async fn delete_listing(
   State(state): State<AppState>,
   OrgId(org_id): OrgId,
@@ -221,6 +284,17 @@ async fn delete_listing(
   Ok(Json(serde_json::json!({ "ok": true })))
 }
 
+#[utoipa::path(
+  get,
+  path = "/listings/{id}/images",
+  tag = "listings",
+  security(("internal_user" = []), ("internal_org" = [])),
+  params(("id" = Uuid, Path, description = "Listing id")),
+  responses(
+    (status = 200, description = "OK", body = [ListingImageWithUrl]),
+    (status = 404, description = "Not found", body = ErrorEnvelope)
+  )
+)]
 async fn list_listing_images(
   State(state): State<AppState>,
   OrgId(org_id): OrgId,
@@ -243,6 +317,19 @@ async fn list_listing_images(
   Ok(Json(out))
 }
 
+#[utoipa::path(
+  post,
+  path = "/listings/{id}/images",
+  tag = "listings",
+  security(("internal_user" = []), ("internal_org" = [])),
+  params(("id" = Uuid, Path, description = "Listing id")),
+  request_body = AttachImagesBody,
+  responses(
+    (status = 204, description = "Attached"),
+    (status = 400, description = "Bad request", body = ErrorEnvelope),
+    (status = 404, description = "Not found", body = ErrorEnvelope)
+  )
+)]
 async fn attach_listing_images(
   State(state): State<AppState>,
   OrgId(org_id): OrgId,
@@ -281,6 +368,20 @@ async fn attach_listing_images(
   Ok(StatusCode::NO_CONTENT)
 }
 
+#[utoipa::path(
+  delete,
+  path = "/listings/{id}/images",
+  tag = "listings",
+  security(("internal_user" = []), ("internal_org" = [])),
+  params(
+    ("id" = Uuid, Path, description = "Listing id"),
+    ("key" = String, Query, description = "Storage key to detach")
+  ),
+  responses(
+    (status = 204, description = "Detached"),
+    (status = 404, description = "Not found", body = ErrorEnvelope)
+  )
+)]
 async fn detach_listing_image(
   State(state): State<AppState>,
   OrgId(org_id): OrgId,
@@ -309,3 +410,27 @@ async fn detach_listing_image(
   }
   Ok(StatusCode::NO_CONTENT)
 }
+
+#[derive(utoipa::OpenApi)]
+#[openapi(
+  paths(
+    list_listings,
+    create_listing,
+    get_listing,
+    update_listing,
+    delete_listing,
+    list_listing_images,
+    attach_listing_images,
+    detach_listing_image
+  ),
+  components(schemas(
+    ConsignmentListing,
+    CreateListingRequest,
+    UpdateListingRequest,
+    AttachImagesBody,
+    ListingImageWithUrl,
+    StoredImage
+  ))
+)]
+pub struct ListingsOpenApiDoc;
+

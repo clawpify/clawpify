@@ -6,6 +6,7 @@ use axum::{
   Router,
 };
 use serde::Deserialize;
+use utoipa::ToSchema;
 
 use super::extractors::OrgId;
 use super::state::AppState;
@@ -37,12 +38,12 @@ fn spa_redirect_origin(state: &AppState) -> Option<String> {
     .or_else(|| origins.first().cloned())
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, ToSchema)]
 pub struct EbayCallbackQuery {
-  code: Option<String>,
-  state: Option<String>,
-  error: Option<String>,
-  error_description: Option<String>,
+  pub code: Option<String>,
+  pub state: Option<String>,
+  pub error: Option<String>,
+  pub error_description: Option<String>,
 }
 
 pub fn routes() -> Router<AppState> {
@@ -55,6 +56,17 @@ pub fn routes() -> Router<AppState> {
   protected.merge(public)
 }
 
+#[utoipa::path(
+  get,
+  path = "/oauth/ebay/start",
+  tag = "ebay",
+  security(("internal_user" = []), ("internal_org" = [])),
+  responses(
+    (status = 307, description = "Redirect to eBay authorization"),
+    (status = 400, description = "Bad request", body = ErrorEnvelope),
+    (status = 500, description = "Misconfigured", body = ErrorEnvelope)
+  )
+)]
 async fn ebay_oauth_start(
   State(state): State<AppState>,
   org: OrgId,
@@ -73,6 +85,22 @@ async fn ebay_oauth_start(
   Ok(Redirect::temporary(&url).into_response())
 }
 
+#[utoipa::path(
+  get,
+  path = "/oauth/ebay/callback",
+  tag = "ebay",
+  params(
+    ("code" = Option<String>, Query, description = "Authorization code from eBay"),
+    ("state" = Option<String>, Query, description = "State token from start URL"),
+    ("error" = Option<String>, Query, description = "OAuth error code"),
+    ("error_description" = Option<String>, Query, description = "OAuth error description")
+  ),
+  responses(
+    (status = 307, description = "Redirect to configured success URL or SPA"),
+    (status = 400, description = "Bad request", body = ErrorEnvelope),
+    (status = 502, description = "Token exchange failed", body = ErrorEnvelope)
+  )
+)]
 async fn ebay_oauth_callback(
   State(state): State<AppState>,
   Query(q): Query<EbayCallbackQuery>,
@@ -166,3 +194,7 @@ fn map_oauth_err(e: EbayOAuthError) -> ApiError {
     _ => error::bad_gateway("ebay token request failed"),
   }
 }
+
+#[derive(utoipa::OpenApi)]
+#[openapi(paths(ebay_oauth_start, ebay_oauth_callback), components(schemas(EbayCallbackQuery)))]
+pub struct EbayOpenApiDoc;

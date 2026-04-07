@@ -85,7 +85,8 @@ pub async fn refresh_access_token(
 }
 
 pub fn authorize_url(cfg: &EbayConfig, state: &str) -> String {
-  let scope_enc = urlencoding::encode(&cfg.oauth_scope);
+  // eBay rejects `scope` when spaces are encoded as `+` in the query string; use `%20` between scope URLs.
+  let scope_enc = urlencoding::encode(&cfg.oauth_scope).replace('+', "%20");
   format!(
     "{}?client_id={}&redirect_uri={}&response_type=code&scope={}&state={}",
     cfg.auth_authorize_url(),

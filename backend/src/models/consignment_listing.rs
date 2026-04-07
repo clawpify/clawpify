@@ -1,7 +1,8 @@
 use serde::Serialize;
+use utoipa::ToSchema;
 use uuid::Uuid;
 
-#[derive(Serialize, sqlx::FromRow)]
+#[derive(Serialize, sqlx::FromRow, ToSchema)]
 pub struct ConsignmentListing {
   /* id: The ID of the consignment listing. */
   pub id: Uuid,

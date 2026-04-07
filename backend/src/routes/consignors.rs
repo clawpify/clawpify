@@ -39,6 +39,20 @@ pub fn routes() -> Router<AppState> {
     .route_layer(middleware::from_fn(mw::require_internal_auth))
 }
 
+#[utoipa::path(
+  get,
+  path = "/consignors",
+  tag = "consignors",
+  security(("internal_user" = []), ("internal_org" = [])),
+  params(
+    ("limit" = Option<i64>, Query, description = "Page size"),
+    ("offset" = Option<i64>, Query, description = "Offset")
+  ),
+  responses(
+    (status = 200, description = "OK", body = [Consignor]),
+    (status = 401, description = "Unauthorized", body = ErrorEnvelope)
+  )
+)]
 async fn list_consignors(
   State(state): State<AppState>,
   OrgId(org_id): OrgId,
@@ -55,6 +69,17 @@ fn normalize_phone_e164(raw: &str) -> Result<String, ApiError> {
   parse_e164(raw).map_err(error::bad_request)
 }
 
+#[utoipa::path(
+  post,
+  path = "/consignors",
+  tag = "consignors",
+  security(("internal_user" = []), ("internal_org" = [])),
+  request_body = CreateConsignorRequest,
+  responses(
+    (status = 201, description = "Created", body = Consignor),
+    (status = 400, description = "Bad request", body = ErrorEnvelope)
+  )
+)]
 async fn create_consignor(
   State(state): State<AppState>,
   OrgId(org_id): OrgId,
@@ -75,6 +100,17 @@ async fn create_consignor(
   Ok((StatusCode::CREATED, Json(row)))
 }
 
+#[utoipa::path(
+  get,
+  path = "/consignors/{id}",
+  tag = "consignors",
+  security(("internal_user" = []), ("internal_org" = [])),
+  params(("id" = Uuid, Path, description = "Consignor id")),
+  responses(
+    (status = 200, description = "OK", body = Consignor),
+    (status = 404, description = "Not found", body = ErrorEnvelope)
+  )
+)]
 async fn get_consignor(
   State(state): State<AppState>,
   OrgId(org_id): OrgId,
@@ -87,6 +123,18 @@ async fn get_consignor(
   Ok(Json(row))
 }
 
+#[utoipa::path(
+  patch,
+  path = "/consignors/{id}",
+  tag = "consignors",
+  security(("internal_user" = []), ("internal_org" = [])),
+  params(("id" = Uuid, Path, description = "Consignor id")),
+  request_body = UpdateConsignorRequest,
+  responses(
+    (status = 200, description = "OK", body = Consignor),
+    (status = 404, description = "Not found", body = ErrorEnvelope)
+  )
+)]
 async fn update_consignor(
   State(state): State<AppState>,
   OrgId(org_id): OrgId,
@@ -112,6 +160,18 @@ async fn update_consignor(
   Ok(Json(row))
 }
 
+#[utoipa::path(
+  delete,
+  path = "/consignors/{id}",
+  tag = "consignors",
+  security(("internal_user" = []), ("internal_org" = [])),
+  params(("id" = Uuid, Path, description = "Consignor id")),
+  responses(
+    (status = 200, description = "Deleted", body = serde_json::Value),
+    (status = 404, description = "Not found", body = ErrorEnvelope),
+    (status = 409, description = "Conflict", body = ErrorEnvelope)
+  )
+)]
 async fn delete_consignor(
   State(state): State<AppState>,
   OrgId(org_id): OrgId,
@@ -133,3 +193,20 @@ async fn delete_consignor(
   }
   Ok(Json(serde_json::json!({ "ok": true })))
 }
+
+#[derive(utoipa::OpenApi)]
+#[openapi(
+  paths(
+    list_consignors,
+    create_consignor,
+    get_consignor,
+    update_consignor,
+    delete_consignor
+  ),
+  components(schemas(
+    Consignor,
+    CreateConsignorRequest,
+    UpdateConsignorRequest
+  ))
+)]
+pub struct ConsignorsOpenApiDoc;

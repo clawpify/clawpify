@@ -73,6 +73,17 @@ fn waitlist_max_signups_per_ip_per_day() -> i64 {
     .unwrap_or(5)
 }
 
+#[utoipa::path(
+  post,
+  path = "/waitlist",
+  tag = "subscribers",
+  request_body = SubscriberRequest,
+  responses(
+    (status = 200, description = "OK", body = SubscriberResponse),
+    (status = 400, description = "Bad request", body = ErrorEnvelope),
+    (status = 429, description = "Rate limited", body = ErrorEnvelope)
+  )
+)]
 async fn subscribe(
   State(state): State<AppState>,
   ClientIpAddress(ip): ClientIpAddress,
@@ -138,3 +149,10 @@ async fn subscribe(
     already_subscribed: if result.is_none() { Some(true) } else { None },
   }))
 }
+
+#[derive(utoipa::OpenApi)]
+#[openapi(
+  paths(subscribe),
+  components(schemas(SubscriberRequest, SubscriberResponse))
+)]
+pub struct SubscribersOpenApiDoc;

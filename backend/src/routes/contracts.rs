@@ -114,6 +114,22 @@ pub fn routes() -> Router<AppState> {
     .route_layer(middleware::from_fn(mw::require_internal_auth))
 }
 
+#[utoipa::path(
+  get,
+  path = "/contracts",
+  tag = "contracts",
+  security(("internal_user" = []), ("internal_org" = [])),
+  params(
+    ("consignor_id" = Option<Uuid>, Query, description = "Filter by consignor"),
+    ("status" = Option<String>, Query, description = "active | closed | expired"),
+    ("limit" = Option<i64>, Query, description = "Page size"),
+    ("offset" = Option<i64>, Query, description = "Page offset")
+  ),
+  responses(
+    (status = 200, description = "OK", body = [Contract]),
+    (status = 400, description = "Bad request", body = ErrorEnvelope)
+  )
+)]
 async fn list_contracts(
   State(state): State<AppState>,
   OrgId(org_id): OrgId,
@@ -140,6 +156,23 @@ async fn list_contracts(
   Ok(Json(rows))
 }
 
+#[utoipa::path(
+  post,
+  path = "/contracts",
+  tag = "contracts",
+  security(("internal_user" = []), ("internal_org" = [])),
+  params((
+    "Idempotency-Key" = Option<String>,
+    Header,
+    description = "Optional idempotency key"
+  )),
+  request_body = ContractCreateRequest,
+  responses(
+    (status = 201, description = "Created", body = Contract),
+    (status = 400, description = "Bad request", body = ErrorEnvelope),
+    (status = 404, description = "Not found", body = ErrorEnvelope)
+  )
+)]
 async fn create_contract(
   State(state): State<AppState>,
   OrgId(org_id): OrgId,
@@ -223,6 +256,17 @@ async fn create_contract_idempotent(
   Ok((StatusCode::CREATED, Json(row)))
 }
 
+#[utoipa::path(
+  get,
+  path = "/contracts/{id}",
+  tag = "contracts",
+  security(("internal_user" = []), ("internal_org" = [])),
+  params(("id" = Uuid, Path, description = "Contract id")),
+  responses(
+    (status = 200, description = "OK", body = Contract),
+    (status = 404, description = "Not found", body = ErrorEnvelope)
+  )
+)]
 async fn get_contract(
   State(state): State<AppState>,
   OrgId(org_id): OrgId,
@@ -232,6 +276,18 @@ async fn get_contract(
   Ok(Json(row))
 }
 
+#[utoipa::path(
+  patch,
+  path = "/contracts/{id}",
+  tag = "contracts",
+  security(("internal_user" = []), ("internal_org" = [])),
+  params(("id" = Uuid, Path, description = "Contract id")),
+  request_body = ContractPatchRequest,
+  responses(
+    (status = 200, description = "OK", body = Contract),
+    (status = 404, description = "Not found", body = ErrorEnvelope)
+  )
+)]
 async fn patch_contract(
   State(state): State<AppState>,
   OrgId(org_id): OrgId,
@@ -250,6 +306,17 @@ async fn patch_contract(
   Ok(Json(row))
 }
 
+#[utoipa::path(
+  get,
+  path = "/contracts/{id}/payouts",
+  tag = "contracts",
+  security(("internal_user" = []), ("internal_org" = [])),
+  params(("id" = Uuid, Path, description = "Contract id")),
+  responses(
+    (status = 200, description = "OK", body = [ContractPayout]),
+    (status = 404, description = "Not found", body = ErrorEnvelope)
+  )
+)]
 async fn list_payouts(
   State(state): State<AppState>,
   OrgId(org_id): OrgId,
@@ -263,6 +330,26 @@ async fn list_payouts(
   Ok(Json(rows))
 }
 
+#[utoipa::path(
+  post,
+  path = "/contracts/{id}/payouts",
+  tag = "contracts",
+  security(("internal_user" = []), ("internal_org" = [])),
+  params(
+    ("id" = Uuid, Path, description = "Contract id"),
+    (
+      "Idempotency-Key" = Option<String>,
+      Header,
+      description = "Optional idempotency key"
+    )
+  ),
+  request_body = PayoutCreateRequest,
+  responses(
+    (status = 201, description = "Created", body = ContractPayout),
+    (status = 400, description = "Bad request", body = ErrorEnvelope),
+    (status = 404, description = "Not found", body = ErrorEnvelope)
+  )
+)]
 async fn create_payout(
   State(state): State<AppState>,
   OrgId(org_id): OrgId,
@@ -382,6 +469,17 @@ async fn create_payout_idempotent(
   Ok((StatusCode::CREATED, Json(row)))
 }
 
+#[utoipa::path(
+  get,
+  path = "/contracts/{id}/summary",
+  tag = "contracts",
+  security(("internal_user" = []), ("internal_org" = [])),
+  params(("id" = Uuid, Path, description = "Contract id")),
+  responses(
+    (status = 200, description = "OK", body = contract_repo::ContractSummary),
+    (status = 404, description = "Not found", body = ErrorEnvelope)
+  )
+)]
 async fn contract_summary(
   State(state): State<AppState>,
   OrgId(org_id): OrgId,
@@ -394,6 +492,19 @@ async fn contract_summary(
   Ok(Json(row))
 }
 
+#[utoipa::path(
+  post,
+  path = "/contracts/{id}/run-expiry-rules",
+  tag = "contracts",
+  security(("internal_user" = []), ("internal_org" = [])),
+  params(("id" = Uuid, Path, description = "Contract id")),
+  request_body = RunExpiryRequest,
+  responses(
+    (status = 200, description = "OK", body = contract_repo::RunExpiryOutcome),
+    (status = 400, description = "Bad request", body = ErrorEnvelope),
+    (status = 404, description = "Not found", body = ErrorEnvelope)
+  )
+)]
 async fn run_expiry_rules(
   State(state): State<AppState>,
   OrgId(org_id): OrgId,
@@ -411,3 +522,29 @@ async fn run_expiry_rules(
     .ok_or_else(|| error::not_found(CONTRACT_NOT_FOUND))?;
   Ok(Json(outcome))
 }
+
+#[derive(utoipa::OpenApi)]
+#[openapi(
+  paths(
+    list_contracts,
+    create_contract,
+    get_contract,
+    patch_contract,
+    list_payouts,
+    create_payout,
+    contract_summary,
+    run_expiry_rules
+  ),
+  components(schemas(
+    Contract,
+    ContractPayout,
+    ContractCreateRequest,
+    ContractPatchRequest,
+    PayoutCreateRequest,
+    RunExpiryRequest,
+    contract_repo::ContractSummary,
+    contract_repo::RunExpiryOutcome,
+    contract_repo::RunExpiryDetail
+  ))
+)]
+pub struct ContractsOpenApiDoc;

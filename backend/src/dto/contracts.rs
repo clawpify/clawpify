@@ -1,8 +1,9 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 use uuid::Uuid;
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, ToSchema)]
 pub struct ContractCreateRequest {
   /* consignor_id: The ID of the consignor. */
   pub consignor_id: Uuid,
@@ -47,7 +48,7 @@ fn default_donation_cutoff() -> i64 {
   5000
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, ToSchema)]
 pub struct ContractPatchRequest {
   /* status: The status of the contract. */
   pub status: Option<String>,
@@ -60,7 +61,7 @@ pub struct ContractPatchRequest {
   pub terms_version: Option<String>,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, ToSchema)]
 pub struct PayoutCreateRequest {
   /* amount_cents: The amount of the payout in cents. */
   pub amount_cents: i64,
@@ -70,7 +71,7 @@ pub struct PayoutCreateRequest {
   pub payout_index: i16,
 }
 
-#[derive(Debug, Deserialize, Default)]
+#[derive(Debug, Deserialize, Default, ToSchema)]
 pub struct RunExpiryRequest {
   /* as_of: The date and time to run the expiry rules as of. */
   pub as_of: Option<DateTime<Utc>>,

@@ -1,6 +1,4 @@
 use axum::{extract::State, http::StatusCode, routing::get, Json, Router};
-use utoipa::OpenApi;
-
 use super::state::AppState;
 
 #[derive(serde::Serialize, utoipa::ToSchema)]
@@ -49,23 +47,11 @@ pub async fn health_check(State(state): State<AppState>) -> (StatusCode, Json<He
 
 #[derive(utoipa::OpenApi)]
 #[openapi(
-  info(
-    title = "Clawpify API",
-    version = "1.0.0",
-    description = "Versioned HTTP API. Authenticated routes expect internal proxy headers (`X-Internal-User-Id`, `X-Internal-Org-Id`). Integration webhooks use their own verification."
-  ),
   paths(health_check),
   components(schemas(HealthResponse)),
-  tags(
-    (name = "meta", description = "Health and API metadata"),
-  ),
-  servers((url = "/api/v1", description = "API version 1")),
+  tags((name = "meta", description = "Health and API metadata"))
 )]
-pub struct ApiDoc;
-
-pub fn openapi_spec() -> utoipa::openapi::OpenApi {
-  ApiDoc::openapi()
-}
+pub struct HealthOpenApiDoc;
 
 pub fn routes() -> Router<AppState> {
   Router::new().route("/health", get(health_check))

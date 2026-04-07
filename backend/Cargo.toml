@@ -35,6 +35,8 @@ base64 = "0.22"
 hex = "0.4"
 utoipa = { version = "4.2", features = ["chrono", "uuid"] }
 aws-sdk-s3 = { version = "=1.96.0", default-features = false, features = ["rt-tokio", "rustls"] }
+# 6.x matches utoipa 4.2 + axum 0.7 (9.x pulls utoipa 5 / axum 0.8).
+utoipa-swagger-ui = { version = "6.0", default-features = false, features = ["axum"] }
 
 # tower: integration tests only (tower::ServiceExt in tests/api_crud.rs); production uses tower-http.
 [dev-dependencies]

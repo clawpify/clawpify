@@ -9,6 +9,7 @@ mod health;
 mod intake;
 mod listings;
 mod llm;
+mod openapi;
 mod state;
 mod subscribers;
 mod webhooks;
@@ -16,18 +17,16 @@ mod s3;
 
 pub use state::AppState;
 
-use axum::{routing::get, Router};
+use axum::Router;
 use sqlx::PgPool;
+use utoipa_swagger_ui::SwaggerUi;
 
 fn core_routes() -> Router<AppState> {
   Router::new()
     .merge(health::routes())
     .merge(spa_hop::routes())
     .merge(app_redirect::routes())
-    .route(
-      "/openapi.json",
-      get(|| async { axum::Json(health::openapi_spec()) }),
-    )
+    .merge(SwaggerUi::new("/swagger-ui").url("/openapi.json", openapi::openapi_spec()))
     .merge(listings::routes())
     .merge(consignors::routes())
     .merge(contracts::routes())

@@ -3,6 +3,8 @@
 mod ebay;
 pub(crate) mod util;
 
+pub use ebay::SpaHopOpenApiDoc;
+
 use axum::Router;
 
 use super::state::AppState;

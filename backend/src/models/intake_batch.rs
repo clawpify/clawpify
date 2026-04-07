@@ -1,9 +1,9 @@
-use chrono::{DateTime, Utc}; 
-use serde::Serialize; 
+use chrono::{DateTime, Utc};
+use serde::Serialize;
+use utoipa::ToSchema;
 use uuid::Uuid;
 
-
-#[derive(Serialize, sqlx::FromRow)]
+#[derive(Serialize, sqlx::FromRow, ToSchema)]
 pub struct IntakeBatch {
   /* id: The ID of the intake batch. */
   pub id: Uuid,

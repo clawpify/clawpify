@@ -1,6 +1,7 @@
 use serde::Deserialize;
+use utoipa::ToSchema;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, ToSchema)]
 pub struct CreateConsignorRequest {
   /* display_name: The display name of the consignor. */
   pub display_name: String,
@@ -14,7 +15,7 @@ pub struct CreateConsignorRequest {
   pub default_payout_method: Option<String>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, ToSchema)]
 pub struct UpdateConsignorRequest {
   /* display_name: The display name of the consignor. */
   pub display_name: Option<String>,

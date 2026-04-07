@@ -37,6 +37,21 @@ struct ListBatchesQuery {
   offset: Option<i64>,
 }
 
+#[utoipa::path(
+  get,
+  path = "/intake/batches",
+  tag = "intake",
+  security(("internal_user" = []), ("internal_org" = [])),
+  params(
+    ("consignor_id" = Option<Uuid>, Query, description = "Filter by consignor"),
+    ("limit" = Option<i64>, Query, description = "Page size"),
+    ("offset" = Option<i64>, Query, description = "Page offset")
+  ),
+  responses(
+    (status = 200, description = "OK", body = [IntakeBatch]),
+    (status = 401, description = "Unauthorized", body = ErrorEnvelope)
+  )
+)]
 async fn list_batches(
   State(state): State<AppState>,
   OrgId(org_id): OrgId,
@@ -50,6 +65,17 @@ async fn list_batches(
   Ok(Json(rows))
 }
 
+#[utoipa::path(
+  post,
+  path = "/intake/batches",
+  tag = "intake",
+  security(("internal_user" = []), ("internal_org" = [])),
+  request_body = IntakeBatchCreateRequest,
+  responses(
+    (status = 201, description = "Created", body = IntakeBatch),
+    (status = 400, description = "Bad request", body = ErrorEnvelope)
+  )
+)]
 async fn create_batch(
   State(state): State<AppState>,
   OrgId(org_id): OrgId,
@@ -64,6 +90,16 @@ async fn create_batch(
   Ok((StatusCode::CREATED, Json(row)))
 }
 
+#[utoipa::path(
+  get,
+  path = "/intake/phone-binding",
+  tag = "intake",
+  security(("internal_user" = []), ("internal_org" = [])),
+  responses(
+    (status = 200, description = "OK", body = [PhoneBindingResponse]),
+    (status = 401, description = "Unauthorized", body = ErrorEnvelope)
+  )
+)]
 async fn get_bindings(
   State(state): State<AppState>,
   OrgId(org_id): OrgId,
@@ -74,6 +110,18 @@ async fn get_bindings(
   Ok(Json(rows))
 }
 
+#[utoipa::path(
+  put,
+  path = "/intake/phone-binding",
+  tag = "intake",
+  security(("internal_user" = []), ("internal_org" = [])),
+  request_body = UpsertPhoneBindingRequest,
+  responses(
+    (status = 200, description = "OK", body = PhoneBindingResponse),
+    (status = 400, description = "Bad request", body = ErrorEnvelope),
+    (status = 409, description = "Conflict", body = ErrorEnvelope)
+  )
+)]
 async fn put_binding(
   State(state): State<AppState>,
   OrgId(org_id): OrgId,
@@ -115,6 +163,16 @@ async fn put_binding(
   Ok(Json(row))
 }
 
+#[utoipa::path(
+  delete,
+  path = "/intake/phone-binding",
+  tag = "intake",
+  security(("internal_user" = []), ("internal_org" = [])),
+  responses(
+    (status = 200, description = "OK", body = serde_json::Value),
+    (status = 404, description = "Not found", body = ErrorEnvelope)
+  )
+)]
 async fn delete_binding(
   State(state): State<AppState>,
   OrgId(org_id): OrgId,
@@ -129,3 +187,21 @@ async fn delete_binding(
   }
   Ok(Json(serde_json::json!({ "ok": true })))
 }
+
+#[derive(utoipa::OpenApi)]
+#[openapi(
+  paths(
+    list_batches,
+    create_batch,
+    get_bindings,
+    put_binding,
+    delete_binding
+  ),
+  components(schemas(
+    IntakeBatch,
+    IntakeBatchCreateRequest,
+    PhoneBindingResponse,
+    UpsertPhoneBindingRequest
+  ))
+)]
+pub struct IntakeOpenApiDoc;
