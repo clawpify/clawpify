@@ -33,11 +33,7 @@ export const clerkAppearance = {
   signIn: {
     elements: {
       rootBox: "w-full max-w-xl",
-    },
-  },
-  signUp: {
-    elements: {
-      rootBox: "w-full max-w-xl",
+      footerAction: "hidden",
     },
   },
 };

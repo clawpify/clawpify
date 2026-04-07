@@ -1,7 +1,7 @@
 import { AuthenticatedImg } from "../../../../../lib/authenticatedMedia";
 import type { ConsignmentListingDto } from "../types";
 import { useListingStoredImageThumb } from "../hooks/useListingStoredImageThumb";
-import { formatListingPrice } from "../utils/formatListingPrice";
+import { formatListingPrice } from "../utils/generalFns";
 import { PackageIcon } from "../../../../../icons/workspace-icons";
 
 type Props = {

@@ -1,4 +1,4 @@
-import { suggestListingSku } from "../app/app/modules/products/utils/suggestListingSku";
+import { suggestListingSku } from "../app/app/modules/products/utils/generalFns";
 import { requireAuth, AuthError } from "../lib/auth";
 import { messageFromErrorBody } from "../lib/messageFromErrorBody";
 import { proxyToRust } from "../utils/networkFns";

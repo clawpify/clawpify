@@ -11,4 +11,7 @@ export type CreateListingBody = Record<string, unknown>;
 export type UpdateListingBody = {
   title?: string;
   description_html?: string;
+  tags?: string[];
+  price_cents?: number;
+  sku?: string;
 };

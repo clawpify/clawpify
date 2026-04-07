@@ -1,8 +1,9 @@
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
+use utoipa::ToSchema;
 use uuid::Uuid;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, ToSchema)]
 pub struct IntakeBatchCreateRequest {
   /* box_count: The number of boxes in the batch. */
   pub box_count: i32,

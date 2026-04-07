@@ -1,7 +1,8 @@
 use serde::Deserialize;
+use utoipa::ToSchema;
 use uuid::Uuid;
 
-#[derive(Deserialize)]
+#[derive(Deserialize, ToSchema)]
 pub struct LogActivityRequest {
   /* store ID */
   pub store_id: Option<Uuid>,

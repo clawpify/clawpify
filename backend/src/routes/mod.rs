@@ -1,11 +1,15 @@
 mod activity;
+mod app_redirect;
+mod spa_hop;
 mod consignors;
 mod contracts;
+mod ebay;
 pub mod extractors;
 mod health;
 mod intake;
 mod listings;
 mod llm;
+mod openapi;
 mod state;
 mod subscribers;
 mod webhooks;
@@ -13,16 +17,18 @@ mod s3;
 
 pub use state::AppState;
 
-use axum::{routing::get, Router};
+use axum::{middleware::from_fn, Router};
 use sqlx::PgPool;
+use utoipa_swagger_ui::SwaggerUi;
+
+use crate::middleware;
 
 fn core_routes() -> Router<AppState> {
   Router::new()
     .merge(health::routes())
-    .route(
-      "/openapi.json",
-      get(|| async { axum::Json(health::openapi_spec()) }),
-    )
+    .merge(spa_hop::routes())
+    .merge(app_redirect::routes())
+    .merge(SwaggerUi::new("/swagger-ui").url("/openapi.json", openapi::openapi_spec()))
     .merge(listings::routes())
     .merge(consignors::routes())
     .merge(contracts::routes())
@@ -32,6 +38,7 @@ fn core_routes() -> Router<AppState> {
     .merge(subscribers::routes())
     .merge(llm::routes())
     .merge(s3::routes())
+    .merge(ebay::routes())
 }
 
 /// API tree with [`AppState`] (database pool + future shared deps).
@@ -45,4 +52,5 @@ pub fn api_router(pool: PgPool) -> Router {
       core_routes().with_state(state.clone()),
     )
     .nest("/api", core_routes().with_state(state))
+    .layer(from_fn(middleware::inject_clerk_bearer_as_internal))
 }

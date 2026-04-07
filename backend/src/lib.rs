@@ -1,4 +1,5 @@
 pub mod auth;
+pub mod clerk_jwt;
 pub mod db;
 pub mod dto;
 pub mod error;
@@ -6,7 +7,6 @@ pub mod middleware;
 pub mod models;
 pub mod repositories;
 pub mod routes;
-pub mod services;
 pub mod http_client;
 pub mod llm;
 pub mod crypto;

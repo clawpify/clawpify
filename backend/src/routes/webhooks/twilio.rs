@@ -48,6 +48,17 @@ fn intake_app_link() -> String {
   std::env::var("INTAKE_APP_URL").unwrap_or_else(|_| "https://clawpify.com/app/inventory".to_string())
 }
 
+/// Body: `application/x-www-form-urlencoded` (Twilio webhook fields). Requires valid `X-Twilio-Signature`.
+#[utoipa::path(
+  post,
+  path = "/webhooks/twilio/messaging",
+  tag = "webhooks",
+  responses(
+    (status = 200, description = "TwiML (`text/xml`)"),
+    (status = 400, description = "Bad request or bad signature"),
+    (status = 503, description = "Twilio not configured")
+  )
+)]
 pub async fn twilio_messaging(
   State(state): State<AppState>,
   headers: HeaderMap,
@@ -208,3 +219,7 @@ fn twiml_response(msg: &str) -> Response {
     Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, "twiml").into_response(),
   }
 }
+
+#[derive(utoipa::OpenApi)]
+#[openapi(paths(twilio_messaging))]
+pub struct WebhooksOpenApiDoc;

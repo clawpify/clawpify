@@ -1,7 +1,6 @@
-import type { ReactNode } from "react";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+import { useMemo } from "react";
 import { useParams, Link } from "react-router-dom";
+import { renderBlogMarkdownToSafeHtml } from "../../../lib/blogMarkdownHtml";
 import { Newsletter } from "./Newsletter";
 import { posts } from "../utils/posts";
 
@@ -33,32 +32,6 @@ function TableOfContents({ headings }: { headings: string[] }) {
 }
 
 /**
- * Slugify a heading.
- *
- * @param value - The heading to slugify.
- * @returns The slugified heading.
- */
-function slugifyHeading(value: string) {
-  return value.toLowerCase().replace(/[^a-z0-9]+/g, "-");
-}
-
-/**
- * Get the text content of a React node.
- *
- * @param node - The React node to get the text content of.
- * @returns The text content of the node.
- */
-function getNodeText(node: ReactNode): string {
-  if (typeof node === "string" || typeof node === "number") return String(node);
-
-  if (Array.isArray(node)) return node.map(getNodeText).join("");
-
-  if (node && typeof node === "object" && "props" in node) return getNodeText((node as { props?: { children?: ReactNode } }).props?.children ?? "");
-
-  return "";
-}
-
-/**
  * Writing post page component.
  *
  * @returns The writing post page component.
@@ -68,24 +41,34 @@ export function WritingPostPage() {
   const post = posts.find((p) => p.slug === slug);
   const relatedPosts = post ? posts.filter((p) => p.slug !== post.slug).slice(0, 2) : [];
 
+  const articleHtml = useMemo(
+    () => (post ? renderBlogMarkdownToSafeHtml(post.content) : ""),
+    [post]
+  );
+
+  const proseClassName = [
+    "[&_h2]:mt-10 [&_h2]:mb-4 [&_h2]:scroll-mt-24 [&_h2]:text-[1.35rem] [&_h2]:font-medium [&_h2]:text-[#26251e]",
+    "[&_p]:mb-5 [&_p]:text-[0.95rem] [&_p]:leading-[1.75] [&_p]:text-[#444]",
+    "[&_ul]:mb-5 [&_ul]:list-disc [&_ul]:space-y-2 [&_ul]:pl-5 [&_ul]:text-[0.95rem] [&_ul]:leading-[1.75] [&_ul]:text-[#444]",
+    "[&_ol]:mb-5 [&_ol]:list-decimal [&_ol]:space-y-2 [&_ol]:pl-5 [&_ol]:text-[0.95rem] [&_ol]:leading-[1.75] [&_ol]:text-[#444]",
+    "[&_a]:text-[#26251e] [&_a]:underline [&_a]:underline-offset-2 [&_a]:transition [&_a]:hover:text-[#555]",
+    "[&_strong]:font-medium [&_strong]:text-[#26251e]",
+    "[&_em]:italic",
+    "[&_code]:rounded [&_code]:bg-black/5 [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-[0.85em] [&_code]:text-[#26251e]",
+  ].join(" ");
+
   if (!post) {
     return (
-      <div className="landing flex h-screen flex-col overflow-hidden bg-[#f2f3f1]">
-        <div className="flex flex-1 flex-col min-w-0">
-          <main className="flex-1 overflow-y-auto">
-            <div className="mx-auto max-w-3xl px-5 pt-32 pb-24 md:px-8 text-center">
-              <h1 className="text-2xl font-medium text-[#26251e] mb-4">
-                Post not found
-              </h1>
-              <Link
-                to="/blog"
-                className="font-mono text-[0.72rem] font-medium uppercase tracking-widest text-[#8a8378] hover:text-[#26251e] transition-colors"
-              >
-                ← Back to Writing
-              </Link>
-            </div>
-          </main>
-        </div>
+      <div className="landing min-h-screen flex flex-col bg-[#f2f3f1]">
+        <main className="flex-1 px-5 pb-24 pt-32 text-center md:px-8">
+          <h1 className="mb-4 text-2xl font-medium text-[#26251e]">Post not found</h1>
+          <Link
+            to="/blog"
+            className="font-mono text-[0.72rem] font-medium uppercase tracking-widest text-[#8a8378] transition-colors hover:text-[#26251e]"
+          >
+            ← All posts
+          </Link>
+        </main>
       </div>
     );
   }
@@ -93,13 +76,12 @@ export function WritingPostPage() {
   const headings = Array.from(post.content.matchAll(/^##\s+(.+)$/gm), (match) => match[1]!.trim());
 
   return (
-    <div className="landing flex h-screen flex-col overflow-hidden bg-[#f2f3f1]">
-      <div className="flex flex-1 flex-col min-w-0">
-        <main className="flex-1 overflow-y-auto">
-          <article className="mx-auto max-w-5xl px-5 pt-12 pb-10 md:px-8">
+    <div className="landing min-h-screen flex flex-col bg-[#f2f3f1]">
+      <main className="w-full min-w-0 flex-1">
+        <article className="mx-auto max-w-5xl px-5 pb-10 pt-7 md:px-8 md:pt-8">
             <Link
               to="/blog"
-              className="inline-block font-mono text-[0.65rem] font-medium uppercase tracking-widest text-[#8a8378] hover:text-[#26251e] transition-colors mb-10"
+              className="mb-10 inline-block font-mono text-[0.65rem] font-medium uppercase tracking-widest text-[#8a8378] transition-colors hover:text-[#26251e]"
             >
               ← All posts
             </Link>
@@ -136,57 +118,10 @@ export function WritingPostPage() {
             </header>
 
             <div className="flex gap-12 items-start">
-              <div className="min-w-0 max-w-2xl flex-1">
-                <ReactMarkdown
-                  remarkPlugins={[remarkGfm]}
-                  components={{
-                    h2: ({ children }) => {
-                      const text = getNodeText(children);
-                      return (
-                        <h2
-                          id={slugifyHeading(text)}
-                          className="mt-10 mb-4 scroll-mt-24 text-[1.35rem] font-medium text-[#26251e]"
-                        >
-                          {children}
-                        </h2>
-                      );
-                    },
-                    p: ({ children }) => (
-                      <p className="mb-5 text-[0.95rem] leading-[1.75] text-[#444]">
-                        {children}
-                      </p>
-                    ),
-                    ul: ({ children }) => (
-                      <ul className="mb-5 list-disc space-y-2 pl-5 text-[0.95rem] leading-[1.75] text-[#444]">
-                        {children}
-                      </ul>
-                    ),
-                    ol: ({ children }) => (
-                      <ol className="mb-5 list-decimal space-y-2 pl-5 text-[0.95rem] leading-[1.75] text-[#444]">
-                        {children}
-                      </ol>
-                    ),
-                    li: ({ children }) => <li>{children}</li>,
-                    a: ({ href, children }) => (
-                      <a
-                        href={href}
-                        className="text-[#26251e] underline underline-offset-2 transition hover:text-[#555]"
-                      >
-                        {children}
-                      </a>
-                    ),
-                    strong: ({ children }) => <strong className="font-medium text-[#26251e]">{children}</strong>,
-                    em: ({ children }) => <em className="italic">{children}</em>,
-                    code: ({ children }) => (
-                      <code className="rounded bg-black/5 px-1.5 py-0.5 font-mono text-[0.85em] text-[#26251e]">
-                        {children}
-                      </code>
-                    ),
-                  }}
-                >
-                  {post.content}
-                </ReactMarkdown>
-              </div>
+              <div
+                className={`min-w-0 max-w-2xl flex-1 ${proseClassName}`}
+                dangerouslySetInnerHTML={{ __html: articleHtml }}
+              />
               {headings.length > 0 && <TableOfContents headings={headings} />}
             </div>
 
@@ -216,10 +151,9 @@ export function WritingPostPage() {
                 </div>
               </div>
             )}
-          </article>
-          <Newsletter />
-        </main>
-      </div>
+        </article>
+        <Newsletter />
+      </main>
     </div>
   );
 }

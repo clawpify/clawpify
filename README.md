@@ -21,7 +21,7 @@ Clawpify helps consignment and resale shops track inventory, listings, and store
 
 - **Frontend:** Bun, React, Tailwind CSS
 - **Backend:** Rust 
-- **Auth:** [Clerk](https://clerk.com) (organizations, sign-in, sign-up)
+- **Auth:** [Clerk](https://clerk.com) (organizations, sign-in)
 - **Database:** PostgreSQL
 
 ## Getting Started
@@ -62,12 +62,13 @@ Clawpify uses [Clerk](https://clerk.com) for authentication. Each person who run
    - **Secret key** (`sk_test_...`) → `CLERK_SECRET_KEY`
 4. For local dev, Clerk allows `http://localhost:*` by default – no extra config needed
 5. For production, add your domain to **Allowed redirect URLs** in Clerk Dashboard → Paths
+6. **Sign-in only:** The app does not expose a public sign-up page. In the Clerk Dashboard, open **Configure → Restrictions** and set **Sign-up mode** to **Restricted** (or your equivalent policy) so new accounts cannot be created outside flows you control (invites, Admin API, etc.).
 
 | Variable | Required | Description |
 |----------|----------|-------------|
 | `CLERK_SECRET_KEY` | Yes | Clerk secret key ([Clerk Dashboard](https://dashboard.clerk.com) → API Keys) |
 | `BUN_PUBLIC_CLERK_PUBLISHABLE_KEY` | Yes | Clerk publishable key for the frontend |
-| `RUST_API_URL` | No | Rust API URL for the Bun server to proxy to (default: `http://127.0.0.1:3000`). **Required in production** if Rust runs in another process or host. On Railway, private URLs like `http://YourRustService.railway.internal:<PORT>` are ideal. A different service’s `*.up.railway.app` URL is fine; the same host as this Bun service is not (startup will fail unless `ALLOW_RUST_PROXY_SAME_HOST=1`). |
+| `RUST_API_URL` | Yes | Base URL of the Rust API for Bun to proxy to (set in `.env`; no default). |
 | `BUN_PUBLIC_API_BASE` | No | Public origin for browser `fetch` to `/api/*` (no trailing slash). Leave unset for same-origin. Set if the static SPA and API use different origins, or to point the waitlist at Rust directly (configure `CORS_ALLOWED_ORIGINS` on Rust). |
 | `PORT` | No | Server port (default: `3001`) |
 | `FIRECRAWL_API_KEY` | No | Firecrawl API key for website scraping (optional) |

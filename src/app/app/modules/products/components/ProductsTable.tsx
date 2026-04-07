@@ -1,6 +1,6 @@
 import { copy } from "../../../utils/copy";
 import type { ConsignmentListingDto } from "../types";
-import { formatListingPrice } from "../utils/formatListingPrice";
+import { formatListingPrice } from "../utils/generalFns";
 
 const listingStatusLabel = (listing: ConsignmentListingDto) => {
   if (listing.acceptance_status === "accepted") return "approved";

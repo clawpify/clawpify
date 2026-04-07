@@ -1,10 +1,5 @@
 import { Link } from "react-router-dom";
-import {
-  Show,
-  SignInButton,
-  SignUpButton,
-  UserButton,
-} from "@clerk/react";
+import { Show, SignInButton, UserButton } from "@clerk/react";
 
 export function AppTopNav() {
   return (
@@ -18,7 +13,6 @@ export function AppTopNav() {
       <Show when="signed-out">
         <div style={{ marginLeft: "auto", display: "flex", gap: "0.5rem" }}>
           <SignInButton />
-          <SignUpButton />
         </div>
       </Show>
       <Show when="signed-in">

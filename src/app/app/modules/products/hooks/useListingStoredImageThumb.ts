@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { useAuthenticatedFetch } from "../../../../../lib/api";
 import type { ConsignmentListingDto } from "../types";
-import { listingPrimaryImageUrl } from "../utils/listingMedia";
 import {
   listingImageSrc,
   listingImagesPath,
   type ListingImageApiRow,
-} from "../utils/listingsApi";
+} from "@/utils/networkFns";
+import { listingPrimaryImageUrl } from "../utils/generalFns";
 
 /** `media_urls` first; otherwise first stored image (`url` from API or `/api/s3/objects?key=...`). */
 export function useListingStoredImageThumb(listing: ConsignmentListingDto): string | null {

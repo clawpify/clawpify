@@ -11,6 +11,7 @@ use axum::{
 };
 use aws_sdk_s3::primitives::ByteStream;
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 use sqlx::PgPool;
 use url::form_urlencoded::Serializer;
 use uuid::Uuid;
@@ -24,19 +25,19 @@ use crate::repositories::stored_images as stored_images_repo;
 
 const MAX_BYTES: u64 = 16 * 1024 * 1024;
 
-#[derive(Deserialize)]
+#[derive(Deserialize, ToSchema)]
 pub struct UploadQuery {
   pub file_name: Option<String>,
   pub listing_id: Option<Uuid>,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, ToSchema)]
 pub struct UploadResult {
   pub key: String,
   pub byte_size: u64,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, ToSchema)]
 pub struct KeyQuery {
   pub key: String,
 }
@@ -136,6 +137,22 @@ async fn require_listing(pool: &PgPool, org_id: &str, listing_id: Uuid) -> Resul
   Ok(())
 }
 
+/// Request body: raw bytes. Send `Content-Type` for the object MIME type.
+#[utoipa::path(
+  post,
+  path = "/s3/objects",
+  tag = "s3",
+  security(("internal_user" = []), ("internal_org" = [])),
+  params(
+    ("file_name" = Option<String>, Query, description = "Suggested file name"),
+    ("listing_id" = Option<Uuid>, Query, description = "Optional listing id to validate")
+  ),
+  responses(
+    (status = 200, description = "Uploaded", body = UploadResult),
+    (status = 400, description = "Bad request", body = ErrorEnvelope),
+    (status = 503, description = "S3 not configured", body = ErrorEnvelope)
+  )
+)]
 async fn upload_object(
   State(state): State<AppState>,
   OrgId(org_id): OrgId,
@@ -186,6 +203,18 @@ async fn upload_object(
   Ok(Json(UploadResult { key, byte_size }))
 }
 
+#[utoipa::path(
+  get,
+  path = "/s3/objects",
+  tag = "s3",
+  security(("internal_user" = []), ("internal_org" = [])),
+  params(("key" = String, Query, description = "Storage key")),
+  responses(
+    (status = 200, description = "Object bytes"),
+    (status = 400, description = "Bad request", body = ErrorEnvelope),
+    (status = 503, description = "S3 not configured", body = ErrorEnvelope)
+  )
+)]
 async fn download_object(
   State(state): State<AppState>,
   OrgId(org_id): OrgId,
@@ -233,6 +262,17 @@ async fn download_object(
     .map_err(|e| error::internal(e))
 }
 
+#[utoipa::path(
+  delete,
+  path = "/s3/objects",
+  tag = "s3",
+  security(("internal_user" = []), ("internal_org" = [])),
+  params(("key" = String, Query, description = "Storage key")),
+  responses(
+    (status = 204, description = "Deleted"),
+    (status = 400, description = "Bad request", body = ErrorEnvelope)
+  )
+)]
 async fn delete_object(
   State(state): State<AppState>,
   OrgId(org_id): OrgId,
@@ -256,3 +296,10 @@ async fn delete_object(
 
   Ok(StatusCode::NO_CONTENT)
 }
+
+#[derive(utoipa::OpenApi)]
+#[openapi(
+  paths(upload_object, download_object, delete_object),
+  components(schemas(UploadResult, UploadQuery, KeyQuery))
+)]
+pub struct S3OpenApiDoc;

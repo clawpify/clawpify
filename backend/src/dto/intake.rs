@@ -1,7 +1,8 @@
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 use uuid::Uuid;
 
-#[derive(Debug, Serialize, sqlx::FromRow)]
+#[derive(Debug, Serialize, sqlx::FromRow, ToSchema)]
 pub struct PhoneBindingResponse {
   /* id: The ID of the phone binding. */  
   pub id: Uuid,
@@ -17,7 +18,7 @@ pub struct PhoneBindingResponse {
   pub created_at: chrono::DateTime<chrono::Utc>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, ToSchema)]
 pub struct UpsertPhoneBindingRequest {
   /* phone_e164: The phone number in E.164 format. */
   pub phone_e164: String,

@@ -2,13 +2,14 @@ use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use axum::Json;
 use serde::Serialize;
+use utoipa::ToSchema;
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, ToSchema)]
 pub struct ErrorEnvelope {
   pub error: ErrorFields,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, ToSchema)]
 pub struct ErrorFields {
   /* error_type: The type of error. */
   #[serde(rename = "type")]

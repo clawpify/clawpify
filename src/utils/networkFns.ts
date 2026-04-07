@@ -1,20 +1,22 @@
 import type { AuthPayload } from "../types/auth";
+import type { ConsignmentListingDto, ListListingsQuery } from "../app/app/modules/products/types";
 
-/**
- * Base URL for Bun → Rust proxy. Prefer `RUST_API_URL_INTERNAL` (e.g.
- * `http://<rust-service>.railway.internal:<PORT>`) so `RUST_API_URL` is not
- * forced to be a public `*.up.railway.app` host that may be this Bun app.
- */
-export function rustApiBaseUrl(): string {
-  const internal = process.env.RUST_API_URL_INTERNAL?.trim();
-  if (internal) return internal.replace(/\/+$/, "");
-  const pub = process.env.RUST_API_URL?.trim();
-  if (pub) return pub.replace(/\/+$/, "");
-  return "http://127.0.0.1:3000";
+export type { CreateListingBody, ListListingsQuery } from "../app/app/modules/products/types";
+
+function readEnv(key: string): string | undefined {
+  if (typeof process === "undefined" || !process.env) return undefined;
+  const v = process.env[key];
+  return typeof v === "string" ? v : undefined;
+}
+
+export const RUST_API_BASE_URL = readEnv("RUST_API_URL") || "";
+
+function rustProxyTarget(path: string, search: string): string {
+  return `${RUST_API_BASE_URL}${path}${search}`;
 }
 
 function rustProxyFetchInit(req: Request, headers: Headers): RequestInit {
-  const raw = process.env.RUST_PROXY_TIMEOUT_MS;
+  const raw = readEnv("RUST_PROXY_TIMEOUT_MS");
   const parsed = raw != null && raw !== "" ? parseInt(raw, 10) : 25_000;
   const ms = Number.isFinite(parsed) && parsed > 0 ? parsed : 25_000;
   return {
@@ -22,6 +24,7 @@ function rustProxyFetchInit(req: Request, headers: Headers): RequestInit {
     headers,
     body: req.method !== "GET" && req.method !== "HEAD" ? req.body : undefined,
     signal: AbortSignal.timeout(ms),
+    redirect: "manual",
   };
 }
 
@@ -44,35 +47,26 @@ function normalizeOrgId(value: string | undefined | null): string | undefined {
   return t.length > 0 ? t : undefined;
 }
 
-/** Clerk active org id, or synthetic `user:<clerk_sub>` when signed in without an organization. */
 export function internalOrgScope(auth: AuthPayload): string {
   const org = auth.orgId?.trim();
   if (org) return org;
   return `user:${auth.userId.trim()}`;
 }
 
-/**
- * Proxy an authenticated request to the Rust API.
- *
- * @param req - The incoming request to forward.
- * @param path - The backend path to proxy to.
- * @param auth - Auth payload injected as internal headers.
- * @returns The response from the Rust API.
- */
 export async function proxyToRust(
   req: Request,
   path: string,
   auth: AuthPayload
 ): Promise<Response> {
   const url = new URL(req.url);
-  const backendUrl = `${rustApiBaseUrl()}${path}${url.search}`;
+  const backendUrl = rustProxyTarget(path, url.search);
   const headers = new Headers(req.headers);
 
   const selectedOrgId = normalizeOrgId(req.headers.get("X-Selected-Org-Id"));
   const tokenOrgId = normalizeOrgId(auth.orgId);
   const resolvedOrgId =
     tokenOrgId ??
-    (process.env.NODE_ENV !== "production" && selectedOrgId?.startsWith("org_")
+    (readEnv("NODE_ENV") !== "production" && selectedOrgId?.startsWith("org_")
       ? selectedOrgId
       : undefined);
 
@@ -94,21 +88,13 @@ export async function proxyToRust(
   });
 }
 
-/**
- * Proxy a public (optionally authenticated) request to the Rust API.
- *
- * @param req - The incoming request to forward.
- * @param path - The backend path to proxy to.
- * @param opts - Optional client IP and auth payload to inject as internal headers.
- * @returns The response from the Rust API.
- */
 export async function proxyToRustPublic(
   req: Request,
   path: string,
   opts?: { clientIP?: string; auth?: AuthPayload }
 ): Promise<Response> {
   const url = new URL(req.url);
-  const backendUrl = `${rustApiBaseUrl()}${path}${url.search}`;
+  const backendUrl = rustProxyTarget(path, url.search);
   const headers = new Headers(req.headers);
 
   if (opts?.clientIP) headers.set("X-Client-IP", opts.clientIP);
@@ -116,7 +102,6 @@ export async function proxyToRustPublic(
   if (opts?.auth) {
     headers.set("X-Internal-User-Id", opts.auth.userId);
     headers.set("X-Internal-Org-Id", internalOrgScope(opts.auth));
-    
     if (opts.auth.orgRole) headers.set("X-Internal-Org-Role", opts.auth.orgRole);
   }
 
@@ -129,14 +114,6 @@ export async function proxyToRustPublic(
   });
 }
 
-/**
- * Create a route handler that authenticates the request and proxies it to the Rust API.
- *
- * @param pathOrResolver - A static path string or a function that derives the path from the request.
- * @param AuthError - The error class thrown by `requireAuth` on authentication failure.
- * @param requireAuth - Function that validates the request and returns an AuthPayload.
- * @returns An async request handler that proxies authenticated requests to the Rust API.
- */
 export function createProxyHandler(
   pathOrResolver: string | ((req: Request) => string),
   AuthError: new (message: string) => Error,
@@ -157,4 +134,98 @@ export function createProxyHandler(
       throw e;
     }
   };
+}
+
+export function listingsListPath(query?: ListListingsQuery): string {
+  const p = new URLSearchParams();
+  if (query?.status) p.set("status", query.status);
+  if (query?.limit != null) p.set("limit", String(query.limit));
+  if (query?.offset != null) p.set("offset", String(query.offset));
+  const qs = p.toString();
+  return `/api/listings${qs ? `?${qs}` : ""}`;
+}
+
+export function listingByIdPath(id: string): string {
+  return `/api/listings/${encodeURIComponent(id)}`;
+}
+
+export const listingsCreatePath = "/api/listings";
+
+export function listingsDetailPath(id: string): string {
+  return `/api/listings/${encodeURIComponent(id)}`;
+}
+
+export function listingImagesPath(listingId: string): string {
+  return `/api/listings/${encodeURIComponent(listingId)}/images`;
+}
+
+export type ListingImageApiRow = {
+  storage_key: string;
+  url?: string;
+};
+
+export function listingImageSrc(row: ListingImageApiRow): string {
+  const u = row.url?.trim();
+  if (u) return u;
+  return `/api/s3/objects?key=${encodeURIComponent(row.storage_key)}`;
+}
+
+export async function parseApiErrorJson(res: Response): Promise<string> {
+  let detail = res.statusText;
+  try {
+    const body = (await res.json()) as {
+      error?: string | { message?: string };
+    };
+    const err = body?.error;
+    if (typeof err === "string" && err.trim()) {
+      detail = err;
+    } else if (err && typeof err === "object" && typeof err.message === "string" && err.message.trim()) {
+      detail = err.message;
+    }
+  } catch {
+    /* ignore */
+  }
+  return detail || `HTTP ${res.status}`;
+}
+
+export async function parseListingsResponse(res: Response): Promise<ConsignmentListingDto[]> {
+  if (!res.ok) {
+    throw new Error(await parseApiErrorJson(res));
+  }
+  return res.json() as Promise<ConsignmentListingDto[]>;
+}
+
+export async function parseListingResponse(res: Response): Promise<ConsignmentListingDto> {
+  if (!res.ok) {
+    throw new Error(await parseApiErrorJson(res));
+  }
+  return res.json() as Promise<ConsignmentListingDto>;
+}
+
+export async function ensureListingMutationOk(res: Response): Promise<void> {
+  if (!res.ok) {
+    throw new Error(await parseApiErrorJson(res));
+  }
+}
+
+export function s3ObjectsUploadPath(listingId: string, fileName: string): string {
+  const p = new URLSearchParams();
+  p.set("listing_id", listingId);
+  p.set("file_name", fileName);
+  return `/api/s3/objects?${p.toString()}`;
+}
+
+export async function uploadListingObject(
+  fetchAuth: (path: string, init?: RequestInit) => Promise<Response>,
+  listingId: string,
+  file: File
+): Promise<void> {
+  const res = await fetchAuth(s3ObjectsUploadPath(listingId, file.name), {
+    method: "POST",
+    headers: { "Content-Type": file.type || "application/octet-stream" },
+    body: file,
+  });
+  if (!res.ok) {
+    throw new Error(await parseApiErrorJson(res));
+  }
 }

@@ -13,6 +13,16 @@ pub fn routes() -> Router<AppState> {
     .route_layer(middleware::from_fn(mw::require_internal_auth))
 }
 
+#[utoipa::path(
+  get,
+  path = "/agent-activity",
+  tag = "activity",
+  security(("internal_user" = []), ("internal_org" = [])),
+  responses(
+    (status = 200, description = "OK", body = [AgentActivity]),
+    (status = 401, description = "Unauthorized", body = ErrorEnvelope)
+  )
+)]
 async fn list_activity(
   State(state): State<AppState>,
   ActivityOrgScope(org_id): ActivityOrgScope,
@@ -31,6 +41,17 @@ async fn list_activity(
   Ok(Json(rows))
 }
 
+#[utoipa::path(
+  post,
+  path = "/agent-activity",
+  tag = "activity",
+  security(("internal_user" = []), ("internal_org" = [])),
+  request_body = LogActivityRequest,
+  responses(
+    (status = 200, description = "OK", body = AgentActivity),
+    (status = 400, description = "Bad request", body = ErrorEnvelope)
+  )
+)]
 async fn log_activity(
   State(state): State<AppState>,
   ActivityOrgScope(org_id): ActivityOrgScope,
@@ -55,3 +76,10 @@ async fn log_activity(
   .map_err(error::db_error)?;
   Ok(Json(row))
 }
+
+#[derive(utoipa::OpenApi)]
+#[openapi(
+  paths(list_activity, log_activity),
+  components(schemas(AgentActivity, LogActivityRequest))
+)]
+pub struct ActivityOpenApiDoc;

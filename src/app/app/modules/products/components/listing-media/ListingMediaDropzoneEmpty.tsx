@@ -1,7 +1,6 @@
 import React, { useState, type ChangeEvent, type RefObject } from "react";
 import { copy } from "../../../../utils/copy";
 
-/** Design-only: file/drop handlers reset input; persistence comes in phase 2. */
 function noopFiles(e: ChangeEvent<HTMLInputElement>) {
   e.target.value = "";
 }

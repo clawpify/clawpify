@@ -1,15 +1,21 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useAuthenticatedFetch } from "../../../../../lib/api";
+import { messageFromErrorBody } from "../../../../../lib/messageFromErrorBody";
 import { useToast } from "../../../../../lib/toast";
 import { copy } from "../../../utils/copy";
-import { useProducts } from "../context/ProductsContext";
 import type { ConsignmentListingDto } from "../types";
-import { htmlToMarkdown, markdownToSafeHtml } from "../utils/listingMarkdown";
-import { buildListingTimelineEvents } from "../utils/buildListingTimelineEvents";
-import { formatListingPrice } from "../utils/formatListingPrice";
-import { statusDotClass } from "../utils/productStatusTab";
+import {
+  buildListingTimelineEvents,
+  formatListingPrice,
+  statusDotClass,
+} from "../utils/generalFns";
 import { PlusIcon } from "../../../../../icons/workspace-icons";
 import { ListingMediaSection } from "./listing-media";
 import { RAIL_CARD_SHADOW } from "./listing-media/listingMediaChrome";
+import {
+  landingOrangeBubbleClassName,
+  landingOrangeBubbleStyle,
+} from "../../../../landing/components/Button";
 
 type Props = {
   listing: ConsignmentListingDto;
@@ -27,6 +33,13 @@ function tagDotClass(tag: string): string {
   let h = 0;
   for (let i = 0; i < tag.length; i++) h = (h + tag.charCodeAt(i) * (i + 1)) % 1000;
   return TAG_DOT_CLASSES[h % TAG_DOT_CLASSES.length] ?? "bg-zinc-400";
+}
+
+function categoryLabel(listing: ConsignmentListingDto): string {
+  const t = listing.product_type?.trim();
+  if (t) return t;
+  if (listing.tags?.length) return listing.tags[0] ?? "";
+  return copy.products.categoryUncategorized;
 }
 
 function vendorLabel(listing: ConsignmentListingDto): string {
@@ -88,79 +101,53 @@ function DetailRailCard({ title, children }: { title: string; children: ReactNod
 }
 
 export function ProductsListingDetail({ listing }: Props) {
-  const { updateListing, updatingListing } = useProducts();
-  const { showToast, setActionToast } = useToast();
-  const [titleDraft, setTitleDraft] = useState(listing.title);
-  const [mdDraft, setMdDraft] = useState(() => htmlToMarkdown(listing.description_html ?? ""));
-  const [lastSavedTitle, setLastSavedTitle] = useState(listing.title);
-  const [lastSavedMarkdown, setLastSavedMarkdown] = useState(() =>
-    htmlToMarkdown(listing.description_html ?? "")
-  );
+  const fetchAuth = useAuthenticatedFetch();
+  const { showToast } = useToast();
   const timeline = useMemo(() => buildListingTimelineEvents(listing), [listing]);
   const tags = listing.tags ?? [];
+  const [ebayConnected, setEbayConnected] = useState<boolean | null>(null);
+  const [ebayConnectLoading, setEbayConnectLoading] = useState(false);
 
   useEffect(() => {
-    const md = htmlToMarkdown(listing.description_html ?? "");
-    setTitleDraft(listing.title);
-    setMdDraft(md);
-    setLastSavedTitle(listing.title);
-    setLastSavedMarkdown(md);
-  }, [listing.id]);
+    let cancelled = false;
+    (async () => {
+      const res = await fetchAuth("/api/v1/oauth/ebay/status");
+      if (cancelled) return;
+      if (res.ok) {
+        const data = (await res.json().catch(() => null)) as { connected?: boolean } | null;
+        setEbayConnected(!!data?.connected);
+      } else {
+        setEbayConnected(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [fetchAuth, listing.id]);
 
-  useEffect(() => () => setActionToast(null), [setActionToast]);
-
-  const hasUnsavedEdits =
-    titleDraft.trim() !== lastSavedTitle.trim() || mdDraft !== lastSavedMarkdown;
-
-  const onCancelEdits = useCallback(() => {
-    setTitleDraft(lastSavedTitle);
-    setMdDraft(lastSavedMarkdown);
-  }, [lastSavedTitle, lastSavedMarkdown]);
-
-  const onSaveEdits = useCallback(async () => {
+  const onConnectEbay = useCallback(async () => {
+    setEbayConnectLoading(true);
     try {
-      const updated = await updateListing(listing.id, {
-        title: titleDraft.trim(),
-        description_html: markdownToSafeHtml(mdDraft),
-      });
-      const md = htmlToMarkdown(updated.description_html ?? "");
-      setTitleDraft(updated.title);
-      setMdDraft(md);
-      setLastSavedTitle(updated.title);
-      setLastSavedMarkdown(md);
-      showToast(copy.products.detailListingSaved);
-    } catch (e) {
-      showToast(
-        `${copy.products.detailListingSaveFailed} ${e instanceof Error ? e.message : "Unknown error"}`
-      );
+      const res = await fetchAuth("/api/v1/oauth/ebay/start");
+      const payload = await res.json().catch(() => undefined);
+      if (res.ok && payload && typeof payload === "object" && "url" in payload) {
+        const url = typeof (payload as { url?: unknown }).url === "string" ? (payload as { url: string }).url.trim() : "";
+        if (url) {
+          const w = window.open(url, "_blank", "noopener,noreferrer");
+          if (!w) window.location.assign(url);
+          return;
+        }
+      }
+      if (res.status === 401) {
+        showToast(copy.products.detailEbayConnectSignIn);
+        return;
+      }
+      const msg = messageFromErrorBody(payload) ?? `Could not start eBay link (${res.status})`;
+      showToast(msg);
+    } finally {
+      setEbayConnectLoading(false);
     }
-  }, [updateListing, listing.id, titleDraft, mdDraft, showToast]);
-
-  const saveDisabled = updatingListing || !hasUnsavedEdits;
-
-  useEffect(() => {
-    if (!hasUnsavedEdits) {
-      setActionToast(null);
-      return;
-    }
-    setActionToast({
-      message: copy.products.detailUnsavedChangesBar,
-      primaryLabel: copy.products.detailDescriptionSave,
-      secondaryLabel: copy.products.detailDescriptionCancel,
-      ariaLabel: copy.products.detailUnsavedChangesAria,
-      onPrimary: () => void onSaveEdits(),
-      onSecondary: onCancelEdits,
-      primaryDisabled: saveDisabled,
-      secondaryDisabled: updatingListing,
-    });
-  }, [
-    hasUnsavedEdits,
-    setActionToast,
-    onSaveEdits,
-    onCancelEdits,
-    saveDisabled,
-    updatingListing,
-  ]);
+  }, [fetchAuth, showToast]);
 
   return (
     <div className="flex min-h-0 flex-col gap-8 lg:grid lg:grid-cols-[minmax(0,1fr)_17.5rem] lg:items-start lg:gap-6 lg:pl-0">
@@ -169,30 +156,17 @@ export function ProductsListingDetail({ listing }: Props) {
           <ListingMediaSection listing={listing} />
         </section>
 
-        <div className="mt-7 flex flex-col gap-1">
-          <label className="sr-only" htmlFor="listing-detail-title">
-            {copy.products.createModalTitlePlaceholder}
-          </label>
-          <input
-            id="listing-detail-title"
-            type="text"
-            value={titleDraft}
-            onChange={(e) => setTitleDraft(e.target.value)}
-            className="w-full border-0 bg-transparent p-0 text-2xl font-bold tracking-tight text-zinc-900 shadow-none outline-none ring-0 transition placeholder:text-zinc-400 focus-visible:outline-none focus-visible:ring-0"
-            placeholder={copy.products.createModalTitlePlaceholder}
-            autoComplete="off"
-          />
-        </div>
+        <h1 className="mt-7 text-xl font-semibold tracking-[-0.02em] text-zinc-900 sm:text-2xl">{listing.title}</h1>
 
         <section className="mt-7" aria-label={copy.products.detailSectionDescription}>
-          <textarea
-            value={mdDraft}
-            onChange={(e) => setMdDraft(e.target.value)}
-            rows={8}
-            className="w-full min-h-[10rem] resize-y border-0 bg-transparent px-0 py-2 text-base leading-[1.65] text-zinc-600 shadow-none outline-none ring-0 transition placeholder:text-zinc-400 focus-visible:outline-none focus-visible:ring-0"
-            placeholder={copy.products.createModalDescriptionPlaceholder}
-            aria-label={copy.products.createModalDescriptionPlaceholder}
-          />
+          {listing.description_html?.trim() ? (
+            <div
+              className="max-w-none text-[14px] leading-[1.65] text-zinc-600 [&_a]:font-medium [&_a]:text-zinc-900 [&_a]:underline [&_a]:decoration-zinc-300 [&_a]:underline-offset-2 [&_h1]:text-lg [&_h2]:text-base [&_h3]:text-sm [&_li]:ml-4 [&_ol]:list-decimal [&_ol]:pl-4 [&_p]:mb-3 [&_p:last-child]:mb-0 [&_strong]:font-medium [&_strong]:text-zinc-800 [&_ul]:list-disc [&_ul]:pl-4"
+              dangerouslySetInnerHTML={{ __html: listing.description_html }}
+            />
+          ) : (
+            <p className="text-sm italic text-zinc-500">{copy.products.detailNoDescription}</p>
+          )}
         </section>
 
         <section className="mt-14 border-t border-zinc-100 pt-8" aria-label={copy.products.detailSectionActivity}>
@@ -212,7 +186,7 @@ export function ProductsListingDetail({ listing }: Props) {
                       />
                     ) : null}
                     <span
-                      className="relative z-[1] mt-px size-2 shrink-0 rounded-full border-2 border-white bg-zinc-400 shadow-[0_0_0_1px_rgba(0,0,0,0.08)]"
+                      className="relative z-[1] mt-px size-2 shrink-0 rounded-full border-2 border-white bg-zinc-300 shadow-[0_0_0_1px_rgba(0,0,0,0.06)]"
                       aria-hidden
                     />
                   </div>
@@ -236,6 +210,7 @@ export function ProductsListingDetail({ listing }: Props) {
               </span>
             </PropertyRow>
             <PropertyRow label={copy.products.detailSidebarSku}>{skuLabel(listing)}</PropertyRow>
+            <PropertyRow label={copy.products.detailSidebarCategory}>{categoryLabel(listing)}</PropertyRow>
             <PropertyRow label={copy.products.detailSidebarVendor}>{vendorLabel(listing)}</PropertyRow>
             <PropertyRow label={copy.products.detailSidebarChannels}>
               <span className="text-zinc-500">{copy.products.detailNone}</span>
@@ -264,6 +239,29 @@ export function ProductsListingDetail({ listing }: Props) {
               className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-zinc-400 transition hover:bg-zinc-100 hover:text-zinc-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-400"
             >
               <PlusIcon size={16} className="text-current" />
+            </button>
+          </div>
+        </DetailRailCard>
+
+        <DetailRailCard title={copy.products.detailSidebarIntegrations}>
+          <div className="space-y-2 px-2 py-2">
+            <p className="text-[11px] font-medium uppercase tracking-[0.06em] text-zinc-400">eBay</p>
+            {ebayConnected === true ? (
+              <p className="text-[13px] leading-snug text-zinc-600">{copy.products.detailEbayConnected}</p>
+            ) : null}
+            <button
+              type="button"
+              disabled={ebayConnectLoading || ebayConnected === null}
+              onClick={onConnectEbay}
+              className={[
+                landingOrangeBubbleClassName,
+                "landing-sans-copy inline-flex w-full items-center justify-center px-6 py-3 text-center text-[13px] font-semibold no-underline disabled:pointer-events-none",
+              ].join(" ")}
+              style={landingOrangeBubbleStyle}
+            >
+              <span className="relative z-[2]">
+                {ebayConnected === true ? copy.products.detailEbayReconnect : copy.products.detailEbayConnectCta}
+              </span>
             </button>
           </div>
         </DetailRailCard>

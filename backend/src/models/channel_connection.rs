@@ -38,4 +38,6 @@ pub struct ChannelConnectionSecrets {
   pub access_token_ciphertext: Vec<u8>,
   /* access_token_nonce: The nonce of the access token. */
   pub access_token_nonce: Vec<u8>,
+  /* token_expires_at: When the OAuth access token expires (if known). */
+  pub token_expires_at: Option<chrono::DateTime<chrono::Utc>>,
 }

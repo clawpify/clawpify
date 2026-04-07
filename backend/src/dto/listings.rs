@@ -1,8 +1,9 @@
 use serde::Deserialize;
+use utoipa::ToSchema;
 use uuid::Uuid;
 
 /// Shared optional fields for create and update listing APIs.
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, ToSchema)]
 pub struct ListingRequestBody {
   /* title: The title of the listing. */
   pub title: Option<String>,

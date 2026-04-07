@@ -18,7 +18,7 @@ import {
   parseListingResponse,
   parseListingsResponse,
   uploadListingObject,
-} from "../utils/listingsApi";
+} from "@/utils/networkFns";
 
 const ProductsContext = createContext<ProductsContextValue | null>(null);
 

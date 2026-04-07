@@ -1,4 +1,5 @@
 import { messageFromErrorBody } from "./messageFromErrorBody";
+import { publicRustOrigin } from "./publicRustOrigin";
 import type { SubscribeRequest, SubscribeResponse } from "../types/subscribe";
 
 export type { SubscribeRequest, SubscribeResponse };
@@ -6,9 +7,9 @@ export type { SubscribeRequest, SubscribeResponse };
 export async function subscribe(
   body: SubscribeRequest
 ): Promise<SubscribeResponse> {
-  const base = process.env.RUST_API_URL ?? "";
-  const url = new URL(`${base}/api/waitlist`);
-  const res = await fetch(url.toString(), {
+  const base = publicRustOrigin();
+  const url = base ? new URL("/api/waitlist", base).href : "/api/waitlist";
+  const res = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),

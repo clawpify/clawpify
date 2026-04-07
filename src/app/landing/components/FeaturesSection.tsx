@@ -1,5 +1,3 @@
-import { motion, useReducedMotion, useScroll, useTransform } from "framer-motion";
-import { useRef } from "react";
 import { LiquidGlassCard } from "@/components/LiquidGlassCard";
 import { containerChromeStyle } from "@/components/Container";
 import { FeatureCard } from "./FeatureCard";
@@ -32,27 +30,11 @@ const mainClassName = [
 ].join(" ");
 
 export function FeaturesSection({ intro, features }: FeaturesSectionProps) {
-  const ref = useRef<HTMLElement>(null);
-  const reducedMotion = useReducedMotion();
-
-  const { scrollYProgress } = useScroll({
-    target: ref,
-    offset: ["start end", "start 0.52"],
-  });
-
-  const y = useTransform(scrollYProgress, [0, 1], [88, 0]);
-
-  const scrollMotionStyle = reducedMotion ? undefined : { y };
-
   return (
-    <motion.main
-      ref={ref}
+    <main
       id="features"
       className={mainClassName}
-      style={{
-        ...scrollMotionStyle,
-        backgroundColor: landingPalette.pageBackground,
-      }}
+      style={{ backgroundColor: landingPalette.pageBackground }}
     >
       <LiquidGlassCard
         className="relative z-10 w-full max-w-7xl 2xl:max-w-screen-2xl"
@@ -96,6 +78,6 @@ export function FeaturesSection({ intro, features }: FeaturesSectionProps) {
           </div>
         </div>
       </LiquidGlassCard>
-    </motion.main>
+    </main>
   );
 }

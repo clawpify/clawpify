@@ -1,8 +1,9 @@
 use chrono::{DateTime, Utc};
 use serde::Serialize;
+use utoipa::ToSchema;
 use uuid::Uuid;
 
-#[derive(Serialize, sqlx::FromRow)]
+#[derive(Serialize, sqlx::FromRow, ToSchema)]
 pub struct Consignor {
   /* id: The ID of the consignor. */
   pub id: Uuid,

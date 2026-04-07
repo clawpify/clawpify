@@ -160,7 +160,7 @@ struct ListingDispositionRow {
   post_contract_disposition: Option<String>,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, utoipa::ToSchema)]
 pub struct ContractSummary {
   pub contract_id: Uuid,
   pub listing_count: i64,
@@ -253,13 +253,13 @@ pub async fn contract_summary(
   }))
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, utoipa::ToSchema)]
 pub struct RunExpiryOutcome {
   pub updated: u64,
   pub details: Vec<RunExpiryDetail>,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, utoipa::ToSchema)]
 pub struct RunExpiryDetail {
   pub listing_id: Uuid,
   pub from: Option<String>,
