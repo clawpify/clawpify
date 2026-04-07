@@ -17,9 +17,11 @@ mod s3;
 
 pub use state::AppState;
 
-use axum::Router;
+use axum::{middleware::from_fn, Router};
 use sqlx::PgPool;
 use utoipa_swagger_ui::SwaggerUi;
+
+use crate::middleware;
 
 fn core_routes() -> Router<AppState> {
   Router::new()
@@ -50,4 +52,5 @@ pub fn api_router(pool: PgPool) -> Router {
       core_routes().with_state(state.clone()),
     )
     .nest("/api", core_routes().with_state(state))
+    .layer(from_fn(middleware::inject_clerk_bearer_as_internal))
 }

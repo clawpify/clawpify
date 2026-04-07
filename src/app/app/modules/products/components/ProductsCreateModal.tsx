@@ -4,8 +4,7 @@ import { landingOrangeBubbleClassName, landingOrangeBubbleStyle } from "../../..
 import { XMarkIcon } from "../../../../../icons/workspace-icons";
 import { copy } from "../../../utils/copy";
 import { useProducts } from "../context/ProductsContext";
-import { isSelectableImageFile } from "../utils/listingMedia";
-import { plainTextToDescriptionHtml } from "../utils/plainToDescriptionHtml";
+import { isSelectableImageFile, plainTextToDescriptionHtml } from "../utils/generalFns";
 import type { ProductCreateFormState, ProductsCreateModalProps } from "../types";
 import { ListingMediaGallery } from "./listing-media/ListingMediaGallery";
 

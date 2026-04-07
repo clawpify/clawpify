@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useAuthenticatedFetch } from "../../../../../lib/api";
 import type { ConsignmentListingDto } from "../types";
-import { listingImageUrls } from "../utils/listingMedia";
 import {
   listingImageSrc,
   listingImagesPath,
   type ListingImageApiRow,
-} from "../utils/listingsApi";
+} from "@/utils/networkFns";
+import { listingImageUrls } from "../utils/generalFns";
 
 export type ListingGalleryUrlsState = {
   urls: string[];

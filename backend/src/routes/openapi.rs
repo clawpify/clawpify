@@ -73,9 +73,7 @@ fn merged_spec() -> OpenApi {
 }
 
 fn apply_servers(doc: &mut OpenApi) {
-  let url = std::env::var("OPENAPI_SERVER_URL").unwrap_or_else(|_| {
-    "https://clawpify.ngrok.io/api/v1".to_string()
-  });
+  let url = std::env::var("OPENAPI_SERVER_URL").expect("OPENAPI_SERVER_URL must be set");
   doc.servers = Some(vec![Server::new(url)]);
 }
 

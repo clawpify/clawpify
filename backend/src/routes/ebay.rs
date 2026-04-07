@@ -3,9 +3,9 @@ use axum::{
   middleware,
   response::{IntoResponse, Redirect, Response},
   routing::get,
-  Router,
+  Json, Router,
 };
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
 use super::extractors::OrgId;
@@ -49,6 +49,7 @@ pub struct EbayCallbackQuery {
 pub fn routes() -> Router<AppState> {
   let protected = Router::new()
     .route("/oauth/ebay/start", get(ebay_oauth_start))
+    .route("/oauth/ebay/status", get(ebay_oauth_status))
     .route_layer(middleware::from_fn(mw::require_internal_auth));
 
   let public = Router::new().route("/oauth/ebay/callback", get(ebay_oauth_callback));
@@ -62,7 +63,7 @@ pub fn routes() -> Router<AppState> {
   tag = "ebay",
   security(("internal_user" = []), ("internal_org" = [])),
   responses(
-    (status = 307, description = "Redirect to eBay authorization"),
+    (status = 200, description = "Authorize URL for eBay (open in a window / same tab)", body = EbayOAuthStartResponse),
     (status = 400, description = "Bad request", body = ErrorEnvelope),
     (status = 500, description = "Misconfigured", body = ErrorEnvelope)
   )
@@ -70,7 +71,7 @@ pub fn routes() -> Router<AppState> {
 async fn ebay_oauth_start(
   State(state): State<AppState>,
   org: OrgId,
-) -> Result<Response, ApiError> {
+) -> Result<Json<EbayOAuthStartResponse>, ApiError> {
   let cfg = state
     .ebay_config
     .as_ref()
@@ -82,7 +83,40 @@ async fn ebay_oauth_start(
 
   let url = oauth::authorize_url(cfg, &st);
 
-  Ok(Redirect::temporary(&url).into_response())
+  Ok(Json(EbayOAuthStartResponse { url }))
+}
+
+#[derive(Serialize, ToSchema)]
+pub struct EbayOAuthStartResponse {
+  /// eBay authorize URL; open in the browser (SPA fetch cannot rely on redirect `Location` cross-origin).
+  pub url: String,
+}
+
+#[derive(Serialize, ToSchema)]
+pub struct EbayStatusResponse {
+  pub connected: bool,
+}
+
+#[utoipa::path(
+  get,
+  path = "/oauth/ebay/status",
+  tag = "ebay",
+  security(("internal_user" = []), ("internal_org" = [])),
+  responses(
+    (status = 200, description = "Connection status", body = EbayStatusResponse),
+    (status = 500, description = "Server error", body = ErrorEnvelope)
+  )
+)]
+async fn ebay_oauth_status(
+  State(state): State<AppState>,
+  org: OrgId,
+) -> Result<Json<EbayStatusResponse>, ApiError> {
+  let row = channel_connections::get_ebay_secrets(&state.pool, org.as_ref())
+    .await
+    .map_err(error::db_error)?;
+  Ok(Json(EbayStatusResponse {
+    connected: row.is_some(),
+  }))
 }
 
 #[utoipa::path(
@@ -196,5 +230,12 @@ fn map_oauth_err(e: EbayOAuthError) -> ApiError {
 }
 
 #[derive(utoipa::OpenApi)]
-#[openapi(paths(ebay_oauth_start, ebay_oauth_callback), components(schemas(EbayCallbackQuery)))]
+#[openapi(
+  paths(ebay_oauth_start, ebay_oauth_status, ebay_oauth_callback),
+  components(schemas(
+    EbayCallbackQuery,
+    EbayOAuthStartResponse,
+    EbayStatusResponse
+  ))
+)]
 pub struct EbayOpenApiDoc;

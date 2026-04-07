@@ -1,4 +1,5 @@
 pub mod auth;
+pub mod clerk_jwt;
 pub mod db;
 pub mod dto;
 pub mod error;

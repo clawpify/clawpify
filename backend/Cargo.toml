@@ -32,6 +32,8 @@ sha1 = "0.10"
 sha2 = "0.10"
 subtle = "2.5"
 base64 = "0.22"
+jsonwebtoken = "9"
+rsa = { version = "0.9", features = ["pem"] }
 hex = "0.4"
 utoipa = { version = "4.2", features = ["chrono", "uuid"] }
 aws-sdk-s3 = { version = "=1.96.0", default-features = false, features = ["rt-tokio", "rustls"] }

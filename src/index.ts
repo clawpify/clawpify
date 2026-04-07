@@ -3,7 +3,6 @@ import { serve } from "bun";
 import { requireAuth, AuthError } from "./lib/auth";
 import { createProxyHandler, proxyToRustPublic } from "./utils/networkFns";
 import { generateLlmsTxt, generateRobotsTxt, generateSitemapXml, injectSeoMeta } from "./lib/seo";
-import { logAndValidateRustProxy } from "./proxy-safety";
 import { loadBundledFrontend } from "./server/build-frontend";
 import { handleCompleteOnboarding } from "./server/clerk-onboarding";
 import { handleProvisionConsignor } from "./server/consignor-provision";
@@ -16,6 +15,14 @@ const { builtAssets, rawHtml } = await loadBundledFrontend(`${import.meta.dir}/i
 type ProxyPath = string | ((req: Request) => string);
 
 const pathnameOf = (req: Request) => new URL(req.url).pathname;
+
+/** Resolve `/app/foo.js` to bundler key `/foo.js`. */
+function bundledAssetKeyCandidates(pathname: string): string[] {
+  const normalized = pathname.replace(/\/{2,}/g, "/");
+  const oneFileUnderApp = normalized.match(/^\/app\/([^/]+\.[^/]+)$/);
+  if (oneFileUnderApp) return [normalized, `/${oneFileUnderApp[1]}`];
+  return [normalized];
+}
 
 const PUBLIC_DIR = path.resolve(path.join(import.meta.dir, "..", "public"));
 const PUBLIC_IMAGE_DIR = path.resolve(PUBLIC_DIR, "image");
@@ -38,7 +45,6 @@ function resolvePublicImageFile(req: Request): string | null {
   return abs;
 }
 
-/** Files in `/public` linked at site root (favicon, Clerk `logoImageUrl`, legacy mark). */
 const PUBLIC_ROOT_NAMES = new Set([
   "favicon-32.png",
   "apple-touch-icon.png",
@@ -99,14 +105,12 @@ const handleImageAsset = async (req: Request) => {
 
 const handleHealth = (req: Request) => forwardPublic(req);
 
-/** Public OpenAPI + Swagger UI (Rust). Needed when traffic hits Bun/ngrok before Rust. */
 const isOpenApiOrSwaggerPath = (pathname: string) =>
   pathname === "/api/v1/openapi.json" ||
   pathname === "/api/openapi.json" ||
   pathname.startsWith("/api/v1/swagger-ui") ||
   pathname.startsWith("/api/swagger-ui");
 
-/** Scalar API Reference (CDN) — same-origin spec from `/api/v1/openapi.json` (proxied to Rust). */
 const handleApiReference = (req: Request) => {
   if (req.method !== "GET" && req.method !== "HEAD") {
     return new Response("Method Not Allowed", { status: 405 });
@@ -155,16 +159,12 @@ const handleWaitlistPost = async (req: Request) => {
   }
 };
 
-/** Does not call Rust — use for Railway/load balancer liveness so health probes cannot proxy-loop. */
 const handleHealthz = () =>
   new Response(JSON.stringify({ ok: true, service: "clawpify-bun" }), {
     headers: { "Content-Type": "application/json; charset=utf-8" },
   });
 
-/** GET + POST share one proxied handler instance. */
 const agentActivityProxy = authProxyHandler("/api/agent-activity");
-
-logAndValidateRustProxy(port);
 
 const routes = {
   "/robots.txt": handleRobotsTxt,
@@ -211,7 +211,6 @@ const AUTH_PROXY_PREFIXES = [
   "/api/s3",
 ] as const;
 
-/** eBay OAuth callback + SPA hop redirects (Rust `/api/v1/*` and legacy `/api/*`). */
 function isEbayOauthPublicPath(pathname: string): boolean {
   if (
     pathname === "/api/v1/oauth/ebay/callback" ||
@@ -228,7 +227,6 @@ function isEbayOauthPublicPath(pathname: string): boolean {
   return false;
 }
 
-/** Protected eBay OAuth GETs (Clerk Bearer via BFF). */
 function isEbayOauthAuthedGetPath(pathname: string): boolean {
   return (
     pathname === "/api/v1/oauth/ebay/start" ||
@@ -259,7 +257,11 @@ const server = serve({
     if (AUTH_PROXY_PREFIXES.some((p) => pathname.startsWith(p))) {
       return authProxyHandler(pathnameOf)(req);
     }
-    const asset = builtAssets.get(pathname);
+    let asset: Blob | undefined;
+    for (const key of bundledAssetKeyCandidates(pathname)) {
+      asset = builtAssets.get(key);
+      if (asset) break;
+    }
     if (asset) {
       return new Response(asset, {
         headers: { "Content-Type": asset.type || "application/octet-stream" },

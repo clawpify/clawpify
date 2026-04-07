@@ -1,19 +1,21 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useAuthenticatedFetch } from "../../../../../lib/api";
+import { messageFromErrorBody } from "../../../../../lib/messageFromErrorBody";
 import { useToast } from "../../../../../lib/toast";
 import { copy } from "../../../utils/copy";
-import { useProducts } from "../context/ProductsContext";
 import type { ConsignmentListingDto } from "../types";
-import { htmlToMarkdown, markdownToSafeHtml } from "../utils/listingMarkdown";
-import { buildListingTimelineEvents } from "../utils/buildListingTimelineEvents";
 import {
-  centsToPriceInputString,
+  buildListingTimelineEvents,
   formatListingPrice,
-  parsePriceInputToCents,
-} from "../utils/formatListingPrice";
-import { statusDotClass } from "../utils/productStatusTab";
+  statusDotClass,
+} from "../utils/generalFns";
 import { PlusIcon } from "../../../../../icons/workspace-icons";
 import { ListingMediaSection } from "./listing-media";
 import { RAIL_CARD_SHADOW } from "./listing-media/listingMediaChrome";
+import {
+  landingOrangeBubbleClassName,
+  landingOrangeBubbleStyle,
+} from "../../../../landing/components/Button";
 
 type Props = {
   listing: ConsignmentListingDto;
@@ -31,6 +33,23 @@ function tagDotClass(tag: string): string {
   let h = 0;
   for (let i = 0; i < tag.length; i++) h = (h + tag.charCodeAt(i) * (i + 1)) % 1000;
   return TAG_DOT_CLASSES[h % TAG_DOT_CLASSES.length] ?? "bg-zinc-400";
+}
+
+function categoryLabel(listing: ConsignmentListingDto): string {
+  const t = listing.product_type?.trim();
+  if (t) return t;
+  if (listing.tags?.length) return listing.tags[0] ?? "";
+  return copy.products.categoryUncategorized;
+}
+
+function vendorLabel(listing: ConsignmentListingDto): string {
+  const v = listing.vendor?.trim();
+  return v || copy.products.detailNone;
+}
+
+function skuLabel(listing: ConsignmentListingDto): string {
+  const s = listing.sku?.trim();
+  return s || copy.products.detailNone;
 }
 
 function PropertyRow({ label, children }: { label: string; children: ReactNode }) {
@@ -52,13 +71,29 @@ function ListingStatusInline({ status }: { status: string }) {
   );
 }
 
+function RailSectionCaret({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      width="10"
+      height="6"
+      viewBox="0 0 10 6"
+      fill="currentColor"
+      aria-hidden
+    >
+      <path d="M0 0.5L5 5.5L10 0.5H0Z" />
+    </svg>
+  );
+}
+
 function DetailRailCard({ title, children }: { title: string; children: ReactNode }) {
   return (
     <div
       className={`overflow-hidden rounded-lg border border-zinc-200/80 bg-white ${RAIL_CARD_SHADOW}`}
     >
-      <h3 className="border-b border-zinc-200/80 px-2 py-2 text-[13px] font-medium text-zinc-600">
-        {title}
+      <h3 className="flex items-center gap-0.5 border-b border-zinc-200/80 px-2 py-2 text-[13px] font-medium text-zinc-600">
+        <span>{title}</span>
+        <RailSectionCaret className="mt-px shrink-0 text-zinc-400 opacity-70" />
       </h3>
       {children}
     </div>
@@ -66,169 +101,53 @@ function DetailRailCard({ title, children }: { title: string; children: ReactNod
 }
 
 export function ProductsListingDetail({ listing }: Props) {
-  const { updateListing, updatingListing } = useProducts();
-  const { showToast, setActionToast } = useToast();
-  const [titleDraft, setTitleDraft] = useState(listing.title);
-  const [mdDraft, setMdDraft] = useState(() => htmlToMarkdown(listing.description_html ?? ""));
-  const [lastSavedTitle, setLastSavedTitle] = useState(listing.title);
-  const [lastSavedMarkdown, setLastSavedMarkdown] = useState(() =>
-    htmlToMarkdown(listing.description_html ?? "")
-  );
+  const fetchAuth = useAuthenticatedFetch();
+  const { showToast } = useToast();
   const timeline = useMemo(() => buildListingTimelineEvents(listing), [listing]);
-  const [tagsDraft, setTagsDraft] = useState<string[]>(() => [...(listing.tags ?? [])]);
-  const [lastSavedTags, setLastSavedTags] = useState<string[]>(() => [...(listing.tags ?? [])]);
-  const [lastSavedPriceCents, setLastSavedPriceCents] = useState(listing.price_cents);
-  const [addingCategory, setAddingCategory] = useState(false);
-  const [categoryInput, setCategoryInput] = useState("");
-  const categoryInputRef = useRef<HTMLInputElement>(null);
-  const categoryEscapeRef = useRef(false);
-  const [priceDraft, setPriceDraft] = useState(() => centsToPriceInputString(listing.price_cents));
-  const [skuDraft, setSkuDraft] = useState(() => listing.sku ?? "");
-  const [lastSavedSku, setLastSavedSku] = useState(() => listing.sku ?? "");
+  const tags = listing.tags ?? [];
+  const [ebayConnected, setEbayConnected] = useState<boolean | null>(null);
+  const [ebayConnectLoading, setEbayConnectLoading] = useState(false);
 
   useEffect(() => {
-    const md = htmlToMarkdown(listing.description_html ?? "");
-    setTitleDraft(listing.title);
-    setMdDraft(md);
-    setLastSavedTitle(listing.title);
-    setLastSavedMarkdown(md);
-    setLastSavedPriceCents(listing.price_cents);
-    setPriceDraft(centsToPriceInputString(listing.price_cents));
-    const nextTags = [...(listing.tags ?? [])];
-    setTagsDraft(nextTags);
-    setLastSavedTags(nextTags);
-    const nextSku = listing.sku ?? "";
-    setSkuDraft(nextSku);
-    setLastSavedSku(nextSku);
-  }, [listing.id]);
-
-  useEffect(() => {
-    if (addingCategory) {
-      categoryInputRef.current?.focus();
-    }
-  }, [addingCategory]);
-
-  useEffect(() => () => setActionToast(null), [setActionToast]);
-
-  const closeCategoryInput = useCallback(() => {
-    setAddingCategory(false);
-    setCategoryInput("");
-  }, []);
-
-  const submitCategory = useCallback(() => {
-    const t = categoryInput.trim();
-    if (!t) {
-      closeCategoryInput();
-      return;
-    }
-    const lower = t.toLowerCase();
-    let duplicate = false;
-    setTagsDraft((prev) => {
-      if (prev.some((tag) => tag.toLowerCase() === lower)) {
-        duplicate = true;
-        return prev;
+    let cancelled = false;
+    (async () => {
+      const res = await fetchAuth("/api/v1/oauth/ebay/status");
+      if (cancelled) return;
+      if (res.ok) {
+        const data = (await res.json().catch(() => null)) as { connected?: boolean } | null;
+        setEbayConnected(!!data?.connected);
+      } else {
+        setEbayConnected(false);
       }
-      return [...prev, t];
-    });
-    if (duplicate) showToast(copy.products.detailCategoryDuplicate);
-    closeCategoryInput();
-  }, [categoryInput, closeCategoryInput, showToast]);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [fetchAuth, listing.id]);
 
-  const savedPriceStr = centsToPriceInputString(lastSavedPriceCents);
-  const parsedPriceDraft = parsePriceInputToCents(priceDraft);
-  const priceDraftIsDirty =
-    priceDraft.trim() !== savedPriceStr &&
-    (parsedPriceDraft === null || parsedPriceDraft !== lastSavedPriceCents);
-  const tagsDraftIsDirty =
-    tagsDraft.length !== lastSavedTags.length || tagsDraft.some((t, i) => t !== lastSavedTags[i]);
-  const skuDraftIsDirty = skuDraft.trim() !== lastSavedSku.trim();
-
-  const hasUnsavedEdits =
-    titleDraft.trim() !== lastSavedTitle.trim() ||
-    mdDraft !== lastSavedMarkdown ||
-    priceDraftIsDirty ||
-    tagsDraftIsDirty ||
-    skuDraftIsDirty;
-
-  const priceBlocksPublish = priceDraftIsDirty && parsedPriceDraft === null;
-
-  const onCancelEdits = useCallback(() => {
-    setTitleDraft(lastSavedTitle);
-    setMdDraft(lastSavedMarkdown);
-    setPriceDraft(centsToPriceInputString(lastSavedPriceCents));
-    setTagsDraft([...lastSavedTags]);
-    setSkuDraft(lastSavedSku);
-    closeCategoryInput();
-    setCategoryInput("");
-  }, [
-    lastSavedTitle,
-    lastSavedMarkdown,
-    lastSavedPriceCents,
-    lastSavedTags,
-    lastSavedSku,
-    closeCategoryInput,
-  ]);
-
-  const onSaveEdits = useCallback(async () => {
-    const cents = parsePriceInputToCents(priceDraft);
-    if (cents === null) {
-      showToast(copy.products.detailPriceInvalid);
-      return;
-    }
+  const onConnectEbay = useCallback(async () => {
+    setEbayConnectLoading(true);
     try {
-      const updated = await updateListing(listing.id, {
-        title: titleDraft.trim(),
-        description_html: markdownToSafeHtml(mdDraft),
-        price_cents: cents,
-        tags: tagsDraft,
-        sku: skuDraft.trim(),
-      });
-      const md = htmlToMarkdown(updated.description_html ?? "");
-      setTitleDraft(updated.title);
-      setMdDraft(md);
-      setLastSavedTitle(updated.title);
-      setLastSavedMarkdown(md);
-      setLastSavedPriceCents(updated.price_cents);
-      setPriceDraft(centsToPriceInputString(updated.price_cents));
-      const savedTags = [...(updated.tags ?? [])];
-      setTagsDraft(savedTags);
-      setLastSavedTags(savedTags);
-      const nextSku = updated.sku ?? "";
-      setSkuDraft(nextSku);
-      setLastSavedSku(nextSku);
-      showToast(copy.products.detailListingSaved);
-    } catch (e) {
-      showToast(
-        `${copy.products.detailListingSaveFailed} ${e instanceof Error ? e.message : "Unknown error"}`
-      );
+      const res = await fetchAuth("/api/v1/oauth/ebay/start");
+      const payload = await res.json().catch(() => undefined);
+      if (res.ok && payload && typeof payload === "object" && "url" in payload) {
+        const url = typeof (payload as { url?: unknown }).url === "string" ? (payload as { url: string }).url.trim() : "";
+        if (url) {
+          const w = window.open(url, "_blank", "noopener,noreferrer");
+          if (!w) window.location.assign(url);
+          return;
+        }
+      }
+      if (res.status === 401) {
+        showToast(copy.products.detailEbayConnectSignIn);
+        return;
+      }
+      const msg = messageFromErrorBody(payload) ?? `Could not start eBay link (${res.status})`;
+      showToast(msg);
+    } finally {
+      setEbayConnectLoading(false);
     }
-  }, [updateListing, listing.id, titleDraft, mdDraft, priceDraft, tagsDraft, skuDraft, showToast]);
-
-  const saveDisabled = updatingListing || !hasUnsavedEdits || priceBlocksPublish;
-
-  useEffect(() => {
-    if (!hasUnsavedEdits) {
-      setActionToast(null);
-      return;
-    }
-    setActionToast({
-      message: copy.products.detailUnsavedChangesBar,
-      primaryLabel: copy.products.detailDescriptionSave,
-      secondaryLabel: copy.products.detailDescriptionCancel,
-      ariaLabel: copy.products.detailUnsavedChangesAria,
-      onPrimary: () => void onSaveEdits(),
-      onSecondary: onCancelEdits,
-      primaryDisabled: saveDisabled,
-      secondaryDisabled: updatingListing,
-    });
-  }, [
-    hasUnsavedEdits,
-    setActionToast,
-    onSaveEdits,
-    onCancelEdits,
-    saveDisabled,
-    updatingListing,
-  ]);
+  }, [fetchAuth, showToast]);
 
   return (
     <div className="flex min-h-0 flex-col gap-8 lg:grid lg:grid-cols-[minmax(0,1fr)_17.5rem] lg:items-start lg:gap-6 lg:pl-0">
@@ -237,30 +156,17 @@ export function ProductsListingDetail({ listing }: Props) {
           <ListingMediaSection listing={listing} />
         </section>
 
-        <div className="mt-7 flex flex-col gap-1">
-          <label className="sr-only" htmlFor="listing-detail-title">
-            {copy.products.createModalTitlePlaceholder}
-          </label>
-          <input
-            id="listing-detail-title"
-            type="text"
-            value={titleDraft}
-            onChange={(e) => setTitleDraft(e.target.value)}
-            className="w-full border-0 bg-transparent p-0 text-2xl font-bold tracking-tight text-zinc-900 shadow-none outline-none ring-0 transition placeholder:text-zinc-400 focus-visible:outline-none focus-visible:ring-0"
-            placeholder={copy.products.createModalTitlePlaceholder}
-            autoComplete="off"
-          />
-        </div>
+        <h1 className="mt-7 text-xl font-semibold tracking-[-0.02em] text-zinc-900 sm:text-2xl">{listing.title}</h1>
 
         <section className="mt-7" aria-label={copy.products.detailSectionDescription}>
-          <textarea
-            value={mdDraft}
-            onChange={(e) => setMdDraft(e.target.value)}
-            rows={8}
-            className="h-[13.5rem] w-full resize-none overflow-y-auto border-0 bg-transparent px-0 py-2 text-base leading-[1.65] text-zinc-600 shadow-none outline-none ring-0 transition placeholder:text-zinc-400 focus-visible:outline-none focus-visible:ring-0"
-            placeholder={copy.products.createModalDescriptionPlaceholder}
-            aria-label={copy.products.createModalDescriptionPlaceholder}
-          />
+          {listing.description_html?.trim() ? (
+            <div
+              className="max-w-none text-[14px] leading-[1.65] text-zinc-600 [&_a]:font-medium [&_a]:text-zinc-900 [&_a]:underline [&_a]:decoration-zinc-300 [&_a]:underline-offset-2 [&_h1]:text-lg [&_h2]:text-base [&_h3]:text-sm [&_li]:ml-4 [&_ol]:list-decimal [&_ol]:pl-4 [&_p]:mb-3 [&_p:last-child]:mb-0 [&_strong]:font-medium [&_strong]:text-zinc-800 [&_ul]:list-disc [&_ul]:pl-4"
+              dangerouslySetInnerHTML={{ __html: listing.description_html }}
+            />
+          ) : (
+            <p className="text-sm italic text-zinc-500">{copy.products.detailNoDescription}</p>
+          )}
         </section>
 
         <section className="mt-14 border-t border-zinc-100 pt-8" aria-label={copy.products.detailSectionActivity}>
@@ -280,7 +186,7 @@ export function ProductsListingDetail({ listing }: Props) {
                       />
                     ) : null}
                     <span
-                      className="relative z-[1] mt-px size-2 shrink-0 rounded-full border-2 border-white bg-zinc-400 shadow-[0_0_0_1px_rgba(0,0,0,0.08)]"
+                      className="relative z-[1] mt-px size-2 shrink-0 rounded-full border-2 border-white bg-zinc-300 shadow-[0_0_0_1px_rgba(0,0,0,0.06)]"
                       aria-hidden
                     />
                   </div>
@@ -299,51 +205,25 @@ export function ProductsListingDetail({ listing }: Props) {
               <ListingStatusInline status={listing.status} />
             </PropertyRow>
             <PropertyRow label={copy.products.detailSidebarPrice}>
-              <input
-                type="text"
-                inputMode="decimal"
-                value={priceDraft}
-                onChange={(e) => setPriceDraft(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    e.currentTarget.blur();
-                  }
-                }}
-                disabled={updatingListing}
-                aria-label={copy.products.detailSidebarPrice}
-                title={formatListingPrice(lastSavedPriceCents, listing.currency_code)}
-                className="w-full min-w-0 border-0 bg-transparent p-0 text-[13px] font-medium tabular-nums leading-snug text-zinc-900 shadow-none outline-none ring-0 placeholder:text-zinc-400 focus-visible:outline-none focus-visible:ring-0 disabled:opacity-50"
-                autoComplete="off"
-              />
+              <span className="tabular-nums font-medium">
+                {formatListingPrice(listing.price_cents, listing.currency_code)}
+              </span>
             </PropertyRow>
-            <PropertyRow label={copy.products.detailSidebarSku}>
-              <input
-                type="text"
-                value={skuDraft}
-                onChange={(e) => setSkuDraft(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    e.currentTarget.blur();
-                  }
-                }}
-                disabled={updatingListing}
-                aria-label={copy.products.detailSidebarSku}
-                placeholder={copy.products.createModalSkuPlaceholder}
-                className="w-full min-w-0 border-0 bg-transparent p-0 text-[13px] font-medium leading-snug text-zinc-900 shadow-none outline-none ring-0 placeholder:text-zinc-400 focus-visible:outline-none focus-visible:ring-0 disabled:opacity-50"
-                autoComplete="off"
-              />
+            <PropertyRow label={copy.products.detailSidebarSku}>{skuLabel(listing)}</PropertyRow>
+            <PropertyRow label={copy.products.detailSidebarCategory}>{categoryLabel(listing)}</PropertyRow>
+            <PropertyRow label={copy.products.detailSidebarVendor}>{vendorLabel(listing)}</PropertyRow>
+            <PropertyRow label={copy.products.detailSidebarChannels}>
+              <span className="text-zinc-500">{copy.products.detailNone}</span>
             </PropertyRow>
           </div>
         </DetailRailCard>
 
         <DetailRailCard title={copy.products.detailSidebarLabels}>
           <div className="flex flex-wrap items-center gap-1.5 px-2 py-2">
-            {tagsDraft.length === 0 && !addingCategory ? (
+            {tags.length === 0 ? (
               <span className="text-[13px] text-zinc-400">{copy.products.detailLabelsEmpty}</span>
             ) : (
-              tagsDraft.map((tag) => (
+              tags.map((tag) => (
                 <span
                   key={tag}
                   className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-zinc-200/90 bg-zinc-50/90 px-2 py-0.5 text-[12px] font-medium text-zinc-700"
@@ -353,45 +233,35 @@ export function ProductsListingDetail({ listing }: Props) {
                 </span>
               ))
             )}
-            {addingCategory ? (
-              <input
-                ref={categoryInputRef}
-                value={categoryInput}
-                onChange={(e) => setCategoryInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    submitCategory();
-                  } else if (e.key === "Escape") {
-                    e.preventDefault();
-                    categoryEscapeRef.current = true;
-                    closeCategoryInput();
-                  }
-                }}
-                onBlur={() => {
-                  queueMicrotask(() => {
-                    if (categoryEscapeRef.current) {
-                      categoryEscapeRef.current = false;
-                      return;
-                    }
-                    submitCategory();
-                  });
-                }}
-                disabled={updatingListing}
-                placeholder={copy.products.createModalCategoryPlaceholder}
-                aria-label={copy.products.detailAddLabelAria}
-                className="h-6 min-w-[6rem] max-w-[12rem] flex-1 rounded-md border border-zinc-200/90 bg-white px-2 text-[12px] text-zinc-900 shadow-none outline-none ring-0 placeholder:text-zinc-400 focus-visible:border-zinc-300 focus-visible:ring-1 focus-visible:ring-zinc-200"
-                autoComplete="off"
-              />
-            ) : null}
             <button
               type="button"
               aria-label={copy.products.detailAddLabelAria}
-              disabled={updatingListing || addingCategory}
-              onClick={() => setAddingCategory(true)}
-              className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-zinc-400 transition hover:bg-zinc-100 hover:text-zinc-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-400 disabled:pointer-events-none disabled:opacity-40"
+              className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-zinc-400 transition hover:bg-zinc-100 hover:text-zinc-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-400"
             >
               <PlusIcon size={16} className="text-current" />
+            </button>
+          </div>
+        </DetailRailCard>
+
+        <DetailRailCard title={copy.products.detailSidebarIntegrations}>
+          <div className="space-y-2 px-2 py-2">
+            <p className="text-[11px] font-medium uppercase tracking-[0.06em] text-zinc-400">eBay</p>
+            {ebayConnected === true ? (
+              <p className="text-[13px] leading-snug text-zinc-600">{copy.products.detailEbayConnected}</p>
+            ) : null}
+            <button
+              type="button"
+              disabled={ebayConnectLoading || ebayConnected === null}
+              onClick={onConnectEbay}
+              className={[
+                landingOrangeBubbleClassName,
+                "landing-sans-copy inline-flex w-full items-center justify-center px-6 py-3 text-center text-[13px] font-semibold no-underline disabled:pointer-events-none",
+              ].join(" ")}
+              style={landingOrangeBubbleStyle}
+            >
+              <span className="relative z-[2]">
+                {ebayConnected === true ? copy.products.detailEbayReconnect : copy.products.detailEbayConnectCta}
+              </span>
             </button>
           </div>
         </DetailRailCard>

@@ -209,26 +209,21 @@ function buildSeoBlock(pathname: string): string {
 
 const SEO_MARKER_RE = /<!-- SEO:START -->[\s\S]*?<!-- SEO:END -->/;
 
-/**
- * Inject per-route SEO tags into the HTML template between the SEO markers.
- *
- * @param html - Raw HTML string containing `<!-- SEO:START -->` and `<!-- SEO:END -->` markers.
- * @param pathname - URL pathname of the current route (e.g. `/`).
- * @returns HTML string with the SEO block replaced.
- */
+export function injectPublicRustOrigin(html: string): string {
+  const base = process.env.BUN_PUBLIC_RUST_API_URL ?? process.env.RUST_API_URL ?? "";
+  const script = `<script>window.__CLAWPIFY_PUBLIC_API_BASE__=${JSON.stringify(base)}<\/script>`;
+  return html.replace("<head>", `<head>\n    ${script}`);
+}
+
 export function injectSeoMeta(html: string, pathname: string): string {
+  const withOrigin = injectPublicRustOrigin(html);
   const seoBlock = buildSeoBlock(pathname);
-  return html.replace(
+  return withOrigin.replace(
     SEO_MARKER_RE,
     `<!-- SEO:START -->\n    ${seoBlock}\n    <!-- SEO:END -->`,
   );
 }
 
-/**
- * Generate the contents of `robots.txt` for the public site.
- *
- * @returns Plain-text robots.txt string.
- */
 export function generateRobotsTxt(): string {
   return `User-agent: *
 Allow: /

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { ConsignmentListingDto } from "../types";
-import { suggestListingSku } from "../utils/suggestListingSku";
+import { suggestListingSku } from "../utils/generalFns";
 
 type ProductDetailsModalProps = {
   listing: ConsignmentListingDto;

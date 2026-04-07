@@ -10,7 +10,7 @@ import {
 import { copy } from "../../../../utils/copy";
 import { ImageIcon, PlusIcon } from "../../../../../../icons/workspace-icons";
 import { AuthenticatedImg } from "../../../../../../lib/authenticatedMedia";
-import { isSelectableImageFile } from "../../utils/listingMedia";
+import { isSelectableImageFile } from "../../utils/generalFns";
 import { listingMediaEmptyHeroFrame, listingMediaHeroFrame } from "./listingMediaChrome";
 import type { ListingMediaSlot } from "./listingMediaTypes";
 

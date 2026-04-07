@@ -1,4 +1,4 @@
-import { statusBadgeClass } from "../utils/productStatusTab";
+import { statusBadgeClass } from "../utils/generalFns";
 
 type Props = {
   status: string;

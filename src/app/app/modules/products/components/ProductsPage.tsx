@@ -4,8 +4,8 @@ import { useWorkspaceHeader } from "../../../context/WorkspaceHeaderContext";
 import { copy } from "../../../utils/copy";
 import { useProducts } from "../context/ProductsContext";
 import type { ProductStatusTab } from "../types";
-import { useIsLgUp } from "../utils/useIsLgUp";
-import { filterProductListings } from "../utils/productStatusTab";
+import { useIsLgUp } from "../hooks/useIsLgUp";
+import { filterProductListings, listingPrimaryImageUrl } from "../utils/generalFns";
 import { ProductsCreateModal } from "./ProductsCreateModal";
 import { ProductsEmptyState } from "./ProductsEmptyState";
 import { ProductsInventoryTable } from "./ProductsInventoryTable";
@@ -13,7 +13,6 @@ import { ProductsInventoryToolbar } from "./ProductsInventoryToolbar";
 import { ProductsListingDetail } from "./ProductsListingDetail";
 import { ClawpifyLoadingScreen } from "../../../components/ClawpifyLoadingScreen";
 import { usePrefetchAuthImageUrls } from "@/lib/authenticatedMedia";
-import { listingPrimaryImageUrl } from "../utils/listingMedia";
 
 function isTypingTarget(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;

@@ -2,8 +2,7 @@ import { AuthenticatedImg } from "../../../../../lib/authenticatedMedia";
 import { copy } from "../../../utils/copy";
 import type { ConsignmentListingDto } from "../types";
 import { useListingStoredImageThumb } from "../hooks/useListingStoredImageThumb";
-import { formatListingPrice } from "../utils/formatListingPrice";
-import { formatListingAge } from "../utils/formatListingAge";
+import { formatListingAge, formatListingPrice } from "../utils/generalFns";
 import { ProductsStatusBadge } from "./ProductsStatusBadge";
 import { PackageIcon, TrashIcon } from "../../../../../icons/workspace-icons";
 
