@@ -81,7 +81,7 @@ fn validate_key<'a>(raw: &'a str, org: &str, user: &str) -> Result<&'a str, ApiE
 fn s3_unavailable() -> ApiError {
   let missing = crate::s3::missing_bucket_env_keys();
   let msg = if missing.is_empty() {
-    "Object storage is disabled: set ENDPOINT, REGION, BUCKET, RAILWAY_BUCKET_ID, and BUCKET_SECRET (see backend/.env.example)."
+    "Object storage is disabled: set ENDPOINT, REGION, BUCKET, RAILWAY_BUCKET_ID, and SECRET_ACCESS_KEY (see backend/.env.example)."
       .to_string()
   } else {
     format!(

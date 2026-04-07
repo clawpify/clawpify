@@ -71,7 +71,6 @@ Clawpify uses [Clerk](https://clerk.com) for authentication. Each person who run
 | `RUST_API_URL` | Yes | Base URL of the Rust API for Bun to proxy to (set in `.env`; no default). |
 | `BUN_PUBLIC_API_BASE` | No | Public origin for browser `fetch` to `/api/*` (no trailing slash). Leave unset for same-origin. Set if the static SPA and API use different origins, or to point the waitlist at Rust directly (configure `CORS_ALLOWED_ORIGINS` on Rust). |
 | `PORT` | No | Server port (default: `3001`) |
-| `FIRECRAWL_API_KEY` | No | Firecrawl API key for website scraping (optional) |
 
 **Backend (`backend/`)**
 

@@ -65,7 +65,7 @@ async fn s3_e2e_ai_image_upload_download_delete(pool: PgPool) {
     "REGION",
     "BUCKET",
     "RAILWAY_BUCKET_ID",
-    "BUCKET_SECRET",
+    "SECRET_ACCESS_KEY",
   ];
   let missing: Vec<&str> = REQUIRED
     .iter()
