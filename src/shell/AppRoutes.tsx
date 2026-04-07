@@ -39,9 +39,6 @@ const ContractsPage = lazy(() =>
 const SignInRoute = lazy(() =>
   import("./auth-routes").then((m) => ({ default: m.SignInRoute })),
 );
-const SignUpRoute = lazy(() =>
-  import("./auth-routes").then((m) => ({ default: m.SignUpRoute })),
-);
 
 function RoutesFallback() {
   return <div className="min-h-screen bg-[#f2f3f1]" aria-hidden />;
@@ -69,7 +66,7 @@ export function AppRoutes() {
           <Route path="listings" element={<Navigate to="/app/products" replace />} />
         </Route>
         <Route path="/sign-in" element={<SignInRoute />} />
-        <Route path="/sign-up" element={<SignUpRoute />} />
+        <Route path="/sign-up" element={<Navigate to="/sign-in" replace />} />
       </Routes>
     </Suspense>
   );

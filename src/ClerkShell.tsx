@@ -21,7 +21,6 @@ export function ClerkShell({ children }: ClerkShellProps) {
     <ClerkProvider
       publishableKey={pk}
       signInUrl="/sign-in"
-      signUpUrl="/sign-up"
       afterSignOutUrl="/"
       appearance={clerkAppearance}
     >

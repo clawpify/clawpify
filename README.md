@@ -21,7 +21,7 @@ Clawpify helps consignment and resale shops track inventory, listings, and store
 
 - **Frontend:** Bun, React, Tailwind CSS
 - **Backend:** Rust 
-- **Auth:** [Clerk](https://clerk.com) (organizations, sign-in, sign-up)
+- **Auth:** [Clerk](https://clerk.com) (organizations, sign-in)
 - **Database:** PostgreSQL
 
 ## Getting Started
@@ -62,6 +62,7 @@ Clawpify uses [Clerk](https://clerk.com) for authentication. Each person who run
    - **Secret key** (`sk_test_...`) → `CLERK_SECRET_KEY`
 4. For local dev, Clerk allows `http://localhost:*` by default – no extra config needed
 5. For production, add your domain to **Allowed redirect URLs** in Clerk Dashboard → Paths
+6. **Sign-in only:** The app does not expose a public sign-up page. In the Clerk Dashboard, open **Configure → Restrictions** and set **Sign-up mode** to **Restricted** (or your equivalent policy) so new accounts cannot be created outside flows you control (invites, Admin API, etc.).
 
 | Variable | Required | Description |
 |----------|----------|-------------|
