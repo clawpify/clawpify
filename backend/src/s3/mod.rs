@@ -10,7 +10,7 @@ const BUCKET_KEYS: &[&str] = &[
   "REGION",
   "BUCKET",
   "RAILWAY_BUCKET_ID",
-  "BUCKET_SECRET",
+  "SECRET_ACCESS_KEY",
 ];
 
 /// Which object-storage env vars are unset or blank (names only — safe to log).
@@ -32,7 +32,7 @@ pub fn try_client_from_env() -> Option<(Client, String)> {
   let region = std::env::var("REGION").ok()?;
   let bucket = std::env::var("BUCKET").ok()?;
   let access_key = std::env::var("RAILWAY_BUCKET_ID").ok()?;
-  let secret_key = std::env::var("BUCKET_SECRET").ok()?;
+  let secret_key = std::env::var("SECRET_ACCESS_KEY").ok()?;
 
   if [endpoint.trim(), region.trim(), bucket.trim(), access_key.trim(), secret_key.trim()]
     .iter()
