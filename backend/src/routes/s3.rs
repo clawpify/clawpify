@@ -9,6 +9,7 @@ use axum::{
   response::Response,
   Json, Router,
 };
+use aws_sdk_s3::error::ProvideErrorMetadata;
 use aws_sdk_s3::primitives::ByteStream;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
