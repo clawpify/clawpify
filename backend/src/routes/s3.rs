@@ -98,9 +98,9 @@ fn s3(state: &AppState) -> Result<(&aws_sdk_s3::Client, &str), ApiError> {
   Ok((client, bucket))
 }
 
-fn s3_err(op: &'static str, key: impl std::fmt::Display, err: impl std::fmt::Display) -> ApiError {
-  tracing::error!(key = %key, %err, op);
-  error::internal(err)
+fn s3_err(op: &'static str, key: impl std::fmt::Display, err: impl std::fmt::Debug) -> ApiError {
+  // AWS SDK Display is often just "service error"; Debug carries the real code/message.
+  error::internal(format!("s3 {op} key={key} err={err:?}"))
 }
 
 fn basename(file_name: &str) -> String {
@@ -177,15 +177,38 @@ async fn upload_object(
   let key = format!("{}{}_{}", upload_prefix(&org_id, &user_id), Uuid::new_v4(), safe_name);
   let len_i64 = i64::try_from(byte_size).map_err(|_| error::bad_request("body too large"))?;
 
+  tracing::debug!(
+    key = %key,
+    bucket = %bucket,
+    content_type = %content_type,
+    byte_size = byte_size,
+    "s3 put_object: starting upload"
+  );
+
   client
     .put_object()
     .bucket(bucket)
     .key(&key)
     .content_type(content_type)
+    .content_length(len_i64)
     .body(ByteStream::from(body))
     .send()
     .await
-    .map_err(|e| s3_err("put_object", &key, e))?;
+    .map_err(|e| {
+      let code = e.as_service_error().and_then(|se| se.code()).unwrap_or("unknown");
+      let msg = e.as_service_error().and_then(|se| se.message()).unwrap_or("no message");
+      tracing::error!(
+        key = %key,
+        bucket = %bucket,
+        content_type = %content_type,
+        byte_size = byte_size,
+        error_code = %code,
+        error_message = %msg,
+        raw_error = ?e,
+        "s3 put_object failed"
+      );
+      s3_err("put_object", &key, e)
+    })?;
 
   stored_images_repo::insert(
     &state.pool,
