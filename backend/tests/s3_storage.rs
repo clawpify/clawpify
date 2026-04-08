@@ -63,7 +63,7 @@ async fn s3_e2e_ai_image_upload_download_delete(pool: PgPool) {
     "OPENAI_API_KEY",
     "ENDPOINT",
     "REGION",
-    "BUCKET",
+    "RAILWAY_BUCKET_NAME",
     "RAILWAY_BUCKET_ID",
     "SECRET_ACCESS_KEY",
   ];

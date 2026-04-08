@@ -8,7 +8,7 @@ pub use presign::presign_get;
 const BUCKET_KEYS: &[&str] = &[
   "ENDPOINT",
   "REGION",
-  "BUCKET",
+  "RAILWAY_BUCKET_NAME",
   "RAILWAY_BUCKET_ID",
   "SECRET_ACCESS_KEY",
 ];
@@ -30,7 +30,7 @@ pub fn missing_bucket_env_keys() -> Vec<&'static str> {
 pub fn try_client_from_env() -> Option<(Client, String)> {
   let endpoint = std::env::var("ENDPOINT").ok()?;
   let region = std::env::var("REGION").ok()?;
-  let bucket = std::env::var("BUCKET").ok()?;
+  let bucket = std::env::var("RAILWAY_BUCKET_NAME").ok()?;
   let access_key = std::env::var("RAILWAY_BUCKET_ID").ok()?;
   let secret_key = std::env::var("SECRET_ACCESS_KEY").ok()?;
 
