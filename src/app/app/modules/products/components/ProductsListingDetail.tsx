@@ -133,8 +133,7 @@ export function ProductsListingDetail({ listing }: Props) {
       if (res.ok && payload && typeof payload === "object" && "url" in payload) {
         const url = typeof (payload as { url?: unknown }).url === "string" ? (payload as { url: string }).url.trim() : "";
         if (url) {
-          const w = window.open(url, "_blank", "noopener,noreferrer");
-          if (!w) window.location.assign(url);
+          window.open(url, "_blank", "noopener=yes,noreferrer=yes");
           return;
         }
       }
