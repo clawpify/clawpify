@@ -1,14 +1,13 @@
-import { useAuth } from "@clerk/react";
-import { CLERK_PREMIUM_FEATURE_SLUG } from "./clerk-billing.ts";
+import { useOrganization } from "@clerk/react";
+import { CLERK_PREMIUM_FEATURE_SLUG } from "@/lib/clerk-billing";
 
-/**
- * `true` when signed in with an active org and the org’s plan includes
- * {@link CLERK_PREMIUM_FEATURE_SLUG}. `false` when loaded but not entitled.
- * `null` while Clerk is loading.
- */
+type OrgWithFeatures = { has?: (opts: { feature: string }) => boolean };
+
 export function useOrgPaidFeature(): boolean | null {
-  const { isLoaded, isSignedIn, orgId, has } = useAuth();
+  const { isLoaded, organization } = useOrganization();
   if (!isLoaded) return null;
-  if (!isSignedIn || !orgId) return false;
+  if (!organization) return false;
+  const has = (organization as OrgWithFeatures).has;
+  if (typeof has !== "function") return true;
   return has({ feature: CLERK_PREMIUM_FEATURE_SLUG });
 }
