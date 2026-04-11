@@ -177,9 +177,6 @@ export const copy = {
     detailSidebarStatus: "Status",
     detailSidebarPrice: "Price",
     detailSidebarSku: "SKU",
-    detailSidebarCategory: "Category",
-    detailSidebarVendor: "Vendor",
-    detailSidebarChannels: "Channels",
     detailSidebarIntegrations: "Integrations",
     detailSidebarLabels: "Category",
     detailLabelsEmpty: "No category yet.",
@@ -242,6 +239,20 @@ export const copy = {
     body: "Define contract terms with POST /api/contracts. Contracts can be created later and linked after listings exist.",
     prevConsignors: "Back: Consignors",
     productsLink: "View products",
+  },
+  billing: {
+    headerContext: "Plan & billing",
+    pageTitle: "Choose a plan for your organization",
+    pageDescription:
+      "Compare plans and subscribe with secure checkout. You can manage billing anytime from this page or your organization profile.",
+    pricingLoadingAria: "Loading plans",
+    footerNote:
+      "Prices and features are configured in the Clerk Dashboard. Contact your admin if you need a different plan.",
+    premiumBadge: "Premium workspace",
+    billingDisabledTitle: "Enable Clerk Billing to see plans",
+    billingDisabledBody:
+      "This page uses Clerk’s pricing table. Turn on Billing for your Clerk application, add organization plans, then reload.",
+    billingDisabledCta: "Open Billing settings in Clerk",
   },
   home: {
     header: "Home",
