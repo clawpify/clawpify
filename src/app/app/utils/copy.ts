@@ -240,25 +240,6 @@ export const copy = {
     prevConsignors: "Back: Consignors",
     productsLink: "View products",
   },
-  billing: {
-    headerContext: "Plan & billing",
-    pageTitle: "Choose a plan for your organization",
-    pageDescription:
-      "Compare plans and subscribe with secure checkout. You can manage billing anytime from this page or your organization profile.",
-    pricingLoadingAria: "Loading plans",
-    footerNote:
-      "Prices and features are configured in the Clerk Dashboard. Contact your admin if you need a different plan.",
-    premiumBadge: "Premium workspace",
-    billingDisabledTitle: "Enable Clerk Billing to see plans",
-    billingDisabledBody:
-      "This page uses Clerk’s pricing table. Turn on Billing for your Clerk application, add organization plans, then reload.",
-    billingDisabledCta: "Open Billing settings in Clerk",
-  },
-  home: {
-    header: "Home",
-    title: "Welcome",
-    desc: "Your workspace overview. Use Inbox and Products to work consignment listings for your organization.",
-  },
   inbox: {
     heading: "Inbox",
     menuActions: "Inbox options",

@@ -1,52 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
-import type { ConsignmentListingDto } from "../types";
+import type {
+  ConsignmentListingDto,
+  ProductDetailsAiSummary,
+  ProductDetailsFormState,
+  ProductDetailsModalProps,
+} from "../types";
 import { suggestListingSku } from "../utils/generalFns";
-
-type ProductDetailsModalProps = {
-  listing: ConsignmentListingDto;
-  open: boolean;
-  saving: boolean;
-  approving: boolean;
-  deleting: boolean;
-  error: string | null;
-  onClose: () => void;
-  onSave: (payload: {
-    title: string;
-    sku: string;
-    status: string;
-    vendor: string;
-    productType: string;
-    tags: string[];
-    priceDollars: string;
-    descriptionHtml: string;
-  }) => Promise<void>;
-  onApprove: () => Promise<void>;
-  onDelete: () => Promise<void>;
-};
-
-type FormState = {
-  title: string;
-  sku: string;
-  status: string;
-  vendor: string;
-  productType: string;
-  tags: string;
-  priceDollars: string;
-  descriptionHtml: string;
-};
-
-type AiSummary = {
-  suggestedPrice?: number;
-  floorPrice?: number;
-  consignorCashBuyPrice?: number;
-  consignmentRangeLow?: number;
-  consignmentRangeHigh?: number;
-  brandDescription?: string;
-  pricingReasoning?: string;
-  itemDescriptionChips: string[];
-  pricingChips: string[];
-  sourcesSearched: string[];
-};
 
 function centsToDollars(value: number): string {
   return (value / 100).toFixed(2);
@@ -160,7 +119,7 @@ function toStringArray(value: unknown): string[] {
   return value.filter((entry): entry is string => typeof entry === "string" && entry.trim().length > 0);
 }
 
-function getAiSummary(listing: ConsignmentListingDto): AiSummary | null {
+function getAiSummary(listing: ConsignmentListingDto): ProductDetailsAiSummary | null {
   const attrs = toRecord(listing.ai_attributes);
   if (!attrs) return null;
   return {
@@ -179,7 +138,7 @@ function getAiSummary(listing: ConsignmentListingDto): AiSummary | null {
   };
 }
 
-function toFormState(listing: ConsignmentListingDto): FormState {
+function toFormState(listing: ConsignmentListingDto): ProductDetailsFormState {
   const suggestedSku = suggestListingSku(listing.vendor ?? "", listing.title ?? "", listing.id);
   return {
     title: listing.title ?? "",
@@ -205,7 +164,7 @@ export function ProductDetailsModal({
   onApprove,
   onDelete,
 }: ProductDetailsModalProps) {
-  const [form, setForm] = useState<FormState>(() => toFormState(listing));
+  const [form, setForm] = useState<ProductDetailsFormState>(() => toFormState(listing));
   const [skuTouched, setSkuTouched] = useState(false);
   const busy = saving || approving || deleting;
   const aiSummary = useMemo(() => getAiSummary(listing), [listing]);

@@ -80,16 +80,6 @@ export function PackageIcon({ className = "shrink-0 text-zinc-500", size = 20 }:
   );
 }
 
-/** Billing / subscription. */
-export function CreditCardIcon({ className = "shrink-0 text-zinc-500", size = 20 }: IconProps) {
-  return (
-    <svg width={size} height={size} {...iconProps} className={className}>
-      <rect x="2" y="5" width="20" height="14" rx="2" />
-      <path d="M2 10h20" />
-    </svg>
-  );
-}
-
 export function SettingsIcon({ className = "shrink-0 text-zinc-500", size = 20 }: IconProps) {
   return (
     <svg width={size} height={size} {...iconProps} className={className}>

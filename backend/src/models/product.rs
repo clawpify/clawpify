@@ -6,6 +6,7 @@ pub struct ProductData {
   pub id: String,
   /* title: The title of the product. */
   pub title: String,
+  /* description: The description of the product. */
   pub description: Option<String>,
   /* price: The price of the product. */
   pub price: Option<String>,

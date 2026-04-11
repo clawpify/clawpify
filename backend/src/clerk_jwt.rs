@@ -6,8 +6,6 @@ use rsa::pkcs8::{EncodePublicKey, LineEnding};
 use rsa::{BigUint, RsaPublicKey};
 use serde::Deserialize;
 
-// ─── Claims ───────────────────────────────────────────────────────────────
-
 #[derive(Debug, Deserialize)]
 struct OrgBlock {
   id: String,
@@ -15,26 +13,17 @@ struct OrgBlock {
 
 #[derive(Debug, Deserialize)]
 pub struct ClerkSessionClaims {
+  /* sub: The subject of the session. */
   pub sub: String,
-
+  /* org_id: The ID of the organization that the session belongs to. */
   #[serde(default)]
   org_id: Option<String>,
-
   #[serde(rename = "o", default)]
+  /* org_block: The organization block that the session belongs to. */
   org_block: Option<OrgBlock>,
-
-  /// Optional: add `org_plan` via Clerk Dashboard → Sessions → Customize session token.
-  /// Use for paid-plan checks in Rust when Billing + JWT template are configured.
-  #[serde(default, rename = "org_plan")]
-  pub org_plan: Option<String>,
 }
 
 impl ClerkSessionClaims {
-  /// `true` when the JWT includes `org_plan` equal to `slug` (custom claim).
-  pub fn has_org_plan(&self, slug: &str) -> bool {
-    self.org_plan.as_deref() == Some(slug)
-  }
-
   pub fn internal_org_scope(&self) -> String {
     if let Some(ref id) = self.org_id {
       return id.clone();
@@ -46,15 +35,15 @@ impl ClerkSessionClaims {
   }
 }
 
-// ─── JWKS → decoding key ────────────────────────────────────────────────────
-
 /// RSA `(n,e)` for `kid`. JWKS may list non-RSA keys, so we scan entries instead of
 /// deserializing the full array into a single struct.
 fn rsa_components_for_kid(keys: &[serde_json::Value], kid: &str) -> Result<(String, String), String> {
   for k in keys {
+
     if k.get("kid").and_then(|v| v.as_str()) != Some(kid) {
       continue;
     }
+    
     if k.get("kty").and_then(|v| v.as_str()) != Some("RSA") {
       continue;
     }
@@ -87,8 +76,6 @@ fn decoding_key_from_rsa_components(n_b64: &str, e_b64: &str) -> Result<Decoding
 
   DecodingKey::from_rsa_pem(pem.as_bytes()).map_err(|e| format!("decoding key: {e}"))
 }
-
-// ─── Verify ─────────────────────────────────────────────────────────────────
 
 pub async fn verify_session_token(jwks_url: &str, token: &str) -> Result<ClerkSessionClaims, String> {
   let hdr = decode_header(token).map_err(|e| format!("jwt header: {e}"))?;

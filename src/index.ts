@@ -176,9 +176,6 @@ const routes = {
   "/api/health": {
     GET: handleHealth,
   },
-  "/api/shield": {
-    PUT: authProxyHandler("/api/shield"),
-  },
   "/api/llm/agents": {
     POST: authProxyHandler("/api/llm/agents"),
   },
@@ -242,24 +239,22 @@ const server = serve({
 
   async fetch(req) {
     const pathname = pathnameOf(req);
-    if (pathname === "/api-reference" || pathname === "/docs/api") {
-      return handleApiReference(req);
-    }
-    if (isOpenApiOrSwaggerPath(pathname)) {
-      return forwardPublic(req);
-    }
-    if (isEbayOauthPublicPath(pathname) && (req.method === "GET" || req.method === "HEAD")) {
-      return forwardPublic(req);
-    }
-    if (isEbayOauthAuthedGetPath(pathname) && (req.method === "GET" || req.method === "HEAD")) {
-      return authProxyHandler(pathnameOf)(req);
-    }
-    if (AUTH_PROXY_PREFIXES.some((p) => pathname.startsWith(p))) {
-      return authProxyHandler(pathnameOf)(req);
-    }
+
+    if (pathname === "/api-reference" || pathname === "/docs/api") return handleApiReference(req);
+
+    if (isOpenApiOrSwaggerPath(pathname)) return forwardPublic(req);
+
+    if (isEbayOauthPublicPath(pathname) && (req.method === "GET" || req.method === "HEAD")) return forwardPublic(req);
+
+    if (isEbayOauthAuthedGetPath(pathname) && (req.method === "GET" || req.method === "HEAD")) return authProxyHandler(pathnameOf)(req);
+
+    if (AUTH_PROXY_PREFIXES.some((p) => pathname.startsWith(p))) return authProxyHandler(pathnameOf)(req);
+
     let asset: Blob | undefined;
+
     for (const key of bundledAssetKeyCandidates(pathname)) {
       asset = builtAssets.get(key);
+      
       if (asset) break;
     }
     if (asset) {
@@ -283,4 +278,3 @@ const server = serve({
 });
 
 serverRef = server;
-console.log(`🚀 Server running at ${server.url}`);

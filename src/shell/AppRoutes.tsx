@@ -35,7 +35,6 @@ const ConsignorsPage = lazy(() =>
 const ContractsPage = lazy(() =>
   appWorkspace().then((m) => ({ default: m.ContractsPage })),
 );
-const BillingPage = lazy(() => appWorkspace().then((m) => ({ default: m.BillingPage })));
 
 const SignInRoute = lazy(() =>
   import("./auth-routes").then((m) => ({ default: m.SignInRoute })),
@@ -64,7 +63,6 @@ export function AppRoutes() {
           </Route>
           <Route path="consignors" element={<ConsignorsPage />} />
           <Route path="contracts" element={<ContractsPage />} />
-          <Route path="billing" element={<BillingPage />} />
           <Route path="listings" element={<Navigate to="/app/products" replace />} />
         </Route>
         <Route path="/sign-in" element={<SignInRoute />} />

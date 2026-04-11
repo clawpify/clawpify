@@ -9,6 +9,7 @@ import {
 import { listingImageUrls } from "../utils/generalFns";
 
 export type ListingGalleryUrlsState = {
+  /* image url */
   urls: string[];
   /** True until the first `GET .../images` for this listing finishes (or errors). */
   galleryMetaPending: boolean;
@@ -28,7 +29,7 @@ export function useListingGalleryImageUrls(
     () => listingImageUrls(listing),
     [listing.id, listing.updated_at, listing.media_urls]
   );
-  const [s3Urls, setS3Urls] = useState<string[]>([]);
+  const [s3Urls, setS3Urls]                         = useState<string[]>([]);
   const [galleryMetaPending, setGalleryMetaPending] = useState(true);
   /** Only reset gallery state when `listing.id` truly changes (avoids fighting the fetch effect on remount). */
   const prevListingIdRef = useRef(listing.id);

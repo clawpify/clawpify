@@ -1,10 +1,6 @@
 import type { CSSProperties } from "react";
 import { landingAccentOrange } from "../utils";
 
-/**
- * Inline styles for the orange glossy pill (`<Button variant="orange" />`).
- * Use with `SurfaceClassName` on elements that are not `<Button>` (Clerk, links, etc.).
- */
 export const SurfaceStyle: CSSProperties = {
   background: landingAccentOrange.gradient,
   borderColor: landingAccentOrange.rim,
@@ -17,7 +13,6 @@ export const SurfaceStyle: CSSProperties = {
   ].join(", "),
 };
 
-/** Tailwind / pseudo-element shell paired with `SurfaceStyle`. */
 export const SurfaceClassName = [
   "relative isolate overflow-hidden rounded-full",
   "border font-medium antialiased text-white shadow-md",

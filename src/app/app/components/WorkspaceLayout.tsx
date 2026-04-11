@@ -59,9 +59,7 @@ function WorkspaceLayoutWithClerkAuth() {
   const { isLoaded, isSignedIn } = useAuth();
   const location = useLocation();
 
-  if (!isLoaded) {
-    return <ClawpifyLoadingScreen variant="fullscreen" />;
-  }
+  if (!isLoaded) return <ClawpifyLoadingScreen variant="fullscreen" />;
 
   if (!isSignedIn) {
     const returnTo = `${location.pathname}${location.search}${location.hash}`;
@@ -72,9 +70,7 @@ function WorkspaceLayoutWithClerkAuth() {
 }
 
 export function WorkspaceLayout() {
-  if (!clerkPublishableKey) {
-    return <WorkspaceChrome />;
-  }
+  if (!clerkPublishableKey) return <WorkspaceChrome />;
 
   return <WorkspaceLayoutWithClerkAuth />;
 }

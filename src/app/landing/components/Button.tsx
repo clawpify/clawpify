@@ -3,9 +3,7 @@ import { SurfaceClassName, SurfaceStyle } from "./buttonSurface";
 
 export { SurfaceClassName, SurfaceStyle } from "./buttonSurface";
 
-/** @deprecated Use `SurfaceClassName` / `SurfaceStyle`. */
 export const landingOrangeBubbleClassName = SurfaceClassName;
-/** @deprecated Use `SurfaceStyle` / `SurfaceClassName`. */
 export const landingOrangeBubbleStyle = SurfaceStyle;
 
 export const landingWhiteBubbleClassName = [
