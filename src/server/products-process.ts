@@ -111,10 +111,10 @@ function resolveOrgIdForRequest(
   auth: Awaited<ReturnType<typeof requireAuth>>
 ) {
   if (auth.orgId) return auth.orgId;
+  
   const selectedOrgId = req.headers.get("X-Selected-Org-Id");
-  if (process.env.NODE_ENV !== "production" && selectedOrgId?.startsWith("org_")) {
-    return selectedOrgId;
-  }
+
+  if (process.env.NODE_ENV !== "production" && selectedOrgId?.startsWith("org_")) return selectedOrgId;
   return undefined;
 }
 

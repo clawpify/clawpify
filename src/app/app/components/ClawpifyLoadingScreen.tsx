@@ -13,7 +13,7 @@ export function ClawpifyLoadingScreen({
   message = copy.settingUpWorkspace,
   className = "",
 }: ClawpifyLoadingScreenProps) {
-  const markImgRef = useRef<HTMLImageElement>(null);
+  const markImgRef                = useRef<HTMLImageElement>(null);
   const [markReady, setMarkReady] = useState(false);
 
   useEffect(() => {

@@ -18,7 +18,6 @@ const ORG_KNOWS_ABOUT = [
   "Consignor agreements and payouts",
   "Multi-channel listings",
   "Shopify",
-  "WooCommerce",
   "E-commerce API integrations",
 ];
 

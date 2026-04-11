@@ -16,6 +16,7 @@ export async function getAuthToken(req: Request): Promise<string | null> {
 
   const cookieHeader = req.headers.get("Cookie");
   if (cookieHeader) {
+    
     const match = cookieHeader.match(/__session=([^;]+)/);
 
     if (match) return decodeURIComponent(match[1]!);
