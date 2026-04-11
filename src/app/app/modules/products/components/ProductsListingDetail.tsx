@@ -35,18 +35,6 @@ function tagDotClass(tag: string): string {
   return TAG_DOT_CLASSES[h % TAG_DOT_CLASSES.length] ?? "bg-zinc-400";
 }
 
-function categoryLabel(listing: ConsignmentListingDto): string {
-  const t = listing.product_type?.trim();
-  if (t) return t;
-  if (listing.tags?.length) return listing.tags[0] ?? "";
-  return copy.products.categoryUncategorized;
-}
-
-function vendorLabel(listing: ConsignmentListingDto): string {
-  const v = listing.vendor?.trim();
-  return v || copy.products.detailNone;
-}
-
 function skuLabel(listing: ConsignmentListingDto): string {
   const s = listing.sku?.trim();
   return s || copy.products.detailNone;
@@ -209,11 +197,6 @@ export function ProductsListingDetail({ listing }: Props) {
               </span>
             </PropertyRow>
             <PropertyRow label={copy.products.detailSidebarSku}>{skuLabel(listing)}</PropertyRow>
-            <PropertyRow label={copy.products.detailSidebarCategory}>{categoryLabel(listing)}</PropertyRow>
-            <PropertyRow label={copy.products.detailSidebarVendor}>{vendorLabel(listing)}</PropertyRow>
-            <PropertyRow label={copy.products.detailSidebarChannels}>
-              <span className="text-zinc-500">{copy.products.detailNone}</span>
-            </PropertyRow>
           </div>
         </DetailRailCard>
 

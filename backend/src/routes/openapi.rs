@@ -7,7 +7,7 @@ use utoipa::{Modify, OpenApi as OpenApiTrait};
 
 use super::{
   activity, app_redirect, consignors, contracts, ebay, health, intake, listings, llm, s3,
-  spa_hop, subscribers, webhooks,
+  spa_redirects, subscribers, webhooks,
 };
 use crate::error::ErrorEnvelope;
 
@@ -67,7 +67,7 @@ fn merged_spec() -> OpenApi {
   doc.merge(s3::S3OpenApiDoc::openapi());
   doc.merge(ebay::EbayOpenApiDoc::openapi());
   doc.merge(app_redirect::AppRedirectOpenApiDoc::openapi());
-  doc.merge(spa_hop::SpaHopOpenApiDoc::openapi());
+  doc.merge(spa_redirects::SpaRedirectsOpenApiDoc::openapi());
   doc.merge(webhooks::WebhooksOpenApiDoc::openapi());
   doc
 }

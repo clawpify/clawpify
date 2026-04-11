@@ -1,6 +1,6 @@
 mod activity;
 mod app_redirect;
-mod spa_hop;
+mod spa_redirects;
 mod consignors;
 mod contracts;
 mod ebay;
@@ -26,7 +26,7 @@ use crate::middleware;
 fn core_routes() -> Router<AppState> {
   Router::new()
     .merge(health::routes())
-    .merge(spa_hop::routes())
+    .merge(spa_redirects::routes())
     .merge(app_redirect::routes())
     .merge(SwaggerUi::new("/swagger-ui").url("/openapi.json", openapi::openapi_spec()))
     .merge(listings::routes())

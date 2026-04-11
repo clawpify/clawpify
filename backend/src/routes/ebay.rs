@@ -143,7 +143,7 @@ async fn ebay_oauth_callback(
   if q.error.is_none() && q.code.is_none() && q.state.is_none() {
     if let Some(origin) = spa_redirect_origin(&state) {
       let target =
-        super::spa_hop::util::app_url_with_query_pair(&origin, "ebay_oauth", "no_callback_params")?;
+        super::spa_redirects::util::app_url_with_query_pair(&origin, "ebay_oauth", "no_callback_params")?;
       tracing::info!(%origin, "ebay OAuth callback visited without query; redirecting to SPA");
       return Ok(Redirect::temporary(&target).into_response());
     }

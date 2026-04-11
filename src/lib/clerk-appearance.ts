@@ -1,3 +1,6 @@
+/**
+ * Shared Clerk UI tokens. `<PricingTable />` on the billing page also merges these via its `appearance` prop.
+ */
 export const clerkAppearance = {
   cssLayerName: "clerk",
   variables: {

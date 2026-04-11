@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import { useOrgPaidFeature } from "@/lib/useOrgPaidFeature.ts";
+import { UnpaidOrgPricingView } from "../../billing/UnpaidOrgPricingView.tsx";
 import { useWorkspaceHeader } from "../../../context/WorkspaceHeaderContext";
 import { copy } from "../../../utils/copy";
 import { useProducts } from "../context/ProductsContext";
@@ -22,6 +24,7 @@ function isTypingTarget(target: EventTarget | null): boolean {
 }
 
 export function ProductsPage() {
+  const orgPaid = useOrgPaidFeature();
   const { listingId } = useParams<{ listingId: string }>();
   const navigate = useNavigate();
   const isLgUp = useIsLgUp();
@@ -91,6 +94,18 @@ export function ProductsPage() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [creating, createModalOpen]);
+
+  if (orgPaid === null) {
+    return (
+      <main className="flex min-h-0 flex-1 flex-col overflow-hidden bg-white">
+        <ClawpifyLoadingScreen variant="fill" message={copy.settingUpWorkspace} />
+      </main>
+    );
+  }
+
+  if (!orgPaid) {
+    return <UnpaidOrgPricingView />;
+  }
 
   const toolbar = (
     <ProductsInventoryToolbar

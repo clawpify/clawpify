@@ -1,31 +1,12 @@
-import type { CSSProperties } from "react";
 import type { ButtonProps } from "../types";
-import { landingAccentOrange } from "../utils";
+import { SurfaceClassName, SurfaceStyle } from "./buttonSurface";
 
-export const landingOrangeBubbleStyle: CSSProperties = {
-  background: landingAccentOrange.gradient,
-  borderColor: landingAccentOrange.rim,
-  boxShadow: [
-    `inset 0 1px 0 0 ${landingAccentOrange.insetHighlight}`,
-    `inset 0 -1px 0 0 ${landingAccentOrange.insetShadow}`,
-    "0 1px 0 rgba(255, 255, 255, 0.35)",
-    "0 6px 14px rgba(154, 52, 18, 0.28)",
-    "0 2px 4px rgba(0, 0, 0, 0.08)",
-  ].join(", "),
-};
+export { SurfaceClassName, SurfaceStyle } from "./buttonSurface";
 
-export const landingOrangeBubbleClassName = [
-  "relative isolate overflow-hidden rounded-full",
-  "border font-medium antialiased text-white shadow-md",
-  "transition-[filter,opacity]",
-  "before:pointer-events-none before:absolute before:inset-x-[12%] before:top-px before:z-[1] before:h-[42%] before:rounded-[999px]",
-  "before:bg-gradient-to-b before:from-white/50 before:via-white/15 before:to-transparent",
-  "after:pointer-events-none after:absolute after:inset-x-0 after:bottom-0 after:top-[55%] after:rounded-b-full",
-  "after:bg-gradient-to-t after:from-black/10 after:to-transparent",
-  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2",
-  "active:brightness-[0.97]",
-  "disabled:cursor-not-allowed disabled:opacity-45",
-].join(" ");
+/** @deprecated Use `SurfaceClassName` / `SurfaceStyle`. */
+export const landingOrangeBubbleClassName = SurfaceClassName;
+/** @deprecated Use `SurfaceStyle` / `SurfaceClassName`. */
+export const landingOrangeBubbleStyle = SurfaceStyle;
 
 export const landingWhiteBubbleClassName = [
   "relative isolate overflow-hidden rounded-full border border-zinc-200/90",
@@ -60,7 +41,7 @@ export function Button({
   children = "Download",
   disabled,
   type = "button",
-  variant = "default",
+  variant = "orange",
   ...props
 }: ButtonProps) {
   const isHero = variant === "heroSky";
@@ -70,7 +51,7 @@ export function Button({
       type={type}
       disabled={disabled}
       className={[
-        isHero ? "" : landingOrangeBubbleClassName,
+        isHero ? "" : SurfaceClassName,
         "landing-sans-copy min-w-[10rem] px-10 py-3",
         isHero
           ? [
@@ -89,7 +70,7 @@ export function Button({
       ]
         .filter(Boolean)
         .join(" ")}
-      style={isHero ? heroSkyStyle : landingOrangeBubbleStyle}
+      style={isHero ? heroSkyStyle : SurfaceStyle}
       {...props}
     >
       <span className="relative z-[2]">{children}</span>
