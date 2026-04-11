@@ -11,8 +11,13 @@ type WorkspaceSidebarProps = {
 export function WorkspaceSidebar({ className, onNavigate }: WorkspaceSidebarProps = {}) {
   const location = useLocation();
   const pathname = location.pathname;
-  const isInbox = pathname === "/app" || pathname === "/app/";
-  const isProducts = pathname.startsWith("/app/products");
+  const segments = pathname.split("/").filter(Boolean);
+  const isProductsList =
+    segments.length === 2 && segments[0] === "app" && segments[1] === "products";
+  const isProductDetail =
+    segments.length >= 3 && segments[0] === "app" && segments[1] === "products";
+  const isInbox = pathname === "/app" || pathname === "/app/" || isProductsList;
+  const isProducts = isProductDetail;
 
   return (
     <aside
@@ -23,9 +28,9 @@ export function WorkspaceSidebar({ className, onNavigate }: WorkspaceSidebarProp
         <div className="mb-3 px-2">
           <OrganizationSwitcher
             hidePersonal
-            afterCreateOrganizationUrl="/app"
-            afterSelectOrganizationUrl="/app"
-            afterLeaveOrganizationUrl="/app"
+            afterCreateOrganizationUrl="/app/products"
+            afterSelectOrganizationUrl="/app/products"
+            afterLeaveOrganizationUrl="/app/products"
           />
         </div>
       </Show>
@@ -39,7 +44,7 @@ export function WorkspaceSidebar({ className, onNavigate }: WorkspaceSidebarProp
       </Show>
       <div className="flex flex-col gap-0.5">
         <Link
-          to="/app"
+          to="/app/products"
           onClick={onNavigate}
           className={`flex items-center gap-2 rounded px-2 py-1.5 text-sm font-medium transition ${
             isInbox ? "bg-zinc-200/60 text-zinc-900" : "text-zinc-700 hover:bg-zinc-200/60 hover:text-zinc-900"

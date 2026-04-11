@@ -1,14 +1,15 @@
 import path from "node:path";
 import { serve } from "bun";
 import { requireAuth, AuthError } from "./lib/auth";
-import { createProxyHandler, proxyToRustPublic } from "./utils/networkFns";
+import { isProduction, PORT } from "./lib/env";
 import { generateLlmsTxt, generateRobotsTxt, generateSitemapXml, injectSeoMeta } from "./lib/seo";
 import { loadBundledFrontend } from "./server/build-frontend";
 import { handleCompleteOnboarding } from "./server/clerk-onboarding";
 import { handleProvisionConsignor } from "./server/consignor-provision";
 import { handleProductsProcess } from "./server/products-process";
+import { createProxyHandler, proxyToRustPublic } from "./utils/networkFns";
 
-const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 3001;
+const port = PORT;
 
 const { builtAssets, rawHtml } = await loadBundledFrontend(`${import.meta.dir}/index.html`);
 
@@ -45,11 +46,7 @@ function resolvePublicImageFile(req: Request): string | null {
   return abs;
 }
 
-const PUBLIC_ROOT_NAMES = new Set([
-  "favicon-32.png",
-  "apple-touch-icon.png",
-  "clawpify-mark.svg",
-]);
+const PUBLIC_ROOT_NAMES = new Set(["favicon-32.png", "apple-touch-icon.png"]);
 
 async function servePublicRoot(pathname: string): Promise<Response | null> {
   const name = pathname.startsWith("/") ? pathname.slice(1) : pathname;
@@ -272,7 +269,7 @@ const server = serve({
     });
   },
 
-  development: process.env.NODE_ENV !== "production" && {
+  development: !isProduction && {
     console: true,
   },
 });

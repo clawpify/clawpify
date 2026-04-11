@@ -1,10 +1,10 @@
 import { useAuth } from "@clerk/react";
 import { useCallback } from "react";
+import { RUST_API_URL } from "./env";
 import { messageFromErrorBody } from "./messageFromErrorBody";
 
-
 function apiUrl(path: string): string {
-  const base = process.env.RUST_API_URL
+  const base = RUST_API_URL;
   if (!base) return path;
   return new URL(path, base).href;
 }

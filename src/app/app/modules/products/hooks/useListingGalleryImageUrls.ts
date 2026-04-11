@@ -11,14 +11,11 @@ import { listingImageUrls } from "../utils/generalFns";
 export type ListingGalleryUrlsState = {
   /* image url */
   urls: string[];
-  /** True until the first `GET .../images` for this listing finishes (or errors). */
   galleryMetaPending: boolean;
 };
 
-/** `media_urls` entries first, then stored-image gallery (API `url` or `/api/s3/objects?key=...`). */
 export function useListingGalleryImageUrls(
   listing: ConsignmentListingDto,
-  /** Bump after uploads so S3 rows refetch even if `listing.updated_at` is unchanged. */
   imageListVersion = 0
 ): ListingGalleryUrlsState {
   const fetchAuth = useAuthenticatedFetch();

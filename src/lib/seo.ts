@@ -1,4 +1,6 @@
-const BASE_URL = process.env.BUN_PUBLIC_BASE_URL || "https://clawpify.com";
+import { BUN_PUBLIC_BASE_URL, PUBLIC_RUST_API_ORIGIN } from "./env";
+
+const BASE_URL = BUN_PUBLIC_BASE_URL;
 
 const DEFAULT_OG_IMAGE = `${BASE_URL}/image/dollars-og.jpg`;
 const DEFAULT_ORG_LOGO = `${BASE_URL}/apple-touch-icon.png`;
@@ -209,7 +211,7 @@ function buildSeoBlock(pathname: string): string {
 const SEO_MARKER_RE = /<!-- SEO:START -->[\s\S]*?<!-- SEO:END -->/;
 
 export function injectPublicRustOrigin(html: string): string {
-  const base = process.env.BUN_PUBLIC_RUST_API_URL ?? process.env.RUST_API_URL ?? "";
+  const base = PUBLIC_RUST_API_ORIGIN;
   const script = `<script>window.__CLAWPIFY_PUBLIC_API_BASE__=${JSON.stringify(base)}<\/script>`;
   return html.replace("<head>", `<head>\n    ${script}`);
 }

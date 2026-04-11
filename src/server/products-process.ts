@@ -1,5 +1,6 @@
 import { suggestListingSku } from "../app/app/modules/products/utils/generalFns";
 import { requireAuth, AuthError } from "../lib/auth";
+import { isProduction } from "../lib/env";
 import { messageFromErrorBody } from "../lib/messageFromErrorBody";
 import { proxyToRust } from "../utils/networkFns";
 
@@ -114,7 +115,7 @@ function resolveOrgIdForRequest(
   
   const selectedOrgId = req.headers.get("X-Selected-Org-Id");
 
-  if (process.env.NODE_ENV !== "production" && selectedOrgId?.startsWith("org_")) return selectedOrgId;
+  if (!isProduction && selectedOrgId?.startsWith("org_")) return selectedOrgId;
   return undefined;
 }
 
