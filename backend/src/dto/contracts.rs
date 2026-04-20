@@ -5,31 +5,20 @@ use uuid::Uuid;
 
 #[derive(Debug, Deserialize, Serialize, ToSchema)]
 pub struct ContractCreateRequest {
-  /* consignor_id: The ID of the consignor. */
-  pub consignor_id: Uuid,
-  /* contract_type: The type of contract. */
+  pub consignor_id: Uuid,                          // consignor id
   #[serde(default = "default_contract_type")]
-  pub contract_type: String,
-  /* start_at: The start date and time of the contract. */
-  pub start_at: DateTime<Utc>,
-  /* end_at: The end date and time of the contract. */
-  pub end_at: DateTime<Utc>,
-  /* consignor_split_bps: The split percentage for the consignor. */
+  pub contract_type: String,                       // contract type
+  pub start_at: DateTime<Utc>,                     // start at
+  pub end_at: DateTime<Utc>,                       // end at
   #[serde(default = "default_consignor_split")]
-  pub consignor_split_bps: i32,
-  /* store_split_bps: The split percentage for the store. */
+  pub consignor_split_bps: i32,                    // consignor split bps
   #[serde(default = "default_store_split")]
-  pub store_split_bps: i32,
-  /* donation_price_cutoff_cents: The price cutoff for donations. */
+  pub store_split_bps: i32,                        // store split bps
   #[serde(default = "default_donation_cutoff")]
-  pub donation_price_cutoff_cents: i64,
-  /* opt_out_under_threshold_donation: Whether the consignor has opted out of donations under the threshold. */
-  #[serde(default)]
-  pub opt_out_under_threshold_donation: bool,
-  /* terms_version: The version of the terms and conditions. */
-  pub terms_version: Option<String>,
-  /* notes: The notes of the contract. */
-  pub notes: Option<String>,
+  pub donation_price_cutoff_cents: i64,            // donation price cutoff cents
+  pub opt_out_under_threshold_donation: bool,      // opt out under threshold donation
+  pub terms_version: Option<String>,               // terms version
+  pub notes: Option<String>,                       // notes
 }
 
 fn default_contract_type() -> String {
@@ -50,31 +39,23 @@ fn default_donation_cutoff() -> i64 {
 
 #[derive(Debug, Deserialize, ToSchema)]
 pub struct ContractPatchRequest {
-  /* status: The status of the contract. */
-  pub status: Option<String>,
-  /* notes: The notes of the contract. */
-  pub notes: Option<String>,
-  /* opt_out_under_threshold_donation: Whether the consignor has opted out of donations under the threshold. */
-  pub opt_out_under_threshold_donation: Option<bool>,
-  pub end_at: Option<DateTime<Utc>>,
-  /* terms_version: The version of the terms and conditions. */
-  pub terms_version: Option<String>,
+  pub status: Option<String>,                         // status
+  pub notes: Option<String>,                          // notes
+  pub opt_out_under_threshold_donation: Option<bool>, // opt out under threshold donation
+  pub end_at: Option<DateTime<Utc>>,                // end at
+  pub terms_version: Option<String>,               // terms version
 }
 
 #[derive(Debug, Deserialize, Serialize, ToSchema)]
 pub struct PayoutCreateRequest {
-  /* amount_cents: The amount of the payout in cents. */
-  pub amount_cents: i64,
-  /* method: The method of the payout. */
-  pub method: String,
-  /* payout_index: The index of the payout. */
-  pub payout_index: i16,
+  pub amount_cents: i64,                           // amount cents
+  pub method: String,                              // method
+  pub payout_index: i16,                           // payout index
 }
 
 #[derive(Debug, Deserialize, Default, ToSchema)]
 pub struct RunExpiryRequest {
-  /* as_of: The date and time to run the expiry rules as of. */
-  pub as_of: Option<DateTime<Utc>>,
+  pub as_of: Option<DateTime<Utc>>,                // as of
 }
 
 pub fn valid_contract_type(s: &str) -> bool {

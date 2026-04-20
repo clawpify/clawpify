@@ -78,7 +78,7 @@ If using the Rust backend, copy `backend/.env.example` to `backend/.env`:
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `DATABASE_URL` | Yes | PostgreSQL connection string (e.g. `postgres://user:password@localhost:5432/clawpify`) |
+| `DATA` | Yes | PostgreSQL connection string (e.g. `postgres://user:password@localhost:5432/clawpify`) |
 
 #### 3. Start development
 
@@ -94,10 +94,10 @@ bun start
 
 #### 5. Database migrations (Railway)
 
-If your database is on Railway, run migrations with the Railway CLI (uses `DATABASE_URL` from your project):
+If your database is on Railway, run migrations with the Railway CLI (uses `DATA` from your project):
 
 ```bash
-railway run bash -c 'for f in migrations/*.sql; do psql $DATABASE_URL -f $f -v ON_ERROR_STOP=1; done'
+railway run bash -c 'for f in migrations/*.sql; do psql $DATA -f $f -v ON_ERROR_STOP=1; done'
 ```
 
 Or run each migration manually in order (`migrations/*.sql`).

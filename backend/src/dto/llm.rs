@@ -6,28 +6,21 @@ use crate::llm::types::{AgentJobResult, AgentRunConfig, SubAgentSpec};
 
 #[derive(Debug, Deserialize, ToSchema)]
 pub struct LlmAgentsRequest {
-  /* run config */
   #[serde(default)]
-  pub run: Option<AgentRunConfig>,
-  /* agents to run */
-  pub agents: Vec<SubAgentSpec>,
+  pub run: Option<AgentRunConfig>, // run config
+  pub agents: Vec<SubAgentSpec>,   // agents to run
 }
 
 #[derive(Debug, Serialize, ToSchema)]
 pub struct LlmAgentsResponse {
-  /* agents results */
-  pub agents: Vec<AgentJobResult>,
+  pub agents: Vec<AgentJobResult>, // agents results
 }
 
 #[derive(Debug, Serialize, ToSchema)]
 pub struct LlmStreamLine {
-  /* agent id */
-  pub agent_id: String,
-  /* sequence number */
+  pub agent_id: String, // agent id
   #[serde(skip_serializing_if = "Option::is_none")]
-  pub seq: Option<u64>,
-  /* kind of data */
-  pub kind: String,
-  /* data */
-  pub data: Value,
+  pub seq: Option<u64>, // sequence number
+  pub kind: String,     // kind of data
+  pub data: Value,      // data
 }

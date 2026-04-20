@@ -1,5 +1,5 @@
 import { requireAuth, AuthError } from "../lib/auth";
-import { isProduction } from "../lib/env";
+import { isProduction } from "../lib/constants";
 import { proxyToRust } from "../utils/networkFns";
 
 const isEmail = (contact: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact);

@@ -3,30 +3,20 @@ use utoipa::ToSchema;
 
 #[derive(Debug, Deserialize, ToSchema)]
 pub struct CreateConsignorRequest {
-  /* display_name: The display name of the consignor. */
-  pub display_name: String,
-  /* email: The email of the consignor. */
-  pub email: Option<String>,
-  /* phone_e164: The phone number of the consignor in E.164 format. */
-  pub phone_e164: Option<String>,
-  /* notes: The notes of the consignor. */
-  pub notes: Option<String>,
-  /* default_payout_method: The default payout method of the consignor. */
-  pub default_payout_method: Option<String>,
+  pub display_name: String,                  // display name
+  pub email: Option<String>,                 // email
+  pub phone_e164: Option<String>,            // phone e164
+  pub notes: Option<String>,                 // notes
+  pub default_payout_method: Option<String>, // default payout method
 }
 
 #[derive(Debug, Deserialize, ToSchema)]
 pub struct UpdateConsignorRequest {
-  /* display_name: The display name of the consignor. */
-  pub display_name: Option<String>,
-  /* email: The email of the consignor. */
-  pub email: Option<String>,
-  /* phone_e164: The phone number of the consignor in E.164 format. */
-  pub phone_e164: Option<String>,
-  /* notes: The notes of the consignor. */
-  pub notes: Option<String>,
-  /* default_payout_method: The default payout method of the consignor. */
-  pub default_payout_method: Option<String>,
+  pub display_name: Option<String>,          // display name
+  pub email: Option<String>,                 // email
+  pub phone_e164: Option<String>,            // phone e164
+  pub notes: Option<String>,                 // notes
+  pub default_payout_method: Option<String>, // default payout method
 }
 
 fn valid_payout_method(s: &str) -> bool {

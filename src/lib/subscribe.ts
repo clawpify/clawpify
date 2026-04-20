@@ -1,5 +1,5 @@
 import type { SubscribeRequest, SubscribeResponse } from "../types/subscribe";
-import { RUST_API_URL } from "./env";
+import { RUST_API_URL } from "./constants";
 import { messageFromErrorBody } from "./messageFromErrorBody";
 
 export type { SubscribeRequest, SubscribeResponse };

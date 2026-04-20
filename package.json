@@ -4,10 +4,10 @@
   "private": false,
   "type": "module",
   "scripts": {
-    "dev": "NODE_ENV=development bun --hot --watch src/index.ts",
+    "dev": "bun --hot --watch src/index.ts",
     "test:backend": "cd backend && cargo test",
     "build": "bun build ./src/index.html --outdir=dist --sourcemap --target=browser --minify --define:process.env.NODE_ENV='\"production\"' --env='BUN_PUBLIC_*' --env='VITE_*'",
-    "start": "NODE_ENV=production bun src/index.ts"
+    "start": "CLAWPIFY_PROD=1 bun src/index.ts"
   },
   "dependencies": {
     "@clerk/backend": "3.0.1",

@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { Show, SignInButton, UserButton } from "@clerk/react";
-import { BUN_PUBLIC_CLERK_PUBLISHABLE_KEY } from "../../../lib/env";
+import { BUN_PUBLIC_CLERK_PUBLISHABLE_KEY } from "../../../lib/constants";
 import {
   FilterIcon,
   SortIcon,

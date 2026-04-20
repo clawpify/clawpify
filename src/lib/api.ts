@@ -1,6 +1,6 @@
 import { useAuth } from "@clerk/react";
 import { useCallback } from "react";
-import { RUST_API_URL } from "./env";
+import { RUST_API_URL } from "./constants";
 import { messageFromErrorBody } from "./messageFromErrorBody";
 
 function apiUrl(path: string): string {

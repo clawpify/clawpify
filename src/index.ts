@@ -1,7 +1,7 @@
 import path from "node:path";
 import { serve } from "bun";
 import { requireAuth, AuthError } from "./lib/auth";
-import { isProduction, PORT } from "./lib/env";
+import { isProduction, PORT } from "./lib/constants";
 import { generateLlmsTxt, generateRobotsTxt, generateSitemapXml, injectSeoMeta } from "./lib/seo";
 import { loadBundledFrontend } from "./server/build-frontend";
 import { handleCompleteOnboarding } from "./server/clerk-onboarding";
@@ -146,7 +146,7 @@ const handleWaitlistPost = async (req: Request) => {
     return await forwardPublic(req, { clientIP });
   } catch (e) {
     console.error(
-      "POST /api/waitlist proxy failed (check RUST_API_URL reaches the Rust service, or set BUN_PUBLIC_API_BASE for direct browser calls):",
+      "POST /api/waitlist proxy failed (check RUST_API_URL reaches the Rust service, or set BUN_PUBLIC_API_URL for direct browser calls):",
       e
     );
     return Response.json(

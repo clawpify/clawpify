@@ -1,17 +1,11 @@
 #[derive(Debug, Clone)]
 pub struct EbayConfig {
-  /* whether to use the sandbox environment */
-  pub sandbox: bool,
-  /* the client ID for the application */
-  pub client_id: String,
-  /* the client secret for the application */
-  pub client_secret: String,
-  /* the redirect URI for the application */
-  pub oauth_redirect_uri: String,
-  /* OAuth scopes: space-separated string (from EBAY_OAUTH_SCOPES or EBAY_OAUTH_SCOPE). */
-  pub oauth_scope: String,
-  /* the success redirect URI for the application */
-  pub oauth_success_redirect: String,
+  pub sandbox: bool,                                 // whether to use the sandbox environment
+  pub client_id: String,                             // client id
+  pub client_secret: String,                         // client secret
+  pub oauth_redirect_uri: String,                    // oauth redirect uri
+  pub oauth_scope: String,                           // oauth scope
+  pub oauth_success_redirect: String,                // oauth success redirect uri
 }
 
 fn require_env(key: &'static str) -> Result<String, &'static str> {

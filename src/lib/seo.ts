@@ -1,4 +1,4 @@
-import { BUN_PUBLIC_BASE_URL, PUBLIC_RUST_API_ORIGIN } from "./env";
+import { BUN_PUBLIC_BASE_URL } from "./constants";
 
 const BASE_URL = BUN_PUBLIC_BASE_URL;
 
@@ -210,16 +210,9 @@ function buildSeoBlock(pathname: string): string {
 
 const SEO_MARKER_RE = /<!-- SEO:START -->[\s\S]*?<!-- SEO:END -->/;
 
-export function injectPublicRustOrigin(html: string): string {
-  const base = PUBLIC_RUST_API_ORIGIN;
-  const script = `<script>window.__CLAWPIFY_PUBLIC_API_BASE__=${JSON.stringify(base)}<\/script>`;
-  return html.replace("<head>", `<head>\n    ${script}`);
-}
-
 export function injectSeoMeta(html: string, pathname: string): string {
-  const withOrigin = injectPublicRustOrigin(html);
   const seoBlock = buildSeoBlock(pathname);
-  return withOrigin.replace(
+  return html.replace(
     SEO_MARKER_RE,
     `<!-- SEO:START -->\n    ${seoBlock}\n    <!-- SEO:END -->`,
   );
@@ -268,11 +261,6 @@ Clawpify is consignment and resale **operations software**: inventory across flo
 `;
 }
 
-/**
- * Generate the contents of `sitemap.xml` for all public routes.
- *
- * @returns XML sitemap string conforming to the sitemaps.org 0.9 schema.
- */
 export function generateSitemapXml(): string {
   const publicPaths: { path: string; lastmod: string; changefreq: string; priority: string }[] = [
     { path: "/",                lastmod: "2026-03-15", changefreq: "monthly", priority: "1.0" },

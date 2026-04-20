@@ -1,6 +1,6 @@
 import type { AuthPayload } from "../types/auth";
 import type { ConsignmentListingDto, ListListingsQuery } from "../app/app/modules/products/types";
-import { RUST_API_URL, RUST_PROXY_TIMEOUT_MS } from "../lib/env";
+import { RUST_API_URL, RUST_PROXY_TIMEOUT_MS } from "../lib/constants";
 
 export type { CreateListingBody, ListListingsQuery } from "../app/app/modules/products/types";
 

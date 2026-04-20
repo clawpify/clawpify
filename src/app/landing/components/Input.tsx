@@ -29,11 +29,11 @@ type InputProps = {
 
 export function Input({ className = "" }: InputProps) {
   const inputId = useId();
-  const { heroWaitlist } = landingCopy;
-  const [email, setEmail] = useState("");
+  const { heroWaitlist }          = landingCopy;
+  const [email, setEmail]         = useState("");
   const [submitted, setSubmitted] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading]     = useState(false);
+  const [error, setError]         = useState<string | null>(null);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();

@@ -4,40 +4,24 @@ use uuid::Uuid;
 /// Safe to return from the API (no ciphertext).
 #[derive(Serialize, sqlx::FromRow)]
 pub struct ChannelConnection {
-  /* id: The ID of the channel connection. */
-  pub id: Uuid,
-  /* org_id: The ID of the organization. */
-  pub org_id: String,
-  /* channel: The channel of the channel connection. */
-  pub channel: String,
-  /* shop_domain: The shop domain of the channel connection. */
-  pub shop_domain: String,
-  /* scopes: The scopes of the channel connection. */
-  pub scopes: Option<String>,
-  /* token_expires_at: The date and time the token expires at. */
-  pub token_expires_at: Option<chrono::DateTime<chrono::Utc>>,
-  /* created_at: The date and time the channel connection was created. */
-  pub created_at: chrono::DateTime<chrono::Utc>,
-  /* updated_at: The date and time the channel connection was last updated. */
-  pub updated_at: chrono::DateTime<chrono::Utc>,
+  pub id: Uuid,                                                // id
+  pub org_id: String,                                          // org id
+  pub channel: String,                                         // channel
+  pub shop_domain: String,                                     // shop domain
+  pub scopes: Option<String>,                                  // scopes
+  pub token_expires_at: Option<chrono::DateTime<chrono::Utc>>, // token expires at
+  pub created_at: chrono::DateTime<chrono::Utc>,               // created at
+  pub updated_at: chrono::DateTime<chrono::Utc>,               // updated at
 }
 
 #[derive(sqlx::FromRow)]
 pub struct ChannelConnectionSecrets {
-  /* id: The ID of the channel connection. */
-  pub id: Uuid,
-  /* org_id: The ID of the organization. */
-  pub org_id: String,
-  /* channel: The channel of the channel connection. */
-  pub channel: String,
-  /* shop_domain: The shop domain of the channel connection. */
-  pub shop_domain: String,
-  /* scopes: The scopes of the channel connection. */
-  pub scopes: Option<String>,
-  /* access_token_ciphertext: The ciphertext of the access token. */
-  pub access_token_ciphertext: Vec<u8>,
-  /* access_token_nonce: The nonce of the access token. */
-  pub access_token_nonce: Vec<u8>,
-  /* token_expires_at: When the OAuth access token expires (if known). */
-  pub token_expires_at: Option<chrono::DateTime<chrono::Utc>>,
+  pub id: Uuid,                                                // id
+  pub org_id: String,                                          // org id
+  pub channel: String,                                         // channel
+  pub shop_domain: String,                                     // shop domain
+  pub scopes: Option<String>,                                  // scopes
+  pub access_token_ciphertext: Vec<u8>,                        // access token ciphertext
+  pub access_token_nonce: Vec<u8>,                             // access token nonce
+  pub token_expires_at: Option<chrono::DateTime<chrono::Utc>>, // token expires at
 }

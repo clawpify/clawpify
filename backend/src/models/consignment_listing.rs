@@ -4,45 +4,27 @@ use uuid::Uuid;
 
 #[derive(Serialize, sqlx::FromRow, ToSchema)]
 pub struct ConsignmentListing {
-  /* id: The ID of the consignment listing. */
-  pub id: Uuid,
-  /* org_id: The ID of the organization. */
-  pub org_id: String,
-  /* created_by_user_id: The ID of the user who created the listing. */
-  pub created_by_user_id: Option<String>,
-  /* status: The status of the listing. */
-  pub status: String,
-  /* title: The title of the listing. */
-  pub title: String,
-  /* description_html: The HTML description of the listing. */
-  pub description_html: String,
-  /* product_type: The type of product the listing is for. */
-  pub product_type: String,
-  /* vendor: The vendor of the listing. */
-  pub vendor: String,
-  /* tags: The tags of the listing. */
-  pub tags: Vec<String>,
-  /* price_cents: The price of the listing in cents. */
-  pub price_cents: i64,
-  /* currency_code: The currency code of the listing. */
-  pub currency_code: String,
-  /* sku: The SKU of the listing. */
-  pub sku: String,
-  /* media_urls: The media URLs of the listing. */
-  pub media_urls: serde_json::Value,
-  /* ai_quality: The AI quality of the listing. */
-  pub ai_quality: Option<serde_json::Value>,
-  /* ai_attributes: The AI attributes of the listing. */
-  pub ai_attributes: Option<serde_json::Value>,
-  /* suggested_price_cents: The suggested price of the listing in cents. */
-  pub suggested_price_cents: Option<i64>,
-  /* created_at: The date and time the listing was created. */
-  pub created_at: chrono::DateTime<chrono::Utc>,
-  /* updated_at: The date and time the listing was last updated. */
-  pub updated_at: chrono::DateTime<chrono::Utc>,
-  pub consignor_id: Option<Uuid>,
-  pub contract_id: Option<Uuid>,
-  pub acceptance_status: Option<String>,
-  pub decline_reason: Option<String>,
-  pub post_contract_disposition: Option<String>,
+  pub id: Uuid,                                           // id
+  pub org_id: String,                                     // org id
+  pub created_by_user_id: Option<String>,                 // created by user id
+  pub status: String,                                     // status
+  pub title: String,                                      // title
+  pub description_html: String,                           // description html
+  pub product_type: String,                               // product type
+  pub vendor: String,                                     // vendor
+  pub tags: Vec<String>,                                  // tags
+  pub price_cents: i64,                                   // price cents
+  pub currency_code: String,                              // currency code
+  pub sku: String,                                        // sku
+  pub media_urls: serde_json::Value,                      // media urls
+  pub ai_quality: Option<serde_json::Value>,              // ai quality
+  pub ai_attributes: Option<serde_json::Value>,           // ai attributes
+  pub suggested_price_cents: Option<i64>,                 // suggested price cents
+  pub created_at: chrono::DateTime<chrono::Utc>,          // created at
+  pub updated_at: chrono::DateTime<chrono::Utc>,          // updated at
+  pub consignor_id: Option<Uuid>,                         // consignor id
+  pub contract_id: Option<Uuid>,                          // contract id
+  pub acceptance_status: Option<String>,                  // acceptance status
+  pub decline_reason: Option<String>,                     // decline reason
+  pub post_contract_disposition: Option<String>,          // post contract disposition
 }

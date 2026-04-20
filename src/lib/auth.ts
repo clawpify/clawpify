@@ -1,5 +1,5 @@
 import { verifyToken } from "@clerk/backend";
-import { CLERK_SECRET_KEY } from "./env";
+import { CLERK_SECRET_KEY } from "./constants";
 
 /**
  * Extract the Clerk session token from a request.

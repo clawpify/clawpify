@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { useLocation } from "react-router-dom";
 import { ClerkProvider } from "@clerk/react";
 import { clerkAppearance } from "./lib/clerk-appearance.ts";
-import { BUN_PUBLIC_CLERK_PUBLISHABLE_KEY } from "./lib/env";
+import { BUN_PUBLIC_CLERK_PUBLISHABLE_KEY } from "./lib/constants";
 import { pathRequiresClerk } from "./lib/path-requires-clerk.ts";
 
 const pk = BUN_PUBLIC_CLERK_PUBLISHABLE_KEY;

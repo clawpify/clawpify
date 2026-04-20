@@ -1,38 +1,67 @@
 import tailwindPlugin from "bun-plugin-tailwind";
-import {
-  BUN_PUBLIC_API_BASE,
-  BUN_PUBLIC_BASE_URL,
-  BUN_PUBLIC_CLERK_PUBLISHABLE_KEY,
-  BUN_PUBLIC_RUST_API_URL,
-  isProduction,
-  NODE_ENV,
-  RUST_API_URL,
-} from "../lib/env";
+
+/** Clerk Frontend API hosts are not the Clawpify REST API; skip if pasted into API base env by mistake. */
+function isClerkAccountsDevOrigin(value: string): boolean {
+  try {
+    const { hostname } = new URL(value);
+    return hostname.endsWith(".clerk.accounts.dev");
+  } catch {
+    return false;
+  }
+}
+
+function firstNonClerkApiOrigin(...candidates: (string | undefined)[]): string {
+  for (const raw of candidates) {
+    const t = (raw ?? "").trim();
+    if (!t || isClerkAccountsDevOrigin(t)) continue;
+    return t;
+  }
+  return "";
+}
+
+function clientNodeEnv(): string {
+  if (process.env.NODE_ENV) return process.env.NODE_ENV;
+  return process.env.CLAWPIFY_PROD === "1" ? "production" : "development";
+}
 
 export async function loadBundledFrontend(entryHtmlPath: string): Promise<{
   builtAssets: Map<string, Blob>;
   rawHtml: string;
 }> {
+  const nodeEnv = clientNodeEnv();
+  const isProd = nodeEnv === "production";
+
+  const pubApi = process.env.BUN_PUBLIC_API_URL ?? "";
+  const clientRustOrigin = firstNonClerkApiOrigin(
+    pubApi,
+    process.env.BUN_PUBLIC_RUST_API_URL,
+    process.env.RUST_API_URL,
+  );
+
   const clientDefines: Record<string, string> = {
-    "process.env.NODE_ENV": JSON.stringify(NODE_ENV),
+    "process.env.NODE_ENV": JSON.stringify(nodeEnv),
     "process.env.PORT": JSON.stringify(process.env.PORT ?? ""),
-    "process.env.RUST_API_URL": JSON.stringify(RUST_API_URL),
-    "process.env.BUN_PUBLIC_RUST_API_URL": JSON.stringify(BUN_PUBLIC_RUST_API_URL),
-    "process.env.BUN_PUBLIC_API_BASE": JSON.stringify(BUN_PUBLIC_API_BASE),
-    "process.env.BUN_PUBLIC_BASE_URL": JSON.stringify(BUN_PUBLIC_BASE_URL),
-    "process.env.BUN_PUBLIC_CLERK_PUBLISHABLE_KEY": JSON.stringify(BUN_PUBLIC_CLERK_PUBLISHABLE_KEY),
+    "process.env.RUST_API_URL": JSON.stringify(clientRustOrigin),
+    "process.env.BUN_PUBLIC_API_URL": JSON.stringify(process.env.BUN_PUBLIC_API_URL ?? ""),
+    "process.env.BUN_PUBLIC_BASE_URL": JSON.stringify(process.env.BUN_PUBLIC_BASE_URL ?? ""),
+    "process.env.BUN_PUBLIC_CLERK_PUBLISHABLE_KEY": JSON.stringify(
+      process.env.BUN_PUBLIC_CLERK_PUBLISHABLE_KEY ?? "",
+    ),
+    "process.env.VITE_CLERK_PUBLISHABLE_KEY": JSON.stringify(
+      process.env.VITE_CLERK_PUBLISHABLE_KEY ?? "",
+    ),
+    "process.env.CLAWPIFY_PROD": JSON.stringify(process.env.CLAWPIFY_PROD ?? ""),
     "process.env.CLERK_SECRET_KEY": JSON.stringify(""),
     "process.env.RUST_PROXY_TIMEOUT_MS": JSON.stringify(process.env.RUST_PROXY_TIMEOUT_MS ?? ""),
-    "process.env.CORS_ALLOWED_ORIGINS": JSON.stringify(process.env.CORS_ALLOWED_ORIGINS ?? ""),
-    "process.env.BUN_SERVICE_URL": JSON.stringify(process.env.BUN_SERVICE_URL ?? ""),
   };
 
   const frontendBuild = await Bun.build({
     entrypoints: [entryHtmlPath],
     target: "browser",
     sourcemap: "none",
-    minify: isProduction,
+    minify: isProd,
     define: clientDefines,
+    banner: `var process=globalThis.process??{env:{NODE_ENV:${JSON.stringify(nodeEnv)}}};`,
     plugins: [tailwindPlugin],
   });
 

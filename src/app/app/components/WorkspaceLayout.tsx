@@ -1,7 +1,7 @@
 import { useAuth } from "@clerk/react";
 import { useEffect, useRef } from "react";
 import { Navigate, Outlet, useLocation, useSearchParams } from "react-router-dom";
-import { BUN_PUBLIC_CLERK_PUBLISHABLE_KEY } from "../../../lib/env";
+import { BUN_PUBLIC_CLERK_PUBLISHABLE_KEY } from "../../../lib/constants";
 import { useToast } from "../../../lib/toast";
 import { copy } from "../utils/copy";
 import { WorkspaceHeaderProvider } from "../context/WorkspaceHeaderContext";

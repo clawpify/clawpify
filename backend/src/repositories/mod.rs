@@ -12,3 +12,4 @@ pub mod listings;
 pub mod stored_images;
 pub mod subscribers;
 pub mod twilio_inbound;
+pub mod listing_publications;

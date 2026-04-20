@@ -4,6 +4,7 @@ mod spa_redirects;
 mod consignors;
 mod contracts;
 mod ebay;
+mod ebay_publish;
 pub mod extractors;
 mod health;
 mod intake;
@@ -39,6 +40,7 @@ fn core_routes() -> Router<AppState> {
     .merge(llm::routes())
     .merge(s3::routes())
     .merge(ebay::routes())
+    .merge(ebay_publish::routes())
 }
 
 /// API tree with [`AppState`] (database pool + future shared deps).

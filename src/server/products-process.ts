@@ -1,6 +1,6 @@
 import { suggestListingSku } from "../app/app/modules/products/utils/generalFns";
 import { requireAuth, AuthError } from "../lib/auth";
-import { isProduction } from "../lib/env";
+import { isProduction } from "../lib/constants";
 import { messageFromErrorBody } from "../lib/messageFromErrorBody";
 import { proxyToRust } from "../utils/networkFns";
 
@@ -55,11 +55,10 @@ function parseJsonFromText(value: string): Record<string, unknown> | null {
 }
 
 function toCents(value: unknown): number | null {
-  if (typeof value === "number" && Number.isFinite(value)) {
-    return Math.max(0, Math.round(value * 100));
-  }
+  if (typeof value === "number" && Number.isFinite(value)) return Math.max(0, Math.round(value * 100));
   if (typeof value === "string") {
     const parsed = Number.parseFloat(value.replace(/[$,\s]/g, ""));
+
     if (Number.isFinite(parsed)) return Math.max(0, Math.round(parsed * 100));
   }
   return null;
@@ -71,13 +70,17 @@ function toDollars(cents: number): number {
 
 function shortenDescription(value: string): string {
   const normalized = value.replace(/\s+/g, " ").trim();
+
   if (normalized.length <= MAX_DESCRIPTION_LENGTH) return normalized;
+
   return `${normalized.slice(0, MAX_DESCRIPTION_LENGTH - 1).trimEnd()}...`;
 }
 
 function shortenBrandDescription(value: string): string {
   const normalized = value.replace(/\s+/g, " ").trim();
+
   if (normalized.length <= MAX_BRAND_DESCRIPTION_LENGTH) return normalized;
+  
   return `${normalized.slice(0, MAX_BRAND_DESCRIPTION_LENGTH - 1).trimEnd()}...`;
 }
 

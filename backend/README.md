@@ -8,11 +8,11 @@ Rust API for the Clawpify consignment inventory tracker: listings, intake, LLM a
    ```bash
    cp .env.example .env
    ```
-   Edit `.env` and set `DATABASE_URL` (required).
+   Edit `.env` and set `DATA` (required).
 
 2. Run migrations (from project root), e.g.:
    ```bash
-   for f in migrations/*.sql; do psql "$DATABASE_URL" -f "$f" -v ON_ERROR_STOP=1; done
+   for f in migrations/*.sql; do psql "$DATA" -f "$f" -v ON_ERROR_STOP=1; done
    ```
 
 3. Optional: generate sqlx query cache for offline builds:
