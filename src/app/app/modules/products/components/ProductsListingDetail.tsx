@@ -11,7 +11,7 @@ import {
 } from "../utils/generalFns";
 import { PlusIcon } from "../../../../../icons/workspace-icons";
 import { ListingMediaSection } from "./listing-media";
-import { RAIL_CARD_SHADOW } from "../utils/generalFns";
+import { RAIL_CARD_SHADOW } from "./listing-media/listingMediaChrome";
 import {
   landingOrangeBubbleClassName,
   landingOrangeBubbleStyle,

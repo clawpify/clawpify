@@ -11,7 +11,9 @@ export const BUN_PUBLIC_CLERK_PUBLISHABLE_KEY =
   "";
 
 export const isProduction = process.env.CLAWPIFY_PROD === "1";
-export const PORT: number = process.env.PORT || 3001;
+export const PORT: number = process.env.PORT
+  ? parseInt(process.env.PORT, 10)
+  : 3001;
 
 export const RUST_API_URL = process.env.RUST_API_URL ?? "";
 export const CLERK_SECRET_KEY = process.env.CLERK_SECRET_KEY;
