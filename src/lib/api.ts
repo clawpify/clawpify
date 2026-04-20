@@ -1,33 +1,12 @@
 import { useAuth } from "@clerk/react";
 import { useCallback } from "react";
-import type { LogActivityPayload } from "../types/agent-activity";
+import { RUST_API_URL } from "./constants";
 import { messageFromErrorBody } from "./messageFromErrorBody";
-import { publicRustOrigin } from "./publicRustOrigin";
 
 function apiUrl(path: string): string {
-  const base = publicRustOrigin();
+  const base = RUST_API_URL;
   if (!base) return path;
   return new URL(path, base).href;
-}
-
-export type { LogActivityPayload };
-
-/** POST `/api/agent-activity`; errors ignored. */
-export async function logAgentActivity(
-  fetchAuth: (path: string, init?: RequestInit) => Promise<Response>,
-  body: LogActivityPayload
-): Promise<void> {
-  try {
-    const res = await fetchAuth("/api/agent-activity", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-
-    if (!res.ok) return;
-  } catch {
-    /* ignore */
-  }
 }
 
 /** Clerk Bearer + one retry on 401 / org-required 400. */
@@ -38,6 +17,7 @@ export function useAuthenticatedFetch() {
     async (path: string, init?: RequestInit): Promise<Response> => {
       const request = async (forceRefresh = false) => {
         const token = await getToken(forceRefresh ? { skipCache: true } : undefined);
+        
         const headers = new Headers(init?.headers);
 
         if (token) headers.set("Authorization", `Bearer ${token}`);
@@ -49,10 +29,10 @@ export function useAuthenticatedFetch() {
       if (res.status === 401) return request(true);
       if (res.status === 400) {
         const body = await res.clone().json().catch(() => undefined);
+
         const message = messageFromErrorBody(body);
-        if (message?.toLowerCase().includes("org required")) {
-          return request(true);
-        }
+
+        if (message?.toLowerCase().includes("org required")) return request(true);
       }
 
       return res;

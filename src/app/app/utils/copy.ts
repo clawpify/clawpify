@@ -177,9 +177,6 @@ export const copy = {
     detailSidebarStatus: "Status",
     detailSidebarPrice: "Price",
     detailSidebarSku: "SKU",
-    detailSidebarCategory: "Category",
-    detailSidebarVendor: "Vendor",
-    detailSidebarChannels: "Channels",
     detailSidebarIntegrations: "Integrations",
     detailSidebarLabels: "Category",
     detailLabelsEmpty: "No category yet.",
@@ -242,11 +239,6 @@ export const copy = {
     body: "Define contract terms with POST /api/contracts. Contracts can be created later and linked after listings exist.",
     prevConsignors: "Back: Consignors",
     productsLink: "View products",
-  },
-  home: {
-    header: "Home",
-    title: "Welcome",
-    desc: "Your workspace overview. Use Inbox and Products to work consignment listings for your organization.",
   },
   inbox: {
     heading: "Inbox",

@@ -22,18 +22,11 @@ const appWorkspace = () => import("../app/app");
 const WorkspaceLayout = lazy(() =>
   appWorkspace().then((m) => ({ default: m.WorkspaceLayout })),
 );
-const HomePage = lazy(() => appWorkspace().then((m) => ({ default: m.HomePage })));
 const ProductsLayout = lazy(() =>
   appWorkspace().then((m) => ({ default: m.ProductsLayout })),
 );
 const ProductsPage = lazy(() =>
   appWorkspace().then((m) => ({ default: m.ProductsPage })),
-);
-const ConsignorsPage = lazy(() =>
-  appWorkspace().then((m) => ({ default: m.ConsignorsPage })),
-);
-const ContractsPage = lazy(() =>
-  appWorkspace().then((m) => ({ default: m.ContractsPage })),
 );
 
 const SignInRoute = lazy(() =>
@@ -56,13 +49,11 @@ export function AppRoutes() {
         <Route path="/writing" element={<Navigate to="/blog" replace />} />
         <Route path="/writing/:slug" element={<WritingSlugRedirect />} />
         <Route path="/app" element={<WorkspaceLayout />}>
-          <Route index element={<HomePage />} />
+          <Route index element={<Navigate to="/app/products" replace />} />
           <Route path="products" element={<ProductsLayout />}>
             <Route index element={<ProductsPage />} />
             <Route path=":listingId" element={<ProductsPage />} />
           </Route>
-          <Route path="consignors" element={<ConsignorsPage />} />
-          <Route path="contracts" element={<ContractsPage />} />
           <Route path="listings" element={<Navigate to="/app/products" replace />} />
         </Route>
         <Route path="/sign-in" element={<SignInRoute />} />

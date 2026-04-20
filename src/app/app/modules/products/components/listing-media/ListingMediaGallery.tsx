@@ -64,14 +64,11 @@ export function ListingMediaGallery({
   const [emptyDragOver, setEmptyDragOver] = useState(false);
   const emptyHeadlineText = emptyHeadline ?? copy.products.detailNoImages;
   
-  const emptyHintText =
-    emptyHint ?? copy.products.detailMediaDropHint;
+  const emptyHintText = emptyHint ?? copy.products.detailMediaDropHint;
 
-  const chooseFilesText =
-    chooseFilesLabel ?? copy.products.detailMediaChooseFiles;
+  const chooseFilesText = chooseFilesLabel ?? copy.products.detailMediaChooseFiles;
 
-  const regionLabel =
-    regionAriaLabel ?? copy.products.detailMediaGalleryRegionAria;
+  const regionLabel = regionAriaLabel ?? copy.products.detailMediaGalleryRegionAria;
 
   const showEmptyHero = n === 0 && !compactWhenEmpty;
   const compactEmptyStrip = n === 0 && compactWhenEmpty;

@@ -28,9 +28,9 @@ export function ProductsPage() {
   const { setConfig } = useWorkspaceHeader();
   const { listings, loading, error, refetch, creating, createError, deleteListing, deleting } = useProducts();
 
-  const [statusTab, setStatusTab] = useState<ProductStatusTab>("all");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [statusTab, setStatusTab]             = useState<ProductStatusTab>("all");
+  const [searchQuery, setSearchQuery]         = useState("");
+  const [deleteError, setDeleteError]         = useState<string | null>(null);
   const [createModalOpen, setCreateModalOpen] = useState(false);
 
   const displayed = useMemo(

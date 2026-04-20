@@ -29,15 +29,15 @@ type Props = {
 
 export function ListingMediaSection({ listing }: Props) {
   const fetchAuth = useAuthenticatedFetch();
-  const { showToast } = useToast();
+  const { showToast }                           = useToast();
   const [imageListVersion, setImageListVersion] = useState(0);
   const { urls: serverUrls, galleryMetaPending } = useListingGalleryImageUrls(
     listing,
     imageListVersion
   );
   usePrefetchAuthImageUrls(serverUrls);
-  const [pending, setPending] = useState<PendingSlot[]>([]);
-  const [heroIndex, setHeroIndex] = useState(0);
+  const [pending, setPending]               = useState<PendingSlot[]>([]);
+  const [heroIndex, setHeroIndex]           = useState(0);
   const [mediaUploading, setMediaUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -103,9 +103,7 @@ export function ListingMediaSection({ listing }: Props) {
         }
         toAdd.push({ id: crypto.randomUUID(), file, previewUrl: URL.createObjectURL(file) });
       }
-      if (!toAdd.length) {
-        return;
-      }
+      if (!toAdd.length) return;
 
       setPending((prev) => [...prev, ...toAdd]);
     },

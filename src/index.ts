@@ -1,14 +1,15 @@
 import path from "node:path";
 import { serve } from "bun";
 import { requireAuth, AuthError } from "./lib/auth";
-import { createProxyHandler, proxyToRustPublic } from "./utils/networkFns";
+import { isProduction, PORT } from "./lib/constants";
 import { generateLlmsTxt, generateRobotsTxt, generateSitemapXml, injectSeoMeta } from "./lib/seo";
 import { loadBundledFrontend } from "./server/build-frontend";
 import { handleCompleteOnboarding } from "./server/clerk-onboarding";
 import { handleProvisionConsignor } from "./server/consignor-provision";
 import { handleProductsProcess } from "./server/products-process";
+import { createProxyHandler, proxyToRustPublic } from "./utils/networkFns";
 
-const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 3001;
+const port = PORT;
 
 const { builtAssets, rawHtml } = await loadBundledFrontend(`${import.meta.dir}/index.html`);
 
@@ -45,11 +46,7 @@ function resolvePublicImageFile(req: Request): string | null {
   return abs;
 }
 
-const PUBLIC_ROOT_NAMES = new Set([
-  "favicon-32.png",
-  "apple-touch-icon.png",
-  "clawpify-mark.svg",
-]);
+const PUBLIC_ROOT_NAMES = new Set(["favicon-32.png", "apple-touch-icon.png"]);
 
 async function servePublicRoot(pathname: string): Promise<Response | null> {
   const name = pathname.startsWith("/") ? pathname.slice(1) : pathname;
@@ -149,7 +146,7 @@ const handleWaitlistPost = async (req: Request) => {
     return await forwardPublic(req, { clientIP });
   } catch (e) {
     console.error(
-      "POST /api/waitlist proxy failed (check RUST_API_URL reaches the Rust service, or set BUN_PUBLIC_API_BASE for direct browser calls):",
+      "POST /api/waitlist proxy failed (check RUST_API_URL reaches the Rust service, or set BUN_PUBLIC_API_URL for direct browser calls):",
       e
     );
     return Response.json(
@@ -175,9 +172,6 @@ const routes = {
 
   "/api/health": {
     GET: handleHealth,
-  },
-  "/api/shield": {
-    PUT: authProxyHandler("/api/shield"),
   },
   "/api/llm/agents": {
     POST: authProxyHandler("/api/llm/agents"),
@@ -242,24 +236,22 @@ const server = serve({
 
   async fetch(req) {
     const pathname = pathnameOf(req);
-    if (pathname === "/api-reference" || pathname === "/docs/api") {
-      return handleApiReference(req);
-    }
-    if (isOpenApiOrSwaggerPath(pathname)) {
-      return forwardPublic(req);
-    }
-    if (isEbayOauthPublicPath(pathname) && (req.method === "GET" || req.method === "HEAD")) {
-      return forwardPublic(req);
-    }
-    if (isEbayOauthAuthedGetPath(pathname) && (req.method === "GET" || req.method === "HEAD")) {
-      return authProxyHandler(pathnameOf)(req);
-    }
-    if (AUTH_PROXY_PREFIXES.some((p) => pathname.startsWith(p))) {
-      return authProxyHandler(pathnameOf)(req);
-    }
+
+    if (pathname === "/api-reference" || pathname === "/docs/api") return handleApiReference(req);
+
+    if (isOpenApiOrSwaggerPath(pathname)) return forwardPublic(req);
+
+    if (isEbayOauthPublicPath(pathname) && (req.method === "GET" || req.method === "HEAD")) return forwardPublic(req);
+
+    if (isEbayOauthAuthedGetPath(pathname) && (req.method === "GET" || req.method === "HEAD")) return authProxyHandler(pathnameOf)(req);
+
+    if (AUTH_PROXY_PREFIXES.some((p) => pathname.startsWith(p))) return authProxyHandler(pathnameOf)(req);
+
     let asset: Blob | undefined;
+
     for (const key of bundledAssetKeyCandidates(pathname)) {
       asset = builtAssets.get(key);
+      
       if (asset) break;
     }
     if (asset) {
@@ -277,10 +269,9 @@ const server = serve({
     });
   },
 
-  development: process.env.NODE_ENV !== "production" && {
+  development: !isProduction && {
     console: true,
   },
 });
 
 serverRef = server;
-console.log(`🚀 Server running at ${server.url}`);

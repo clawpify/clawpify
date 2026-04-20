@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { Show, SignInButton, UserButton } from "@clerk/react";
-import { useWorkspaceHeader } from "../context/WorkspaceHeaderContext";
+import { BUN_PUBLIC_CLERK_PUBLISHABLE_KEY } from "../../../lib/constants";
 import {
   FilterIcon,
   SortIcon,
@@ -9,8 +9,9 @@ import {
   BellIcon,
   ChevronDownIcon,
 } from "../../../icons/workspace-icons";
+import { useWorkspaceHeader } from "../context/WorkspaceHeaderContext";
 
-const clerkPublishableKey = process.env.BUN_PUBLIC_CLERK_PUBLISHABLE_KEY ?? "";
+const clerkPublishableKey = BUN_PUBLIC_CLERK_PUBLISHABLE_KEY;
 
 export function WorkspaceMainHeader() {
   const { config } = useWorkspaceHeader();
@@ -42,7 +43,6 @@ export function WorkspaceMainHeader() {
             <ChevronDownIcon size={16} className="shrink-0 text-zinc-500" />
           </button>
         </div>
-
         {/* Center: tabs */}
         {tabs.length > 0 && (
           <div className="flex items-center gap-1">

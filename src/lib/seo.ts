@@ -1,4 +1,6 @@
-const BASE_URL = process.env.BUN_PUBLIC_BASE_URL || "https://clawpify.com";
+import { BUN_PUBLIC_BASE_URL } from "./constants";
+
+const BASE_URL = BUN_PUBLIC_BASE_URL;
 
 const DEFAULT_OG_IMAGE = `${BASE_URL}/image/dollars-og.jpg`;
 const DEFAULT_ORG_LOGO = `${BASE_URL}/apple-touch-icon.png`;
@@ -18,7 +20,6 @@ const ORG_KNOWS_ABOUT = [
   "Consignor agreements and payouts",
   "Multi-channel listings",
   "Shopify",
-  "WooCommerce",
   "E-commerce API integrations",
 ];
 
@@ -209,16 +210,9 @@ function buildSeoBlock(pathname: string): string {
 
 const SEO_MARKER_RE = /<!-- SEO:START -->[\s\S]*?<!-- SEO:END -->/;
 
-export function injectPublicRustOrigin(html: string): string {
-  const base = process.env.BUN_PUBLIC_RUST_API_URL ?? process.env.RUST_API_URL ?? "";
-  const script = `<script>window.__CLAWPIFY_PUBLIC_API_BASE__=${JSON.stringify(base)}<\/script>`;
-  return html.replace("<head>", `<head>\n    ${script}`);
-}
-
 export function injectSeoMeta(html: string, pathname: string): string {
-  const withOrigin = injectPublicRustOrigin(html);
   const seoBlock = buildSeoBlock(pathname);
-  return withOrigin.replace(
+  return html.replace(
     SEO_MARKER_RE,
     `<!-- SEO:START -->\n    ${seoBlock}\n    <!-- SEO:END -->`,
   );
@@ -267,11 +261,6 @@ Clawpify is consignment and resale **operations software**: inventory across flo
 `;
 }
 
-/**
- * Generate the contents of `sitemap.xml` for all public routes.
- *
- * @returns XML sitemap string conforming to the sitemaps.org 0.9 schema.
- */
 export function generateSitemapXml(): string {
   const publicPaths: { path: string; lastmod: string; changefreq: string; priority: string }[] = [
     { path: "/",                lastmod: "2026-03-15", changefreq: "monthly", priority: "1.0" },

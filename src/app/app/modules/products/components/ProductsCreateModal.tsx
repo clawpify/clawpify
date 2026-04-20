@@ -25,8 +25,7 @@ function initialForm(): ProductCreateFormState {
   };
 }
 
-const metaPillClass =
-  "h-7 shrink-0 rounded-full border border-zinc-200/90 bg-white px-2.5 text-[11px] font-medium text-zinc-700 placeholder:text-zinc-400 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition focus:border-zinc-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20";
+const metaPillClass = "h-7 shrink-0 rounded-full border border-zinc-200/90 bg-white px-2.5 text-[11px] font-medium text-zinc-700 placeholder:text-zinc-400 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition focus:border-zinc-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/20";
 
 const selectChevronStyle = {
   backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2371717a'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
@@ -41,15 +40,15 @@ function categorySelectValue(productType: string, presetValues: readonly string[
 
 export function ProductsCreateModal({ open, onClose, onCreated }: ProductsCreateModalProps) {
   const { createListingWithImageFiles, creating } = useProducts();
-  const [form, setForm] = useState(() => initialForm());
-  const [heroIndex, setHeroIndex] = useState(0);
+  const [form, setForm]                       = useState(() => initialForm());
+  const [heroIndex, setHeroIndex]             = useState(0);
   const [submitAttempted, setSubmitAttempted] = useState(false);
-  const titleRef = useRef<HTMLInputElement>(null);
-  const descriptionRef = useRef<HTMLTextAreaElement>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
-  const formRef = useRef(form);
-  const heroIndexRef = useRef(heroIndex);
-  const prevOpen = useRef(false);
+  const titleRef                              = useRef<HTMLInputElement>(null);
+  const descriptionRef                        = useRef<HTMLTextAreaElement>(null);
+  const fileRef                               = useRef<HTMLInputElement>(null);
+  const formRef                               = useRef(form);
+  const heroIndexRef                          = useRef(heroIndex);
+  const prevOpen                              = useRef(false);
 
   formRef.current = form;
   heroIndexRef.current = heroIndex;
@@ -178,9 +177,8 @@ export function ProductsCreateModal({ open, onClose, onCreated }: ProductsCreate
     }
     if (value === CATEGORY_CUSTOM) {
       const cur = form.productType.trim();
-      if (presetValues.includes(cur)) {
-        setField("productType", "");
-      }
+      
+      if (presetValues.includes(cur)) setField("productType", "");
       return;
     }
     setField("productType", value);

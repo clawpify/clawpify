@@ -1,29 +1,19 @@
 import type { AuthPayload } from "../types/auth";
 import type { ConsignmentListingDto, ListListingsQuery } from "../app/app/modules/products/types";
+import { RUST_API_URL, RUST_PROXY_TIMEOUT_MS } from "../lib/constants";
 
 export type { CreateListingBody, ListListingsQuery } from "../app/app/modules/products/types";
 
-function readEnv(key: string): string | undefined {
-  if (typeof process === "undefined" || !process.env) return undefined;
-  const v = process.env[key];
-  return typeof v === "string" ? v : undefined;
-}
-
-export const RUST_API_BASE_URL = readEnv("RUST_API_URL") || "";
-
 function rustProxyTarget(path: string, search: string): string {
-  return `${RUST_API_BASE_URL}${path}${search}`;
+  return `${RUST_API_URL}${path}${search}`;
 }
 
 function rustProxyFetchInit(req: Request, headers: Headers): RequestInit {
-  const raw = readEnv("RUST_PROXY_TIMEOUT_MS");
-  const parsed = raw != null && raw !== "" ? parseInt(raw, 10) : 25_000;
-  const ms = Number.isFinite(parsed) && parsed > 0 ? parsed : 25_000;
   return {
     method: req.method,
     headers,
     body: req.method !== "GET" && req.method !== "HEAD" ? req.body : undefined,
-    signal: AbortSignal.timeout(ms),
+    signal: AbortSignal.timeout(RUST_PROXY_TIMEOUT_MS),
     redirect: "manual",
   };
 }
@@ -62,17 +52,10 @@ export async function proxyToRust(
   const backendUrl = rustProxyTarget(path, url.search);
   const headers = new Headers(req.headers);
 
-  const selectedOrgId = normalizeOrgId(req.headers.get("X-Selected-Org-Id"));
   const tokenOrgId = normalizeOrgId(auth.orgId);
-  const resolvedOrgId =
-    tokenOrgId ??
-    (readEnv("NODE_ENV") !== "production" && selectedOrgId?.startsWith("org_")
-      ? selectedOrgId
-      : undefined);
-
   const authForProxy: AuthPayload = {
     ...auth,
-    orgId: resolvedOrgId ?? auth.orgId,
+    orgId: tokenOrgId ?? auth.orgId,
   };
 
   headers.set("X-Internal-User-Id", auth.userId);

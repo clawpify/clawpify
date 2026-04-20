@@ -5,7 +5,7 @@ use axum::{
   Router,
 };
 
-use super::spa_hop::util;
+use super::spa_redirects::util;
 use super::state::AppState;
 use crate::error::ApiError;
 

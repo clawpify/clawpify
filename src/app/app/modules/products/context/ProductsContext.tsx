@@ -25,22 +25,24 @@ const ProductsContext = createContext<ProductsContextValue | null>(null);
 export function ProductsProvider({ children }: { children: ReactNode }) {
   const fetchAuth = useAuthenticatedFetch();
   /** After first sync, refetch quietly so Clerk/`fetchAuth` identity changes do not toggle `loading` and unmount listing detail (wiping local pending media state). */
-  const initialProductsFetchStarted = useRef(false);
-  const [listings, setListings] = useState<ConsignmentListingDto[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [creating, setCreating] = useState(false);
-  const [createError, setCreateError] = useState<string | null>(null);
+  const initialProductsFetchStarted           = useRef(false);
+  const [listings, setListings]               = useState<ConsignmentListingDto[]>([]);
+  const [loading, setLoading]                 = useState(true);
+  const [error, setError]                     = useState<string | null>(null);
+  const [creating, setCreating]               = useState(false);
+  const [createError, setCreateError]         = useState<string | null>(null);
   const [updatingListing, setUpdatingListing] = useState(false);
-  const [deleting, setDeleting] = useState(false);
+  const [deleting, setDeleting]               = useState(false);
 
   const refetch = useCallback(
     async (opts?: { quiet?: boolean }) => {
       const quiet = opts?.quiet === true;
+
       if (!quiet) {
         setLoading(true);
         setError(null);
       }
+      
       try {
         const res = await fetchAuth(listingsListPath({ limit: 100, offset: 0 }));
         setListings(await parseListingsResponse(res));

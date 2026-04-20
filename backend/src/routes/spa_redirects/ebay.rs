@@ -49,4 +49,4 @@ async fn ebay_success(State(state): State<AppState>) -> Result<impl IntoResponse
 
 #[derive(utoipa::OpenApi)]
 #[openapi(paths(ebay_declined, ebay_success))]
-pub struct SpaHopOpenApiDoc;
+pub struct SpaRedirectsOpenApiDoc;

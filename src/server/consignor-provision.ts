@@ -1,4 +1,5 @@
 import { requireAuth, AuthError } from "../lib/auth";
+import { isProduction } from "../lib/constants";
 import { proxyToRust } from "../utils/networkFns";
 
 const isEmail = (contact: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact);
@@ -42,7 +43,7 @@ export async function handleProvisionConsignor(req: Request) {
     const bodyOrgId = body.organizationId;
     const orgId =
       tokenOrgId ??
-      (process.env.NODE_ENV !== "production" ? bodyOrgId : undefined);
+      (!isProduction ? bodyOrgId : undefined);
 
     if (!orgId || !orgId.startsWith("org_")) {
       return Response.json({ error: "Active organization required" }, { status: 400 });

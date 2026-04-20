@@ -69,6 +69,7 @@ impl<'a> EbayInventory<'a> {
     fulfillment_policy_id: &str, 
     payment_policy_id: &str, 
     return_policy_id: &str,
+    merchant_location_key: &str,
   ) -> Result<String, EbayInventoryError> {
 
     let url = format!("{}/sell/inventory/v1/offer", self.base());
@@ -89,6 +90,7 @@ impl<'a> EbayInventory<'a> {
           "currency": currency,
         },
       },
+      "merchantLocationKey": merchant_location_key,
     });
 
     let res = http_client::shared()

@@ -3,7 +3,9 @@ import type { CreateListingBody, UpdateListingBody } from "./api";
 
 export type ProductsContextValue = {
   listings: ConsignmentListingDto[];
+  /* loading boolen */
   loading: boolean;
+  /* error boolean  */
   error: string | null;
   refetch: () => Promise<void>;
   createListing: (body?: CreateListingBody) => Promise<ConsignmentListingDto>;

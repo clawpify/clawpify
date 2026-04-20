@@ -73,46 +73,6 @@ export function ChevronDownIcon({ className = "shrink-0 text-zinc-400", size = 1
   );
 }
 
-export function MetricIcon({ className = "shrink-0 text-zinc-500", size = 20 }: IconProps) {
-  return (
-    <svg width={size} height={size} {...iconProps} className={className}>
-      <path d="M12 20V10" />
-      <path d="M18 20V4" />
-      <path d="M6 20v-4" />
-    </svg>
-  );
-}
-
-export function CalendarIcon({ className = "", size = 32 }: IconProps) {
-  return (
-    <svg width={size} height={size} {...iconProps} className={className}>
-      <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-      <line x1="16" y1="2" x2="16" y2="6" />
-      <line x1="8" y1="2" x2="8" y2="6" />
-      <line x1="3" y1="10" x2="21" y2="10" />
-    </svg>
-  );
-}
-
-export function ChartBarIcon({ className = "", size = 18 }: IconProps) {
-  return (
-    <svg width={size} height={size} {...iconProps} className={className}>
-      <line x1="12" y1="20" x2="12" y2="10" />
-      <line x1="18" y1="20" x2="18" y2="4" />
-      <line x1="6" y1="20" x2="6" y2="16" />
-    </svg>
-  );
-}
-
-export function ChartLineIcon({ className = "", size = 18 }: IconProps) {
-  return (
-    <svg width={size} height={size} {...iconProps} className={className}>
-      <polyline points="22 12 18 22 12 18 2 22" />
-      <polyline points="22 2 12 12 2 8" />
-    </svg>
-  );
-}
-
 export function ExportIcon({ className = "", size = 18 }: IconProps) {
   return (
     <svg width={size} height={size} {...iconProps} className={className}>

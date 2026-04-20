@@ -9,15 +9,13 @@ import {
 import { listingImageUrls } from "../utils/generalFns";
 
 export type ListingGalleryUrlsState = {
+  /* image url */
   urls: string[];
-  /** True until the first `GET .../images` for this listing finishes (or errors). */
   galleryMetaPending: boolean;
 };
 
-/** `media_urls` entries first, then stored-image gallery (API `url` or `/api/s3/objects?key=...`). */
 export function useListingGalleryImageUrls(
   listing: ConsignmentListingDto,
-  /** Bump after uploads so S3 rows refetch even if `listing.updated_at` is unchanged. */
   imageListVersion = 0
 ): ListingGalleryUrlsState {
   const fetchAuth = useAuthenticatedFetch();
@@ -28,7 +26,7 @@ export function useListingGalleryImageUrls(
     () => listingImageUrls(listing),
     [listing.id, listing.updated_at, listing.media_urls]
   );
-  const [s3Urls, setS3Urls] = useState<string[]>([]);
+  const [s3Urls, setS3Urls]                         = useState<string[]>([]);
   const [galleryMetaPending, setGalleryMetaPending] = useState(true);
   /** Only reset gallery state when `listing.id` truly changes (avoids fighting the fetch effect on remount). */
   const prevListingIdRef = useRef(listing.id);

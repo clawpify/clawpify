@@ -1,5 +1,3 @@
-import { ChartBarIcon } from "./app-icons";
-
 const iconProps = {
   viewBox: "0 0 24 24",
   fill: "none" as const,
@@ -57,8 +55,6 @@ export function EyeIcon({ className = "shrink-0 text-zinc-500", size = 20 }: Ico
     </svg>
   );
 }
-
-export { ChartBarIcon };
 
 export function InboxIcon({ className = "shrink-0 text-zinc-500", size = 20 }: IconProps) {
   return (

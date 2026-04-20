@@ -1,6 +1,7 @@
 import { useAuth } from "@clerk/react";
 import { useEffect, useRef } from "react";
 import { Navigate, Outlet, useLocation, useSearchParams } from "react-router-dom";
+import { BUN_PUBLIC_CLERK_PUBLISHABLE_KEY } from "../../../lib/constants";
 import { useToast } from "../../../lib/toast";
 import { copy } from "../utils/copy";
 import { WorkspaceHeaderProvider } from "../context/WorkspaceHeaderContext";
@@ -8,7 +9,7 @@ import { ClawpifyLoadingScreen } from "./ClawpifyLoadingScreen";
 import { WorkspaceMainHeader } from "./WorkspaceMainHeader";
 import { WorkspaceSidebar } from "./WorkspaceSidebar";
 
-const clerkPublishableKey = process.env.BUN_PUBLIC_CLERK_PUBLISHABLE_KEY ?? "";
+const clerkPublishableKey = BUN_PUBLIC_CLERK_PUBLISHABLE_KEY;
 
 /** One-time toast + strip `ebay_oauth` after OAuth hop (`/app?ebay_oauth=…`). */
 function EbayOauthQueryHandler() {
@@ -59,9 +60,7 @@ function WorkspaceLayoutWithClerkAuth() {
   const { isLoaded, isSignedIn } = useAuth();
   const location = useLocation();
 
-  if (!isLoaded) {
-    return <ClawpifyLoadingScreen variant="fullscreen" />;
-  }
+  if (!isLoaded) return <ClawpifyLoadingScreen variant="fullscreen" />;
 
   if (!isSignedIn) {
     const returnTo = `${location.pathname}${location.search}${location.hash}`;
@@ -72,9 +71,7 @@ function WorkspaceLayoutWithClerkAuth() {
 }
 
 export function WorkspaceLayout() {
-  if (!clerkPublishableKey) {
-    return <WorkspaceChrome />;
-  }
+  if (!clerkPublishableKey) return <WorkspaceChrome />;
 
   return <WorkspaceLayoutWithClerkAuth />;
 }

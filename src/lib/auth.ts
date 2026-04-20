@@ -1,6 +1,5 @@
 import { verifyToken } from "@clerk/backend";
-
-const CLERK_SECRET_KEY = process.env.CLERK_SECRET_KEY;
+import { CLERK_SECRET_KEY } from "./constants";
 
 /**
  * Extract the Clerk session token from a request.
@@ -16,6 +15,7 @@ export async function getAuthToken(req: Request): Promise<string | null> {
 
   const cookieHeader = req.headers.get("Cookie");
   if (cookieHeader) {
+    
     const match = cookieHeader.match(/__session=([^;]+)/);
 
     if (match) return decodeURIComponent(match[1]!);
