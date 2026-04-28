@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuthenticatedFetch } from "../../../../lib/api";
 import { messageFromErrorBody } from "../../../../lib/messageFromErrorBody";
 import { useToast } from "../../../../lib/toast";
 import { SettingsIcon } from "../../../../icons/workspace-icons";
 import { useWorkspaceHeader } from "../../context/WorkspaceHeaderContext";
 import { copy } from "../../utils/copy";
+import { ebayOAuthStartPath, ebayOAuthStatusPath } from "@/utils/networkFns";
 import {
   landingOrangeBubbleClassName,
   landingOrangeBubbleStyle,
@@ -12,20 +13,26 @@ import {
 
 type EbayStatus = "loading" | "connected" | "disconnected";
 
+const SETTINGS_HEADER_CONTEXT = copy.settings.title;
+const SETTINGS_HEADER_CONFIG = {
+  context: SETTINGS_HEADER_CONTEXT,
+  contextIcon: (
+    <span className="flex h-5 w-5 items-center justify-center rounded bg-zinc-200 text-zinc-700">
+      <SettingsIcon size={14} className="text-current" />
+    </span>
+  ),
+};
+
 export function SettingsPage() {
   const { setConfig } = useWorkspaceHeader();
 
   useEffect(() => {
-    setConfig({
-      context: copy.settings.title,
-      contextIcon: (
-        <span className="flex h-5 w-5 items-center justify-center rounded bg-zinc-200 text-zinc-700">
-          <SettingsIcon size={14} className="text-current" />
-        </span>
-      ),
-    });
+    setConfig(SETTINGS_HEADER_CONFIG);
 
-    return () => setConfig({});
+    return () =>
+      setConfig((current) =>
+        current.context === SETTINGS_HEADER_CONTEXT ? {} : current
+      );
   }, [setConfig]);
 
   return (
@@ -57,26 +64,59 @@ function EbayIntegrationCard() {
   const { showToast } = useToast();
   const [status, setStatus] = useState<EbayStatus>("loading");
   const [connectLoading, setConnectLoading] = useState(false);
+  const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const refreshStatus = useCallback(async () => {
-    setStatus("loading");
-    const res = await fetchAuth("/api/v1/oauth/ebay/status");
+  const refreshStatus = useCallback(async (opts?: { quiet?: boolean }): Promise<EbayStatus> => {
+    if (!opts?.quiet) setStatus("loading");
+    const res = await fetchAuth(ebayOAuthStatusPath);
     if (res.ok) {
       const data = (await res.json().catch(() => null)) as { connected?: boolean } | null;
-      setStatus(data?.connected ? "connected" : "disconnected");
-      return;
+      const next = data?.connected ? "connected" : "disconnected";
+      setStatus(next);
+      return next;
     }
     setStatus("disconnected");
+    return "disconnected";
   }, [fetchAuth]);
+
+  const clearStatusPoll = useCallback(() => {
+    if (pollTimerRef.current) {
+      clearInterval(pollTimerRef.current);
+      pollTimerRef.current = null;
+    }
+  }, []);
+
+  const startStatusPoll = useCallback(() => {
+    clearStatusPoll();
+    const stopAt = Date.now() + 60_000;
+    const tick = async () => {
+      const next = await refreshStatus({ quiet: true }).catch(() => "disconnected" as EbayStatus);
+      if (next === "connected" || Date.now() >= stopAt) clearStatusPoll();
+    };
+    void tick();
+    pollTimerRef.current = setInterval(() => void tick(), 2_000);
+  }, [clearStatusPoll, refreshStatus]);
 
   useEffect(() => {
     void refreshStatus();
+    const onFocus = () => void refreshStatus({ quiet: true });
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") void refreshStatus({ quiet: true });
+    };
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
   }, [refreshStatus]);
+
+  useEffect(() => clearStatusPoll, [clearStatusPoll]);
 
   const onConnect = useCallback(async () => {
     setConnectLoading(true);
     try {
-      const res = await fetchAuth("/api/v1/oauth/ebay/start");
+      const res = await fetchAuth(ebayOAuthStartPath);
       const payload = await res.json().catch(() => undefined);
 
       if (res.ok && payload && typeof payload === "object" && "url" in payload) {
@@ -87,6 +127,7 @@ function EbayIntegrationCard() {
 
         if (url) {
           window.open(url, "_blank", "noopener=yes,noreferrer=yes");
+          startStatusPoll();
           return;
         }
       }
@@ -101,7 +142,7 @@ function EbayIntegrationCard() {
     } finally {
       setConnectLoading(false);
     }
-  }, [fetchAuth, showToast]);
+  }, [fetchAuth, showToast, startStatusPoll]);
 
   const connected = status === "connected";
   const statusText =

@@ -3,7 +3,7 @@ pub struct EbayConfig {
   pub sandbox: bool,                                 // whether to use the sandbox environment
   pub client_id: String,                             // client id
   pub client_secret: String,                         // client secret
-  pub oauth_redirect_uri: String,                    // oauth redirect uri
+  pub oauth_ru_name: String,                         // eBay RuName value passed as OAuth redirect_uri
   pub oauth_scope: String,                           // oauth scope
   pub oauth_success_redirect: String,                // oauth success redirect uri
 }
@@ -23,7 +23,9 @@ impl EbayConfig {
 
     let client_id = require_env("EBAY_CLIENT_ID")?;
     let client_secret = require_env("EBAY_CLIENT_SECRET")?;
-    let oauth_redirect_uri = require_env("EBAY_OAUTH_REDIRECT_URI")?;
+    // eBay calls this request parameter `redirect_uri`, but REST OAuth expects
+    // the app's generated RuName here, not the accepted/declined callback URL.
+    let oauth_ru_name = require_env("EBAY_OAUTH_REDIRECT_URI")?;
     let oauth_scope = require_env("EBAY_OAUTH_SCOPES")
       .or_else(|_| require_env("EBAY_OAUTH_SCOPE"))
       .map_err(|_| "EBAY_OAUTH_SCOPES (or EBAY_OAUTH_SCOPE as fallback)")?;
@@ -32,7 +34,7 @@ impl EbayConfig {
       sandbox,
       client_id,
       client_secret,
-      oauth_redirect_uri,
+      oauth_ru_name,
       oauth_scope,
       oauth_success_redirect: std::env::var("EBAY_OAUTH_SUCCESS_REDIRECT")
         .unwrap_or_else(|_| "http://localhost:3001/app".into()),
