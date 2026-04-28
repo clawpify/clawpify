@@ -1,5 +1,6 @@
 use reqwest::StatusCode;
-use serde_json::json;
+use serde::{Deserialize, Serialize};
+use serde_json::{json, Value};
 
 use super::config::EbayConfig;
 use crate::http_client;
@@ -12,92 +13,63 @@ pub enum EbayInventoryError {
   Json(#[from] serde_json::Error),
   #[error("ebay api {status}: {body}")]
   Api { status: StatusCode, body: String },
+  #[error("ebay response missing {0}")]
+  MissingField(&'static str),
 }
 
 pub struct EbayInventory<'a> {
-  pub cfg: &'a EbayConfig,
-  pub access_token: &'a str,
+  pub cfg: &'a EbayConfig,   // eBay API configuration
+  pub access_token: &'a str, // eBay API access token
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PutInventoryItemRequest {
+  pub sku: String,
+  pub title: String,
+  pub description_html: String,
+  pub image_urls: Vec<String>,
+  pub condition: String,
+  pub quantity: i64,
+  #[serde(default)]
+  pub aspects: Value,
+  pub brand: Option<String>,
+  pub mpn: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CreateOfferRequest {
+  pub sku: String,
+  pub marketplace_id: String,
+  pub category_id: String,
+  pub price_value: String,
+  pub currency: String,
+  pub available_quantity: i64,
+  pub fulfillment_policy_id: String,
+  pub payment_policy_id: String,
+  pub return_policy_id: String,
+  pub merchant_location_key: Option<String>,
+  pub quantity_limit_per_buyer: Option<i64>,
+  pub include_catalog_product_details: Option<bool>,
 }
 
 impl<'a> EbayInventory<'a> {
+
+  /**
+   * Get the base URL for the eBay API.
+   * - return The base URL as a string.
+   */
   fn base(&self) -> String {
     self.cfg.api_base_url().trim_end_matches('/').to_string()
   }
 
-  pub async fn put_inventory_item(
+  /// Send an authenticated JSON request and preserve eBay error bodies.
+  async fn send_json<T: serde::de::DeserializeOwned>(
     &self,
-    sku: &str,
-    title: &str,
-    description_html: &str,
-    image_urls: Vec<String>,
-    _category_id: &str,
-    condition_id: &str,
-  ) -> Result<(), EbayInventoryError> {
-
-    let url = format!("{}/sell/inventory/v1/inventory_item/{}", self.base(), urlencoding::encode(sku));
-
-    let body = json!({
-      "availability": { "shipToLocationAvailability": { "quantity": 1 } },
-      "condition": condition_id,
-      "product": {
-        "title": title,
-        "description": description_html,
-        "imageUrls": image_urls,
-        "aspects": {},
-      },
-    });
-
-    let res = http_client::shared()
-      .put(url)
+    req: reqwest::RequestBuilder,
+  ) -> Result<T, EbayInventoryError> {
+    let res = req
       .header("Authorization", format!("Bearer {}", self.access_token))
       .header("Content-Type", "application/json")
-      .header("Content-Language", "en-US")
-      .json(&body)
-      .send()
-      .await?;
-    
-    Self::ok_or_body(res).await
-  }
-
-  pub async fn create_offer(
-    &self, 
-    sku: &str,
-    marketplace_id: &str,
-    category_id: &str,
-    price_value: &str,
-    currency: &str, 
-    fulfillment_policy_id: &str, 
-    payment_policy_id: &str, 
-    return_policy_id: &str,
-    merchant_location_key: &str,
-  ) -> Result<String, EbayInventoryError> {
-
-    let url = format!("{}/sell/inventory/v1/offer", self.base());
-
-    let body = json!({
-      "sku": sku,
-      "marketplaceId": marketplace_id,
-      "format": "FIXED_PRICE",
-      "categoryId": category_id,
-      "listingPolicies": {
-        "fulfillmentPolicyId": fulfillment_policy_id,
-        "paymentPolicyId": payment_policy_id,
-        "returnPolicyId": return_policy_id,
-      },
-      "pricingSummary": {
-        "price": {
-          "value": price_value,
-          "currency": currency,
-        },
-      },
-      "merchantLocationKey": merchant_location_key,
-    });
-
-    let res = http_client::shared()
-      .post(url)
-      .header("Authorization", format!("Bearer {}", self.access_token))
-      .header("Content-Type", "application/json") 
-      .json(&body)
       .send()
       .await?;
 
@@ -108,32 +80,36 @@ impl<'a> EbayInventory<'a> {
       return Err(EbayInventoryError::Api { status, body });
     }
 
-    let v: serde_json::Value = serde_json::from_str(&body)?; 
-    Ok(v["offerId"].as_str().unwrap_or_default().to_string())
-  }
-
-  pub async fn publish_offer(&self, offer_id: &str) -> Result<serde_json::Value, EbayInventoryError> {
-    let url = format!("{}/sell/inventory/v1/offer/{}/publish", self.base(), offer_id);
-
-    let res = http_client::shared() 
-      .post(url)
-      .header("Authorization", format!("Bearer {}", self.access_token))
-      .header("Content-Type", "application/json")
-      .json(&json!({}))
-      .send()
-      .await?;
-
-    let status = res.status();
-    let body = res.text().await?;
-
-    if !status.is_success() {
-      return Err(EbayInventoryError::Api { status, body });
+    if body.trim().is_empty() {
+      return Ok(serde_json::from_value(Value::Null)?);
     }
 
     Ok(serde_json::from_str(&body)?)
   }
 
-  async fn ok_or_body(res: reqwest::Response) -> Result<(), EbayInventoryError> { 
+  /**
+   * Get inventory item by SKU; returns `None` when eBay reports 404.
+   * - param sku - The SKU to get the inventory item for.
+   * - return The inventory item as a JSON object.
+   * - throws EbayInventoryError if the request fails.
+   */
+  pub async fn get_inventory_item(&self, sku: &str) -> Result<Option<Value>, EbayInventoryError> {
+    let url = format!(
+      "{}/sell/inventory/v1/inventory_item/{}",
+      self.base(),
+      urlencoding::encode(sku),
+    );
+
+    let res = http_client::shared()
+      .get(url)
+      .header("Authorization", format!("Bearer {}", self.access_token))
+      .send()
+      .await?;
+
+    if res.status() == StatusCode::NOT_FOUND {
+      return Ok(None);
+    }
+
     let status = res.status();
     let body = res.text().await?;
 
@@ -141,6 +117,140 @@ impl<'a> EbayInventory<'a> {
       return Err(EbayInventoryError::Api { status, body });
     }
 
+    Ok(Some(serde_json::from_str(&body)?))
+  }
+
+  /// Get all offers associated with a SKU, including unpublished offers.
+  pub async fn get_offers_by_sku(&self, sku: &str) -> Result<Vec<Value>, EbayInventoryError> {
+    let url = format!(
+      "{}/sell/inventory/v1/offer?sku={}",
+      self.base(),
+      urlencoding::encode(sku),
+    );
+    let v: Value = self.send_json(http_client::shared().get(url)).await?;
+    Ok(
+      v.get("offers")
+        .and_then(|x| x.as_array())
+        .cloned()
+        .unwrap_or_default(),
+    )
+  }
+
+  /// Get one offer by eBay offer id.
+  pub async fn get_offer(&self, offer_id: &str) -> Result<Value, EbayInventoryError> {
+    let url = format!(
+      "{}/sell/inventory/v1/offer/{}",
+      self.base(),
+      urlencoding::encode(offer_id),
+    );
+    self.send_json(http_client::shared().get(url)).await
+  }
+
+  /// Create or update the eBay inventory item backing an offer.
+  pub async fn put_inventory_item(
+    &self,
+    input: &PutInventoryItemRequest,
+  ) -> Result<(), EbayInventoryError> {
+    let url = format!(
+      "{}/sell/inventory/v1/inventory_item/{}",
+      self.base(),
+      urlencoding::encode(&input.sku),
+    );
+
+    let mut product = json!({
+      "title": input.title,
+      "description": input.description_html,
+      "imageUrls": input.image_urls,
+      "aspects": input.aspects,
+    });
+
+    if let Some(brand) = &input.brand {
+      product["brand"] = json!(brand);
+    }
+
+    if let Some(mpn) = &input.mpn {
+      product["mpn"] = json!(mpn);
+    }
+
+    let body = json!({
+      "availability": { "shipToLocationAvailability": { "quantity": input.quantity } },
+      "condition": input.condition,
+      "product": product,
+    });
+
+    let _: Value = self
+      .send_json(
+        http_client::shared()
+          .put(url)
+          .header("Content-Language", "en-US")
+          .json(&body),
+      )
+      .await?;
+
     Ok(())
+  }
+
+  /// Create an unpublished offer; this is the eBay draft.
+  pub async fn create_offer(
+    &self,
+    input: &CreateOfferRequest,
+  ) -> Result<String, EbayInventoryError> {
+    let url = format!("{}/sell/inventory/v1/offer", self.base());
+
+    let mut body = json!({
+      "sku": input.sku,
+      "marketplaceId": input.marketplace_id,
+      "format": "FIXED_PRICE",
+      "categoryId": input.category_id,
+      "availableQuantity": input.available_quantity,
+      "listingPolicies": {
+        "fulfillmentPolicyId": input.fulfillment_policy_id,
+        "paymentPolicyId": input.payment_policy_id,
+        "returnPolicyId": input.return_policy_id,
+      },
+      "pricingSummary": {
+        "price": {
+          "value": input.price_value,
+          "currency": input.currency,
+        }
+      }
+    });
+
+    if let Some(key) = &input.merchant_location_key {
+      body["merchantLocationKey"] = json!(key);
+    }
+
+    if let Some(limit) = input.quantity_limit_per_buyer {
+      body["quantityLimitPerBuyer"] = json!(limit);
+    }
+
+    if let Some(include) = input.include_catalog_product_details {
+      body["includeCatalogProductDetails"] = json!(include);
+    }
+
+    let v: Value = self
+      .send_json(http_client::shared().post(url).json(&body))
+      .await?;
+    let offer_id = v
+      .get("offerId")
+      .and_then(|x| x.as_str())
+      .unwrap_or_default()
+      .trim();
+
+    if offer_id.is_empty() {
+      return Err(EbayInventoryError::MissingField("offerId"));
+    }
+
+    Ok(offer_id.to_string())
+  }
+
+  /// Publish an existing unpublished offer.
+  pub async fn publish_offer(&self, offer_id: &str) -> Result<Value, EbayInventoryError> {
+    let url = format!(
+      "{}/sell/inventory/v1/offer/{}/publish",
+      self.base(),
+      urlencoding::encode(offer_id),
+    );
+    self.send_json(http_client::shared().post(url)).await
   }
 }

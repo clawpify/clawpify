@@ -46,12 +46,9 @@ function FooterExploreAiBubbles({ providers }: { providers: readonly LandingFoot
 function FooterLink({ label, href, external }: LandingFooterLink) {
   const useNative =
     Boolean(external) || href.startsWith("http") || href.startsWith("mailto:");
-  const hitboxClass = "landing-footer-nav-bubble-hitbox";
-  const bubble = (
-    <span className="landing-glass-sphere inline-flex items-center justify-center rounded-full px-2.5 py-1.5 font-mono text-[0.78rem] leading-tight text-current">
-      {label}
-    </span>
-  );
+  /** Plain text — no pill wrapper; avoids any “glass bubble” read (see `landing-glass-sphere`). */
+  const hitboxClass =
+    "landing-footer-nav-link font-mono text-[0.78rem] leading-tight text-current no-underline";
   if (useNative) {
     return (
       <a
@@ -60,13 +57,13 @@ function FooterLink({ label, href, external }: LandingFooterLink) {
         rel={href.startsWith("mailto:") ? undefined : "noopener noreferrer"}
         className={hitboxClass}
       >
-        {bubble}
+        {label}
       </a>
     );
   }
   return (
     <Link to={href} className={hitboxClass}>
-      {bubble}
+      {label}
     </Link>
   );
 }

@@ -11,8 +11,10 @@ use utoipa::ToSchema;
 use super::extractors::OrgId;
 use super::state::AppState;
 use crate::error::{self, ApiError};
+use crate::integrations::ebay::account::{EbayAccount, EbayAccountError};
 use crate::integrations::ebay::oauth::{self, EbayOAuthError};
 use crate::integrations::ebay::state_token::{self, StateTokenError};
+use crate::integrations::ebay::token_service::EbayTokenService;
 use crate::middleware as mw;
 use crate::repositories::channel_connections;
 
@@ -33,9 +35,7 @@ fn spa_redirect_origin(state: &AppState) -> Option<String> {
     let l = o.to_lowercase();
     l.contains("127.0.0.1") || l.contains("localhost")
   });
-  preferred
-    .cloned()
-    .or_else(|| origins.first().cloned())
+  preferred.cloned().or_else(|| origins.first().cloned())
 }
 
 #[derive(Deserialize, ToSchema)]
@@ -50,6 +50,7 @@ pub fn routes() -> Router<AppState> {
   let protected = Router::new()
     .route("/oauth/ebay/start", get(ebay_oauth_start))
     .route("/oauth/ebay/status", get(ebay_oauth_status))
+    .route("/ebay/seller/setup", get(ebay_seller_setup))
     .route_layer(middleware::from_fn(mw::require_internal_auth));
 
   let public = Router::new().route("/oauth/ebay/callback", get(ebay_oauth_callback));
@@ -77,9 +78,11 @@ async fn ebay_oauth_start(
     .as_ref()
     .ok_or_else(|| error::internal("eBay OAuth is not configured"))?;
 
-  let secret = std::env::var("OAUTH_STATE_SECRET").map_err(|_| error::internal("OAUTH_STATE_SECRET"))?;
+  let secret =
+    std::env::var("OAUTH_STATE_SECRET").map_err(|_| error::internal("OAUTH_STATE_SECRET"))?;
 
-  let st = state_token::sign_state(secret.as_bytes(), org.as_ref(), 900).map_err(|_| error::bad_request("state"))?;
+  let st = state_token::sign_state(secret.as_bytes(), org.as_ref(), 900)
+    .map_err(|_| error::bad_request("state"))?;
 
   let url = oauth::authorize_url(cfg, &st);
 
@@ -95,6 +98,25 @@ pub struct EbayOAuthStartResponse {
 #[derive(Serialize, ToSchema)]
 pub struct EbayStatusResponse {
   pub connected: bool,
+}
+
+#[derive(Deserialize, ToSchema)]
+pub struct EbaySellerSetupQuery {
+  #[serde(default = "default_marketplace_id")]
+  pub marketplace_id: String,
+}
+
+#[derive(Serialize, ToSchema)]
+pub struct EbaySellerSetupResponse {
+  pub marketplace_id: String,
+  pub fulfillment_policies: serde_json::Value,
+  pub payment_policies: serde_json::Value,
+  pub return_policies: serde_json::Value,
+  pub locations: serde_json::Value,
+}
+
+fn default_marketplace_id() -> String {
+  "EBAY_US".to_string()
 }
 
 #[utoipa::path(
@@ -121,6 +143,71 @@ async fn ebay_oauth_status(
 
 #[utoipa::path(
   get,
+  path = "/ebay/seller/setup",
+  tag = "ebay",
+  security(("internal_user" = []), ("internal_org" = [])),
+  params(("marketplace_id" = Option<String>, Query, description = "eBay marketplace id, defaults to EBAY_US")),
+  responses(
+    (status = 200, description = "Seller policies and inventory locations", body = EbaySellerSetupResponse),
+    (status = 400, description = "Bad request", body = ErrorEnvelope),
+    (status = 502, description = "eBay API failed", body = ErrorEnvelope)
+  )
+)]
+async fn ebay_seller_setup(
+  State(state): State<AppState>,
+  org: OrgId,
+  Query(q): Query<EbaySellerSetupQuery>,
+) -> Result<Json<EbaySellerSetupResponse>, ApiError> {
+  let cfg = state
+    .ebay_config
+    .as_ref()
+    .ok_or_else(|| error::internal("eBay not configured"))?;
+  let crypto = state
+    .token_crypto
+    .as_ref()
+    .ok_or_else(|| error::internal("CHANNEL_ENCRYPTION_KEY / token crypto"))?;
+
+  let bearer = EbayTokenService {
+    pool: &state.pool,
+    cfg,
+    crypto,
+  }
+  .bearer_for_org(org.as_ref())
+  .await
+  .map_err(|e| ApiError::bad_request(e.to_string()))?;
+
+  let account = EbayAccount {
+    cfg,
+    access_token: &bearer,
+  };
+  let setup = account
+    .seller_setup(&q.marketplace_id)
+    .await
+    .map_err(map_account_err)?;
+
+  Ok(Json(EbaySellerSetupResponse {
+    marketplace_id: q.marketplace_id,
+    fulfillment_policies: setup
+      .get("fulfillment_policies")
+      .cloned()
+      .unwrap_or(serde_json::Value::Null),
+    payment_policies: setup
+      .get("payment_policies")
+      .cloned()
+      .unwrap_or(serde_json::Value::Null),
+    return_policies: setup
+      .get("return_policies")
+      .cloned()
+      .unwrap_or(serde_json::Value::Null),
+    locations: setup
+      .get("locations")
+      .cloned()
+      .unwrap_or(serde_json::Value::Null),
+  }))
+}
+
+#[utoipa::path(
+  get,
   path = "/oauth/ebay/callback",
   tag = "ebay",
   params(
@@ -142,8 +229,11 @@ async fn ebay_oauth_callback(
   // Bare /oauth/ebay/callback (no ?code= / ?state=): direct open, refresh, or ngrok UI link without eBay's query string.
   if q.error.is_none() && q.code.is_none() && q.state.is_none() {
     if let Some(origin) = spa_redirect_origin(&state) {
-      let target =
-        super::spa_redirects::util::app_url_with_query_pair(&origin, "ebay_oauth", "no_callback_params")?;
+      let target = super::spa_redirects::util::app_url_with_query_pair(
+        &origin,
+        "ebay_oauth",
+        "no_callback_params",
+      )?;
       tracing::info!(%origin, "ebay OAuth callback visited without query; redirecting to SPA");
       return Ok(Redirect::temporary(&target).into_response());
     }
@@ -169,13 +259,14 @@ async fn ebay_oauth_callback(
     return Err(error::bad_request(&msg));
   }
 
-  let code = q
-    .code
-    .ok_or_else(|| error::bad_request("missing code (finish sign-in on eBay or do not refresh this URL)"))?;
+  let code = q.code.ok_or_else(|| {
+    error::bad_request("missing code (finish sign-in on eBay or do not refresh this URL)")
+  })?;
 
   let state_tok = q.state.ok_or_else(|| error::bad_request("missing state"))?;
 
-  let secret = std::env::var("OAUTH_STATE_SECRET").map_err(|_| error::internal("OAUTH_STATE_SECRET"))?;
+  let secret =
+    std::env::var("OAUTH_STATE_SECRET").map_err(|_| error::internal("OAUTH_STATE_SECRET"))?;
 
   let payload = state_token::verify_state(secret.as_bytes(), &state_tok).map_err(|e| match e {
     StateTokenError::Expired => error::bad_request("state expired"),
@@ -214,9 +305,7 @@ async fn ebay_oauth_callback(
   .await
   .map_err(error::db_error)?;
 
-  Ok(
-    Redirect::temporary(&cfg.oauth_success_redirect).into_response(),
-  )
+  Ok(Redirect::temporary(&cfg.oauth_success_redirect).into_response())
 }
 
 fn map_oauth_err(e: EbayOAuthError) -> ApiError {
@@ -229,13 +318,27 @@ fn map_oauth_err(e: EbayOAuthError) -> ApiError {
   }
 }
 
+fn map_account_err(e: EbayAccountError) -> ApiError {
+  match e {
+    EbayAccountError::Api { .. } => ApiError::bad_gateway(e.to_string()),
+    EbayAccountError::Http(_) | EbayAccountError::Json(_) => ApiError::bad_gateway(e.to_string()),
+  }
+}
+
 #[derive(utoipa::OpenApi)]
 #[openapi(
-  paths(ebay_oauth_start, ebay_oauth_status, ebay_oauth_callback),
+  paths(
+    ebay_oauth_start,
+    ebay_oauth_status,
+    ebay_oauth_callback,
+    ebay_seller_setup
+  ),
   components(schemas(
     EbayCallbackQuery,
     EbayOAuthStartResponse,
-    EbayStatusResponse
+    EbayStatusResponse,
+    EbaySellerSetupQuery,
+    EbaySellerSetupResponse
   ))
 )]
 pub struct EbayOpenApiDoc;

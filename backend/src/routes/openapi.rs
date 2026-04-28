@@ -6,8 +6,8 @@ use utoipa::openapi::{OpenApi, Server};
 use utoipa::{Modify, OpenApi as OpenApiTrait};
 
 use super::{
-  activity, app_redirect, consignors, contracts, ebay, health, intake, listings, llm, s3,
-  spa_redirects, subscribers, webhooks,
+  activity, app_redirect, consignors, contracts, ebay, ebay_publish, health, intake, listings, llm,
+  s3, spa_redirects, subscribers, webhooks,
 };
 use crate::error::ErrorEnvelope;
 
@@ -16,7 +16,9 @@ struct SecurityAddon;
 
 impl Modify for SecurityAddon {
   fn modify(&self, openapi: &mut OpenApi) {
-    let components = openapi.components.get_or_insert_with(utoipa::openapi::Components::new);
+    let components = openapi
+      .components
+      .get_or_insert_with(utoipa::openapi::Components::new);
     components.add_security_scheme(
       "internal_user",
       SecurityScheme::ApiKey(ApiKey::Header(ApiKeyValue::new("X-Internal-User-Id"))),
@@ -66,6 +68,7 @@ fn merged_spec() -> OpenApi {
   doc.merge(llm::LlmOpenApiDoc::openapi());
   doc.merge(s3::S3OpenApiDoc::openapi());
   doc.merge(ebay::EbayOpenApiDoc::openapi());
+  doc.merge(ebay_publish::EbayPublishOpenApiDoc::openapi());
   doc.merge(app_redirect::AppRedirectOpenApiDoc::openapi());
   doc.merge(spa_redirects::SpaRedirectsOpenApiDoc::openapi());
   doc.merge(webhooks::WebhooksOpenApiDoc::openapi());
