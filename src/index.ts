@@ -200,6 +200,7 @@ const routes = {
 const AUTH_PROXY_PREFIXES = [
   "/api/consignors",
   "/api/contracts",
+  "/api/ebay",
   "/api/listings",
   "/api/intake",
   "/api/s3",

@@ -1,6 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 import { OrganizationSwitcher, Show } from "@clerk/react";
-import { InboxIcon, PackageIcon } from "../../../icons/workspace-icons";
+import { InboxIcon, PackageIcon, SettingsIcon } from "../../../icons/workspace-icons";
 import { copy } from "../utils/copy";
 
 type WorkspaceSidebarProps = {
@@ -16,6 +16,7 @@ export function WorkspaceSidebar({ className, onNavigate }: WorkspaceSidebarProp
     segments.length === 2 && segments[0] === "app" && segments[1] === "products";
   const isProductDetail =
     segments.length >= 3 && segments[0] === "app" && segments[1] === "products";
+  const isSettings = segments.length >= 2 && segments[0] === "app" && segments[1] === "settings";
   const isInbox = pathname === "/app" || pathname === "/app/" || isProductsList;
   const isProducts = isProductDetail;
 
@@ -62,6 +63,16 @@ export function WorkspaceSidebar({ className, onNavigate }: WorkspaceSidebarProp
         >
           <PackageIcon size={18} className={isProducts ? "text-zinc-900" : "text-zinc-600"} />
           {copy.sidebar.products}
+        </Link>
+        <Link
+          to="/app/settings"
+          onClick={onNavigate}
+          className={`flex items-center gap-2 rounded px-2 py-1.5 text-sm font-medium transition ${
+            isSettings ? "bg-zinc-200/60 text-zinc-900" : "text-zinc-700 hover:bg-zinc-200/60 hover:text-zinc-900"
+          }`}
+        >
+          <SettingsIcon size={18} className={isSettings ? "text-zinc-900" : "text-zinc-600"} />
+          {copy.sidebar.settings}
         </Link>
       </div>
     </aside>

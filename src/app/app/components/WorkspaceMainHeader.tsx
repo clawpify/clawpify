@@ -2,11 +2,7 @@ import { Link } from "react-router-dom";
 import { Show, SignInButton, UserButton } from "@clerk/react";
 import { BUN_PUBLIC_CLERK_PUBLISHABLE_KEY } from "../../../lib/constants";
 import {
-  FilterIcon,
-  SortIcon,
-  LayoutIcon,
   PlusIcon,
-  BellIcon,
   ChevronDownIcon,
 } from "../../../icons/workspace-icons";
 import { useWorkspaceHeader } from "../context/WorkspaceHeaderContext";
@@ -71,7 +67,7 @@ export function WorkspaceMainHeader() {
           </div>
         )}
 
-        {/* Right: account + action icons */}
+        {/* Right: account + contextual action */}
         <div className="flex items-center gap-0.5">
           {clerkPublishableKey ? (
             <>
@@ -117,34 +113,6 @@ export function WorkspaceMainHeader() {
               <PlusIcon size={18} />
             </button>
           )}
-          <button
-            type="button"
-            className="rounded p-1.5 text-zinc-500 transition hover:bg-zinc-200/60 hover:text-zinc-900"
-            aria-label="Filter"
-          >
-            <FilterIcon size={18} />
-          </button>
-          <button
-            type="button"
-            className="rounded p-1.5 text-zinc-500 transition hover:bg-zinc-200/60 hover:text-zinc-900"
-            aria-label="Sort"
-          >
-            <SortIcon size={18} />
-          </button>
-          <button
-            type="button"
-            className="rounded p-1.5 text-zinc-500 transition hover:bg-zinc-200/60 hover:text-zinc-900"
-            aria-label="Layout"
-          >
-            <LayoutIcon size={18} />
-          </button>
-          <button
-            type="button"
-            className="rounded p-1.5 text-zinc-500 transition hover:bg-zinc-200/60 hover:text-zinc-900"
-            aria-label="Notifications"
-          >
-            <BellIcon size={18} />
-          </button>
         </div>
       </div>
     </header>

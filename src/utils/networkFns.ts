@@ -142,6 +142,22 @@ export function listingImagesPath(listingId: string): string {
   return `/api/listings/${encodeURIComponent(listingId)}/images`;
 }
 
+export const ebayOAuthStatusPath = "/api/oauth/ebay/status";
+
+export const ebayOAuthStartPath = "/api/oauth/ebay/start";
+
+export function ebaySellerSetupPath(marketplaceId = "EBAY_US"): string {
+  return `/api/ebay/seller/setup?marketplace_id=${encodeURIComponent(marketplaceId)}`;
+}
+
+export function listingEbayDraftPath(listingId: string): string {
+  return `/api/listings/${encodeURIComponent(listingId)}/ebay/draft`;
+}
+
+export function listingEbayPublishPath(listingId: string): string {
+  return `/api/listings/${encodeURIComponent(listingId)}/ebay/publish`;
+}
+
 export type ListingImageApiRow = {
   storage_key: string;
   url?: string;

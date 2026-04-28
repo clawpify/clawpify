@@ -28,6 +28,9 @@ const ProductsLayout = lazy(() =>
 const ProductsPage = lazy(() =>
   appWorkspace().then((m) => ({ default: m.ProductsPage })),
 );
+const SettingsPage = lazy(() =>
+  appWorkspace().then((m) => ({ default: m.SettingsPage })),
+);
 
 const SignInRoute = lazy(() =>
   import("./auth-routes").then((m) => ({ default: m.SignInRoute })),
@@ -54,6 +57,7 @@ export function AppRoutes() {
             <Route index element={<ProductsPage />} />
             <Route path=":listingId" element={<ProductsPage />} />
           </Route>
+          <Route path="settings" element={<SettingsPage />} />
           <Route path="listings" element={<Navigate to="/app/products" replace />} />
         </Route>
         <Route path="/sign-in" element={<SignInRoute />} />

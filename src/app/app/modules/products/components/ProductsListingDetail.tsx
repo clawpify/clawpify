@@ -1,7 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
-import { useAuthenticatedFetch } from "../../../../../lib/api";
-import { messageFromErrorBody } from "../../../../../lib/messageFromErrorBody";
-import { useToast } from "../../../../../lib/toast";
+import { useMemo, type ReactNode } from "react";
 import { copy } from "../../../utils/copy";
 import type { ConsignmentListingDto } from "../types";
 import {
@@ -11,11 +8,8 @@ import {
 } from "../utils/generalFns";
 import { PlusIcon } from "../../../../../icons/workspace-icons";
 import { ListingMediaSection } from "./listing-media";
+import { ProductsListingIntegration } from "./ProductsListingIntegration";
 import { RAIL_CARD_SHADOW } from "./listing-media/listingMediaChrome";
-import {
-  landingOrangeBubbleClassName,
-  landingOrangeBubbleStyle,
-} from "../../../../landing/components/Button";
 
 type Props = {
   listing: ConsignmentListingDto;
@@ -74,12 +68,36 @@ function RailSectionCaret({ className }: { className?: string }) {
   );
 }
 
-function DetailRailCard({ title, children }: { title: string; children: ReactNode }) {
+function DetailRailCard({
+  title,
+  children,
+  collapsible = false,
+  defaultOpen = true,
+}: {
+  title: string;
+  children: ReactNode;
+  collapsible?: boolean;
+  defaultOpen?: boolean;
+}) {
+  const chrome = `overflow-hidden rounded-lg border border-zinc-200/80 bg-white ${RAIL_CARD_SHADOW}`;
+  const headingClass =
+    "flex w-full items-center gap-0.5 border-b border-zinc-200/80 px-2 py-2 text-left text-[13px] font-medium text-zinc-600";
+
+  if (collapsible) {
+    return (
+      <details className={`${chrome} group`} open={defaultOpen}>
+        <summary className={`${headingClass} cursor-pointer list-none [&::-webkit-details-marker]:hidden`}>
+          <span>{title}</span>
+          <RailSectionCaret className="mt-px shrink-0 text-zinc-400 opacity-70 transition group-open:rotate-180" />
+        </summary>
+        {children}
+      </details>
+    );
+  }
+
   return (
-    <div
-      className={`overflow-hidden rounded-lg border border-zinc-200/80 bg-white ${RAIL_CARD_SHADOW}`}
-    >
-      <h3 className="flex items-center gap-0.5 border-b border-zinc-200/80 px-2 py-2 text-[13px] font-medium text-zinc-600">
+    <div className={chrome}>
+      <h3 className={headingClass}>
         <span>{title}</span>
         <RailSectionCaret className="mt-px shrink-0 text-zinc-400 opacity-70" />
       </h3>
@@ -89,52 +107,8 @@ function DetailRailCard({ title, children }: { title: string; children: ReactNod
 }
 
 export function ProductsListingDetail({ listing }: Props) {
-  const fetchAuth = useAuthenticatedFetch();
-  const { showToast } = useToast();
   const timeline = useMemo(() => buildListingTimelineEvents(listing), [listing]);
   const tags = listing.tags ?? [];
-  const [ebayConnected, setEbayConnected] = useState<boolean | null>(null);
-  const [ebayConnectLoading, setEbayConnectLoading] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      const res = await fetchAuth("/api/v1/oauth/ebay/status");
-      if (cancelled) return;
-      if (res.ok) {
-        const data = (await res.json().catch(() => null)) as { connected?: boolean } | null;
-        setEbayConnected(!!data?.connected);
-      } else {
-        setEbayConnected(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [fetchAuth, listing.id]);
-
-  const onConnectEbay = useCallback(async () => {
-    setEbayConnectLoading(true);
-    try {
-      const res = await fetchAuth("/api/v1/oauth/ebay/start");
-      const payload = await res.json().catch(() => undefined);
-      if (res.ok && payload && typeof payload === "object" && "url" in payload) {
-        const url = typeof (payload as { url?: unknown }).url === "string" ? (payload as { url: string }).url.trim() : "";
-        if (url) {
-          window.open(url, "_blank", "noopener=yes,noreferrer=yes");
-          return;
-        }
-      }
-      if (res.status === 401) {
-        showToast(copy.products.detailEbayConnectSignIn);
-        return;
-      }
-      const msg = messageFromErrorBody(payload) ?? `Could not start eBay link (${res.status})`;
-      showToast(msg);
-    } finally {
-      setEbayConnectLoading(false);
-    }
-  }, [fetchAuth, showToast]);
 
   return (
     <div className="flex min-h-0 flex-col gap-8 lg:grid lg:grid-cols-[minmax(0,1fr)_17.5rem] lg:items-start lg:gap-6 lg:pl-0">
@@ -197,6 +171,9 @@ export function ProductsListingDetail({ listing }: Props) {
               </span>
             </PropertyRow>
             <PropertyRow label={copy.products.detailSidebarSku}>{skuLabel(listing)}</PropertyRow>
+            <PropertyRow label={copy.products.detailSidebarChannels}>
+              <span className="text-zinc-400">{copy.products.detailChannelsNone}</span>
+            </PropertyRow>
           </div>
         </DetailRailCard>
 
@@ -225,28 +202,10 @@ export function ProductsListingDetail({ listing }: Props) {
           </div>
         </DetailRailCard>
 
-        <DetailRailCard title={copy.products.detailSidebarIntegrations}>
-          <div className="space-y-2 px-2 py-2">
-            <p className="text-[11px] font-medium uppercase tracking-[0.06em] text-zinc-400">eBay</p>
-            {ebayConnected === true ? (
-              <p className="text-[13px] leading-snug text-zinc-600">{copy.products.detailEbayConnected}</p>
-            ) : null}
-            <button
-              type="button"
-              disabled={ebayConnectLoading || ebayConnected === null}
-              onClick={onConnectEbay}
-              className={[
-                landingOrangeBubbleClassName,
-                "landing-sans-copy inline-flex w-full items-center justify-center px-6 py-3 text-center text-[13px] font-semibold no-underline disabled:pointer-events-none",
-              ].join(" ")}
-              style={landingOrangeBubbleStyle}
-            >
-              <span className="relative z-[2]">
-                {ebayConnected === true ? copy.products.detailEbayReconnect : copy.products.detailEbayConnectCta}
-              </span>
-            </button>
-          </div>
+        <DetailRailCard title={copy.products.detailSidebarIntegrations} collapsible defaultOpen={false}>
+          <ProductsListingIntegration listing={listing} />
         </DetailRailCard>
+
       </aside>
     </div>
   );
