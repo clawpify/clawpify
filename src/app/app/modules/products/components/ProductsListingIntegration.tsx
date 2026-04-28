@@ -399,7 +399,9 @@ export function ProductsListingIntegration({ listing }: { listing: ConsignmentLi
     try {
       const res = await fetchAuth(ebayOAuthStartPath);
       const payload = await readJsonOrError<EbayOAuthStartResponse>(res);
-      if (payload.url.trim()) window.open(payload.url.trim(), "_blank", "noopener=yes,noreferrer=yes");
+      const url = payload.url.trim();
+      if (!url) throw new Error("eBay authorize URL was empty");
+      window.location.assign(url);
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Unknown error";
       setError(msg);

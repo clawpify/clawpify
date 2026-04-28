@@ -126,7 +126,7 @@ function EbayIntegrationCard() {
             : "";
 
         if (url) {
-          window.open(url, "_blank", "noopener=yes,noreferrer=yes");
+          window.location.assign(url);
           startStatusPoll();
           return;
         }
@@ -139,6 +139,8 @@ function EbayIntegrationCard() {
 
       const msg = messageFromErrorBody(payload) ?? `Could not start eBay link (${res.status})`;
       showToast(msg);
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : "Could not start eBay link");
     } finally {
       setConnectLoading(false);
     }
