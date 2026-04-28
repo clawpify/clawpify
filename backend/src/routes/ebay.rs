@@ -119,6 +119,15 @@ fn default_marketplace_id() -> String {
   "EBAY_US".to_string()
 }
 
+fn settings_redirect(origin: &str, value: &str) -> Result<String, ApiError> {
+  super::spa_redirects::util::app_path_url_with_query_pair(
+    origin,
+    "/app/settings",
+    "ebay_oauth",
+    value,
+  )
+}
+
 #[utoipa::path(
   get,
   path = "/oauth/ebay/status",
@@ -229,11 +238,7 @@ async fn ebay_oauth_callback(
   // Bare /oauth/ebay/callback (no ?code= / ?state=): direct open, refresh, or ngrok UI link without eBay's query string.
   if q.error.is_none() && q.code.is_none() && q.state.is_none() {
     if let Some(origin) = spa_redirect_origin(&state) {
-      let target = super::spa_redirects::util::app_url_with_query_pair(
-        &origin,
-        "ebay_oauth",
-        "no_callback_params",
-      )?;
+      let target = settings_redirect(&origin, "no_callback_params")?;
       tracing::info!(%origin, "ebay OAuth callback visited without query; redirecting to SPA");
       return Ok(Redirect::temporary(&target).into_response());
     }
@@ -256,6 +261,11 @@ async fn ebay_oauth_callback(
 
   if let Some(err) = q.error {
     let msg = q.error_description.unwrap_or(err);
+    if let Some(origin) = spa_redirect_origin(&state) {
+      let target = settings_redirect(&origin, "declined")?;
+      tracing::info!(message = %msg, "ebay OAuth declined; redirecting to settings");
+      return Ok(Redirect::temporary(&target).into_response());
+    }
     return Err(error::bad_request(&msg));
   }
 
@@ -304,6 +314,11 @@ async fn ebay_oauth_callback(
   )
   .await
   .map_err(error::db_error)?;
+
+  if let Some(origin) = spa_redirect_origin(&state) {
+    let target = settings_redirect(&origin, "connected")?;
+    return Ok(Redirect::temporary(&target).into_response());
+  }
 
   Ok(Redirect::temporary(&cfg.oauth_success_redirect).into_response())
 }

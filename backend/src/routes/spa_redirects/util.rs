@@ -28,3 +28,18 @@ pub(crate) fn app_url_with_query_pair(origin: &str, key: &str, value: &str) -> R
   u.query_pairs_mut().append_pair(key, value);
   Ok(u.into())
 }
+
+pub(crate) fn app_path_url_with_query_pair(
+  origin: &str,
+  app_path: &str,
+  key: &str,
+  value: &str,
+) -> Result<String, ApiError> {
+  let mut u = Url::parse(origin).map_err(|_| error::bad_request("APP_PUBLIC_ORIGIN must be a valid URL with scheme"))?;
+  let path = app_path.trim_start_matches('/');
+  u.path_segments_mut()
+    .map_err(|_| error::internal("redirect url path failed"))?
+    .extend(path.split('/').filter(|segment| !segment.is_empty()));
+  u.query_pairs_mut().append_pair(key, value);
+  Ok(u.into())
+}

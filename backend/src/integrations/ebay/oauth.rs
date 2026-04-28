@@ -97,7 +97,7 @@ pub fn authorize_url(cfg: &EbayConfig, state: &str) -> String {
     redirect_uri_looks_like_url,
     scope_count = cfg.oauth_scope.split_whitespace().count(),
     scope_len = cfg.oauth_scope.len(),
-    "building eBay OAuth authorize URL; EBAY_OAUTH_REDIRECT_URI must be the eBay RuName"
+    "building eBay OAuth authorize URL; EBAY_OAUTH_REDIRECT_URI must contain the eBay RuName"
   );
   format!(
     "{}?client_id={}&redirect_uri={}&response_type=code&scope={}&state={}",
