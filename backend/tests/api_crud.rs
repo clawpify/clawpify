@@ -299,7 +299,11 @@ async fn intake_phone_binding_put_get_delete(pool: PgPool) {
   assert_eq!(res.status(), StatusCode::NOT_FOUND);
 }
 
-fn twilio_sign_url_params(auth_token: &str, url: &str, params: &BTreeMap<String, String>) -> String {
+fn twilio_sign_url_params(
+  auth_token: &str,
+  url: &str,
+  params: &BTreeMap<String, String>,
+) -> String {
   let mut payload = String::with_capacity(url.len() + params.len() * 32);
   payload.push_str(url);
   for (k, v) in params {
@@ -317,12 +321,7 @@ async fn health_ok(_pool: PgPool) {
   for path in ["/api/v1/health", "/api/health"] {
     let res = app
       .clone()
-      .oneshot(
-        Request::builder()
-          .uri(path)
-          .body(Body::empty())
-          .unwrap(),
-      )
+      .oneshot(Request::builder().uri(path).body(Body::empty()).unwrap())
       .await
       .expect("health");
     assert_eq!(res.status(), StatusCode::OK, "path {path}");
@@ -618,7 +617,13 @@ async fn twilio_webhook_requires_signature_when_configured(pool: PgPool) {
     .await
     .expect("twilio post");
   assert_eq!(res.status(), StatusCode::BAD_REQUEST);
-  let text = String::from_utf8(axum::body::to_bytes(res.into_body(), usize::MAX).await.unwrap().to_vec()).unwrap();
+  let text = String::from_utf8(
+    axum::body::to_bytes(res.into_body(), usize::MAX)
+      .await
+      .unwrap()
+      .to_vec(),
+  )
+  .unwrap();
   assert!(text.contains("Missing signature"), "body={text:?}");
 
   std::env::remove_var("TWILIO_AUTH_TOKEN");
@@ -678,11 +683,7 @@ async fn twilio_webhook_bound_phone_num_media_zero_asks_for_photo(pool: PgPool) 
   let mut params = BTreeMap::new();
   params.insert("From".to_string(), "+15550001003".to_string());
   params.insert("NumMedia".to_string(), "0".to_string());
-  let sig = twilio_sign_url_params(
-    "test_auth_token_for_integration",
-    webhook_url,
-    &params,
-  );
+  let sig = twilio_sign_url_params("test_auth_token_for_integration", webhook_url, &params);
   let body_str = "From=%2B15550001003&NumMedia=0";
 
   let app = api_router(pool);
@@ -699,7 +700,13 @@ async fn twilio_webhook_bound_phone_num_media_zero_asks_for_photo(pool: PgPool) 
     .await
     .expect("twilio mms hint");
   assert_eq!(res.status(), StatusCode::OK);
-  let text = String::from_utf8(axum::body::to_bytes(res.into_body(), usize::MAX).await.unwrap().to_vec()).unwrap();
+  let text = String::from_utf8(
+    axum::body::to_bytes(res.into_body(), usize::MAX)
+      .await
+      .unwrap()
+      .to_vec(),
+  )
+  .unwrap();
   assert!(
     text.contains("Send a photo") || text.contains("photo"),
     "expected MMS prompt in: {text}"
@@ -795,7 +802,9 @@ async fn consignment_consignor_contract_payout_listing_flow(pool: PgPool) {
     .expect("list contracts");
   assert_eq!(res.status(), StatusCode::OK);
   let ctr_list: Vec<Value> = serde_json::from_value(json_from_body(res.into_body()).await).unwrap();
-  assert!(ctr_list.iter().any(|r| r["id"].as_str() == Some(contract_id)));
+  assert!(ctr_list
+    .iter()
+    .any(|r| r["id"].as_str() == Some(contract_id)));
 
   let res = app
     .clone()

@@ -20,10 +20,7 @@ pub struct UpdateConsignorRequest {
 }
 
 fn valid_payout_method(s: &str) -> bool {
-  matches!(
-    s,
-    "cash" | "e_transfer" | "cheque" | "store_credit"
-  )
+  matches!(s, "cash" | "e_transfer" | "cheque" | "store_credit")
 }
 
 pub fn validate_payout_method_opt(m: Option<&String>) -> Result<(), &'static str> {

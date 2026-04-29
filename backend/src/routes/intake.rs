@@ -58,10 +58,9 @@ async fn list_batches(
   Query(q): Query<ListBatchesQuery>,
 ) -> Result<Json<Vec<IntakeBatch>>, ApiError> {
   let page = Pagination::new(q.limit, q.offset);
-  let rows =
-    intake_batches::list(&state.pool, org_id.as_ref(), q.consignor_id, page)
-      .await
-      .map_err(error::db_error)?;
+  let rows = intake_batches::list(&state.pool, org_id.as_ref(), q.consignor_id, page)
+    .await
+    .map_err(error::db_error)?;
   Ok(Json(rows))
 }
 
@@ -130,35 +129,26 @@ async fn put_binding(
 ) -> Result<Json<PhoneBindingResponse>, ApiError> {
   let phone = parse_e164(&body.phone_e164).map_err(error::bad_request)?;
 
-  if intake_phone_bindings::phone_taken_by_other(
-    &state.pool,
-    &phone,
-    org_id.as_ref(),
-    uid.as_ref(),
-  )
-  .await
-  .map_err(error::db_error)?
+  if intake_phone_bindings::phone_taken_by_other(&state.pool, &phone, org_id.as_ref(), uid.as_ref())
+    .await
+    .map_err(error::db_error)?
   {
     return Err(error::bad_request(
       "That phone is already linked to another account or organization",
     ));
   }
 
-  let row = intake_phone_bindings::upsert_for_user(
-    &state.pool,
-    org_id.as_ref(),
-    uid.as_ref(),
-    &phone,
-  )
-  .await
-  .map_err(|e| {
-    if let sqlx::Error::Database(ref d) = e {
-      if d.is_unique_violation() {
-        return error::conflict("Phone conflict");
-      }
-    }
-    error::db_error(e)
-  })?;
+  let row =
+    intake_phone_bindings::upsert_for_user(&state.pool, org_id.as_ref(), uid.as_ref(), &phone)
+      .await
+      .map_err(|e| {
+        if let sqlx::Error::Database(ref d) = e {
+          if d.is_unique_violation() {
+            return error::conflict("Phone conflict");
+          }
+        }
+        error::db_error(e)
+      })?;
 
   Ok(Json(row))
 }
@@ -178,10 +168,9 @@ async fn delete_binding(
   OrgId(org_id): OrgId,
   UserId(uid): UserId,
 ) -> Result<Json<serde_json::Value>, ApiError> {
-  let deleted =
-    intake_phone_bindings::delete_for_user(&state.pool, org_id.as_ref(), uid.as_ref())
-      .await
-      .map_err(error::db_error)?;
+  let deleted = intake_phone_bindings::delete_for_user(&state.pool, org_id.as_ref(), uid.as_ref())
+    .await
+    .map_err(error::db_error)?;
   if !deleted {
     return Err(error::not_found("No phone binding for this user"));
   }
@@ -190,13 +179,7 @@ async fn delete_binding(
 
 #[derive(utoipa::OpenApi)]
 #[openapi(
-  paths(
-    list_batches,
-    create_batch,
-    get_bindings,
-    put_binding,
-    delete_binding
-  ),
+  paths(list_batches, create_batch, get_bindings, put_binding, delete_binding),
   components(schemas(
     IntakeBatch,
     IntakeBatchCreateRequest,

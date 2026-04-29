@@ -94,8 +94,8 @@ where
       .extensions
       .get::<ConnectInfo<SocketAddr>>()
       .map(|c| c.0);
-    let ip = client_ip::resolve_client_ip(&parts.headers, connect)
-      .map_err(|m| error::bad_request(m))?;
+    let ip =
+      client_ip::resolve_client_ip(&parts.headers, connect).map_err(|m| error::bad_request(m))?;
     Ok(ClientIpAddress(ip))
   }
 }

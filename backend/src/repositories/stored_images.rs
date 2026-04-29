@@ -97,7 +97,11 @@ pub async fn detach_from_listing(
   Ok(r.rows_affected() == 1)
 }
 
-pub async fn delete_by_org_and_key(pool: &PgPool, org_id: &str, storage_key: &str) -> Result<u64, sqlx::Error> {
+pub async fn delete_by_org_and_key(
+  pool: &PgPool,
+  org_id: &str,
+  storage_key: &str,
+) -> Result<u64, sqlx::Error> {
   let r = sqlx::query(r#"DELETE FROM stored_images WHERE org_id = $1 AND storage_key = $2"#)
     .bind(org_id)
     .bind(storage_key)

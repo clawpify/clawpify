@@ -8,7 +8,8 @@ pub async fn fetch_media_bytes(
   auth_token: &str,
   media_url: &str,
 ) -> Result<(Vec<u8>, Option<String>), String> {
-  let basic = base64::engine::general_purpose::STANDARD.encode(format!("{account_sid}:{auth_token}"));
+  let basic =
+    base64::engine::general_purpose::STANDARD.encode(format!("{account_sid}:{auth_token}"));
   let client = http_client::shared();
   let resp = client
     .get(media_url)

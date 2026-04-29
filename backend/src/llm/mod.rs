@@ -7,10 +7,6 @@ pub use config::load_registry;
 pub use orchestrator::Orchestrator;
 pub use providers::{LlmProvider, ProviderRegistry};
 pub use types::{
-  AgentJobResult, 
-  AgentRunConfig, 
-  ProviderId, 
-  SubAgentSpec,
-  WebSearchToolConfig, 
+  AgentJobResult, AgentRunConfig, ProviderId, SubAgentSpec, WebSearchToolConfig,
   WebSearchUserLocation,
 };

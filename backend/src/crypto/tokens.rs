@@ -21,7 +21,6 @@ pub struct TokenCrypto {
   cipher: ChaCha20Poly1305,
 }
 
-
 fn decode_32_byte_key(raw: &str) -> Result<[u8; 32], TokenCryptoError> {
   let s = raw.trim();
   if s.len() == 64 && s.as_bytes().iter().all(|b| b.is_ascii_hexdigit()) {

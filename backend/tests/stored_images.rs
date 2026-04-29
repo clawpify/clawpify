@@ -15,34 +15,29 @@ async fn stored_images_insert_and_delete(pool: PgPool) {
   let user = "user-1";
   let key = format!("uploads/{org}/{user}/00000000-0000-0000-0000-000000000001_smoke.png");
 
-  stored_images::insert(
-    &pool,
-    org,
-    user,
-    &key,
-    "image/png",
-    1024,
-    "smoke.png",
-    None,
-  )
-  .await
-  .expect("insert");
-
-  let count: (i64,) = sqlx::query_as("SELECT COUNT(*)::bigint FROM stored_images WHERE storage_key = $1")
-    .bind(&key)
-    .fetch_one(&pool)
+  stored_images::insert(&pool, org, user, &key, "image/png", 1024, "smoke.png", None)
     .await
-    .expect("count");
+    .expect("insert");
+
+  let count: (i64,) =
+    sqlx::query_as("SELECT COUNT(*)::bigint FROM stored_images WHERE storage_key = $1")
+      .bind(&key)
+      .fetch_one(&pool)
+      .await
+      .expect("count");
   assert_eq!(count.0, 1);
 
-  let n = stored_images::delete_by_org_and_key(&pool, org, &key).await.expect("delete");
+  let n = stored_images::delete_by_org_and_key(&pool, org, &key)
+    .await
+    .expect("delete");
   assert_eq!(n, 1);
 
-  let count: (i64,) = sqlx::query_as("SELECT COUNT(*)::bigint FROM stored_images WHERE storage_key = $1")
-    .bind(&key)
-    .fetch_one(&pool)
-    .await
-    .expect("count");
+  let count: (i64,) =
+    sqlx::query_as("SELECT COUNT(*)::bigint FROM stored_images WHERE storage_key = $1")
+      .bind(&key)
+      .fetch_one(&pool)
+      .await
+      .expect("count");
   assert_eq!(count.0, 0);
 }
 

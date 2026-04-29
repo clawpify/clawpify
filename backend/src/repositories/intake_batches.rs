@@ -1,9 +1,9 @@
 use sqlx::{PgPool, Postgres, QueryBuilder};
 use uuid::Uuid;
 
+use super::pagination::Pagination;
 use crate::dto::intake_batches::IntakeBatchCreateRequest;
 use crate::models::intake_batch::IntakeBatch;
-use super::pagination::Pagination;
 
 pub async fn list(
   pool: &PgPool,

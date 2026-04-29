@@ -249,6 +249,9 @@ export const copy = {
     detailIntegrationDefaults: "eBay defaults",
     detailIntegrationCategoryId: "Category ID",
     detailIntegrationConditionId: "Condition",
+    detailIntegrationLocalPickup: "Local pickup",
+    detailIntegrationLocalPickupHint:
+      "Off by default. eBay requires the selected fulfillment policy to match this setting.",
     detailIntegrationMarketplace: "Marketplace",
     detailIntegrationPoliciesAuto: "Policies load from seller setup when you turn on integration.",
     detailIntegrationCategoryHint:

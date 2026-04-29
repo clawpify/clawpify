@@ -32,9 +32,7 @@ pub fn verify_twilio_request(
 
   let expected = base64::engine::general_purpose::STANDARD
     .decode(signature_b64.trim().as_bytes())
-    .map_err(|_| {
-      error::bad_request("Invalid Twilio signature encoding")
-    })?;
+    .map_err(|_| error::bad_request("Invalid Twilio signature encoding"))?;
 
   if expected.len() != digest.len() || !bool::from(expected.as_slice().ct_eq(digest.as_slice())) {
     return Err(error::bad_request("Twilio signature mismatch"));
@@ -60,7 +58,11 @@ pub fn twilio_request_url(headers: &HeaderMap, path: &str) -> Result<String, Api
   let host = headers
     .get("host")
     .and_then(|h| h.to_str().ok())
-    .ok_or_else(|| error::bad_request("Host required for Twilio signature (set TWILIO_WEBHOOK_URL or forward Host)"))?;
+    .ok_or_else(|| {
+      error::bad_request(
+        "Host required for Twilio signature (set TWILIO_WEBHOOK_URL or forward Host)",
+      )
+    })?;
 
   Ok(format!("{}://{}{}", proto, host, path))
 }

@@ -3,8 +3,8 @@ use std::sync::atomic::AtomicU64;
 use std::sync::Arc;
 
 use axum::{
-  extract::DefaultBodyLimit,
   body::Body,
+  extract::DefaultBodyLimit,
   http::{header, StatusCode},
   middleware,
   response::{IntoResponse, Response},
@@ -53,7 +53,9 @@ async fn llm_agents(
     return Err(error::bad_request("agents must not be empty"));
   }
   if body.agents.len() > MAX_AGENTS {
-    return Err(error::bad_request(&format!("at most {MAX_AGENTS} agents per request")));
+    return Err(error::bad_request(&format!(
+      "at most {MAX_AGENTS} agents per request"
+    )));
   }
 
   let registry = load_registry().map_err(|e| error::service_unavailable(e.as_str()))?;
@@ -78,14 +80,14 @@ async fn llm_agents(
     (status = 400, description = "Bad request", body = ErrorEnvelope)
   )
 )]
-async fn llm_agents_stream(
-  Json(body): Json<LlmAgentsRequest>,
-) -> Result<Response, ApiError> {
+async fn llm_agents_stream(Json(body): Json<LlmAgentsRequest>) -> Result<Response, ApiError> {
   if body.agents.is_empty() {
     return Err(error::bad_request("agents must not be empty"));
   }
   if body.agents.len() > MAX_AGENTS {
-    return Err(error::bad_request(&format!("at most {MAX_AGENTS} agents per request")));
+    return Err(error::bad_request(&format!(
+      "at most {MAX_AGENTS} agents per request"
+    )));
   }
 
   let registry = load_registry().map_err(|e| error::service_unavailable(e.as_str()))?;
@@ -108,12 +110,14 @@ async fn llm_agents_stream(
     Ok::<Bytes, Infallible>(Bytes::from(s))
   });
 
-  Ok((
-    StatusCode::OK,
-    [(header::CONTENT_TYPE, "application/x-ndjson")],
-    Body::from_stream(stream),
+  Ok(
+    (
+      StatusCode::OK,
+      [(header::CONTENT_TYPE, "application/x-ndjson")],
+      Body::from_stream(stream),
+    )
+      .into_response(),
   )
-  .into_response())
 }
 
 #[derive(utoipa::OpenApi)]

@@ -8,7 +8,7 @@ use crate::llm::types::{AgentJobResult, AgentRunConfig, SubAgentSpec};
 pub struct LlmAgentsRequest {
   #[serde(default)]
   pub run: Option<AgentRunConfig>, // run config
-  pub agents: Vec<SubAgentSpec>,   // agents to run
+  pub agents: Vec<SubAgentSpec>, // agents to run
 }
 
 #[derive(Debug, Serialize, ToSchema)]

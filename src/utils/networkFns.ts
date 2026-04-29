@@ -146,8 +146,12 @@ export const ebayOAuthStatusPath = "/api/oauth/ebay/status";
 
 export const ebayOAuthStartPath = "/api/oauth/ebay/start";
 
-export function ebaySellerSetupPath(marketplaceId = "EBAY_US"): string {
-  return `/api/ebay/seller/setup?marketplace_id=${encodeURIComponent(marketplaceId)}`;
+export function ebaySellerSetupPath(marketplaceId = "EBAY_US", localPickup = false): string {
+  const params = new URLSearchParams({
+    marketplace_id: marketplaceId,
+    local_pickup: String(localPickup),
+  });
+  return `/api/ebay/seller/setup?${params.toString()}`;
 }
 
 export function listingEbayDraftPath(listingId: string): string {

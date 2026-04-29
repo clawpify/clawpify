@@ -1,5 +1,5 @@
-use axum::{extract::State, http::StatusCode, routing::get, Json, Router};
 use super::state::AppState;
+use axum::{extract::State, http::StatusCode, routing::get, Json, Router};
 
 #[derive(serde::Serialize, utoipa::ToSchema)]
 pub struct HealthResponse {

@@ -5,8 +5,8 @@ use uuid::Uuid;
 
 #[derive(Serialize, Deserialize, sqlx::FromRow, ToSchema)]
 pub struct Contract {
-  pub id: Uuid,                              // id  
-  pub org_id: String,                        // org id
+  pub id: Uuid,                               // id
+  pub org_id: String,                         // org id
   pub consignor_id: Uuid,                     // consignor id
   pub contract_type: String,                  // contract type
   pub status: String,                         // status

@@ -5,7 +5,7 @@ use uuid::Uuid;
 
 #[derive(Serialize, sqlx::FromRow, ToSchema)]
 pub struct Consignor {
-  pub id: Uuid,                              // id 
+  pub id: Uuid,                              // id
   pub org_id: String,                        // org id
   pub display_name: String,                  // display name
   pub email: Option<String>,                 // email

@@ -63,7 +63,6 @@ async fn load_contract(state: &AppState, org_id: &str, id: Uuid) -> Result<Contr
 }
 
 fn validate_new_contract(body: &ContractCreateRequest) -> Result<(), ApiError> {
-
   if !valid_contract_type(body.contract_type.as_str()) {
     return Err(error::bad_request("Invalid contract_type"));
   }
@@ -80,7 +79,6 @@ fn validate_new_contract(body: &ContractCreateRequest) -> Result<(), ApiError> {
 }
 
 fn validate_payout_request(body: &PayoutCreateRequest) -> Result<(), ApiError> {
-
   if body.payout_index != 1 && body.payout_index != 2 {
     return Err(error::bad_request("payout_index must be 1 or 2"));
   }
@@ -101,10 +99,7 @@ fn validate_payout_request(body: &PayoutCreateRequest) -> Result<(), ApiError> {
 pub fn routes() -> Router<AppState> {
   Router::new()
     .route("/contracts", get(list_contracts).post(create_contract))
-    .route(
-      "/contracts/:id",
-      get(get_contract).patch(patch_contract),
-    )
+    .route("/contracts/:id", get(get_contract).patch(patch_contract))
     .route(
       "/contracts/:id/payouts",
       get(list_payouts).post(create_payout),
@@ -143,15 +138,9 @@ async fn list_contracts(
     }
   }
 
-  let rows = contract_repo::list(
-    &state.pool,
-    org_id.as_ref(),
-    q.consignor_id,
-    status,
-    page,
-  )
-  .await
-  .map_err(error::db_error)?;
+  let rows = contract_repo::list(&state.pool, org_id.as_ref(), q.consignor_id, status, page)
+    .await
+    .map_err(error::db_error)?;
 
   Ok(Json(rows))
 }
@@ -203,9 +192,8 @@ async fn create_contract_idempotent(
   idem_key: &str,
   body: ContractCreateRequest,
 ) -> Result<(StatusCode, Json<Contract>), ApiError> {
-  let hash = crate::util::idempotency::body_hash(&body).map_err(|_| {
-    error::bad_request("Invalid request body for idempotency")
-  })?;
+  let hash = crate::util::idempotency::body_hash(&body)
+    .map_err(|_| error::bad_request("Invalid request body for idempotency"))?;
 
   let scope = api_idempotency::IdempotencyScope {
     client_key: idem_key,
@@ -218,16 +206,14 @@ async fn create_contract_idempotent(
     .await
     .map_err(error::db_error)?;
 
-  if let Some((stored_hash, status_i, json_body)) =
-    api_idempotency::lookup(&mut tx, org_id, scope)
-      .await
-      .map_err(error::db_error)?
+  if let Some((stored_hash, status_i, json_body)) = api_idempotency::lookup(&mut tx, org_id, scope)
+    .await
+    .map_err(error::db_error)?
   {
     if stored_hash != hash {
       return Err(error::idempotency_mismatch());
     }
-    let contract: Contract =
-      serde_json::from_value(json_body).map_err(error::internal)?;
+    let contract: Contract = serde_json::from_value(json_body).map_err(error::internal)?;
     let code = u16::try_from(status_i).unwrap_or(201);
     return Ok((
       StatusCode::from_u16(code).unwrap_or(StatusCode::CREATED),
@@ -235,10 +221,9 @@ async fn create_contract_idempotent(
     ));
   }
 
-  let exists =
-    contract_repo::consignor_in_org(&mut *tx, org_id, body.consignor_id)
-      .await
-      .map_err(error::db_error)?;
+  let exists = contract_repo::consignor_in_org(&mut *tx, org_id, body.consignor_id)
+    .await
+    .map_err(error::db_error)?;
   if !exists {
     return Err(error::not_found(CONSIGNOR_NOT_FOUND));
   }
@@ -323,10 +308,9 @@ async fn list_payouts(
   Path(contract_id): Path<Uuid>,
 ) -> Result<Json<Vec<ContractPayout>>, ApiError> {
   load_contract(&state, org_id.as_ref(), contract_id).await?;
-  let rows =
-    contract_payouts::list_for_contract(&state.pool, org_id.as_ref(), contract_id)
-      .await
-      .map_err(error::db_error)?;
+  let rows = contract_payouts::list_for_contract(&state.pool, org_id.as_ref(), contract_id)
+    .await
+    .map_err(error::db_error)?;
   Ok(Json(rows))
 }
 
@@ -360,14 +344,7 @@ async fn create_payout(
   load_contract(&state, org_id.as_ref(), contract_id).await?;
   validate_payout_request(&body)?;
   if let Some(key) = parse_idempotency_key(&headers)? {
-    return create_payout_idempotent(
-      &state,
-      org_id.as_ref(),
-      contract_id,
-      key,
-      body,
-    )
-    .await;
+    return create_payout_idempotent(&state, org_id.as_ref(), contract_id, key, body).await;
   }
   let n = contract_payouts::count_for_contract(&state.pool, contract_id)
     .await
@@ -402,9 +379,8 @@ async fn create_payout_idempotent(
   idem_key: &str,
   body: PayoutCreateRequest,
 ) -> Result<(StatusCode, Json<ContractPayout>), ApiError> {
-  let hash = crate::util::idempotency::body_hash(&body).map_err(|_| {
-    error::bad_request("Invalid request body for idempotency")
-  })?;
+  let hash = crate::util::idempotency::body_hash(&body)
+    .map_err(|_| error::bad_request("Invalid request body for idempotency"))?;
 
   let op = format!("payout_create:{contract_id}");
   let scope = api_idempotency::IdempotencyScope {
@@ -418,16 +394,14 @@ async fn create_payout_idempotent(
     .await
     .map_err(error::db_error)?;
 
-  if let Some((stored_hash, status_i, json_body)) =
-    api_idempotency::lookup(&mut tx, org_id, scope)
-      .await
-      .map_err(error::db_error)?
+  if let Some((stored_hash, status_i, json_body)) = api_idempotency::lookup(&mut tx, org_id, scope)
+    .await
+    .map_err(error::db_error)?
   {
     if stored_hash != hash {
       return Err(error::idempotency_mismatch());
     }
-    let row: ContractPayout =
-      serde_json::from_value(json_body).map_err(error::internal)?;
+    let row: ContractPayout = serde_json::from_value(json_body).map_err(error::internal)?;
     let code = u16::try_from(status_i).unwrap_or(201);
     return Ok((
       StatusCode::from_u16(code).unwrap_or(StatusCode::CREATED),

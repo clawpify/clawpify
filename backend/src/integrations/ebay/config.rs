@@ -1,11 +1,11 @@
 #[derive(Debug, Clone)]
 pub struct EbayConfig {
-  pub sandbox: bool,                                 // whether to use the sandbox environment
-  pub client_id: String,                             // client id
-  pub client_secret: String,                         // client secret
-  pub oauth_ru_name: String,                         // eBay RuName value passed as OAuth redirect_uri
-  pub oauth_scope: String,                           // oauth scope
-  pub oauth_success_redirect: String,                // oauth success redirect uri
+  pub sandbox: bool,                  // whether to use the sandbox environment
+  pub client_id: String,              // client id
+  pub client_secret: String,          // client secret
+  pub oauth_ru_name: String,          // eBay RuName value passed as OAuth redirect_uri
+  pub oauth_scope: String,            // oauth scope
+  pub oauth_success_redirect: String, // oauth success redirect uri
 }
 
 fn require_env(key: &'static str) -> Result<String, &'static str> {

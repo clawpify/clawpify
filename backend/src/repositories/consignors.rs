@@ -1,9 +1,9 @@
 use sqlx::PgPool;
 use uuid::Uuid;
 
+use super::pagination::Pagination;
 use crate::dto::consignors::{CreateConsignorRequest, UpdateConsignorRequest};
 use crate::models::consignor::Consignor;
-use super::pagination::Pagination;
 
 pub async fn list_by_org(
   pool: &PgPool,

@@ -53,7 +53,6 @@ pub struct CreateOfferRequest {
 }
 
 impl<'a> EbayInventory<'a> {
-
   /**
    * Get the base URL for the eBay API.
    * - return The base URL as a string.

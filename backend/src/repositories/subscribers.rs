@@ -18,7 +18,11 @@ pub async fn create(pool: &PgPool, email: &str) -> Result<Subscriber, sqlx::Erro
   .await
 }
 
-pub async fn update(pool: &PgPool, id: Uuid, email: &str) -> Result<Option<Subscriber>, sqlx::Error> {
+pub async fn update(
+  pool: &PgPool,
+  id: Uuid,
+  email: &str,
+) -> Result<Option<Subscriber>, sqlx::Error> {
   sqlx::query_as::<_, Subscriber>(
     r#"UPDATE waitlist
        SET email = $2
@@ -45,7 +49,9 @@ mod tests {
 
   #[sqlx::test(migrations = "../migrations")]
   async fn create_update_delete_subscriber(pool: PgPool) {
-    let created = create(&pool, "  User@Example.com ").await.expect("create subscriber");
+    let created = create(&pool, "  User@Example.com ")
+      .await
+      .expect("create subscriber");
     assert_eq!(created.email, "user@example.com");
 
     let updated = update(&pool, created.id, "new@example.com")

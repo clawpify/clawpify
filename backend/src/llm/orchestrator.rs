@@ -56,7 +56,12 @@ impl Orchestrator {
       }
     }
 
-    out.sort_by_key(|r| sort_keys.get(&r.id).copied().unwrap_or((usize::MAX, usize::MAX)));
+    out.sort_by_key(|r| {
+      sort_keys
+        .get(&r.id)
+        .copied()
+        .unwrap_or((usize::MAX, usize::MAX))
+    });
 
     out
   }

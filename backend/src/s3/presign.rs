@@ -15,8 +15,10 @@ pub async fn presign_get(
   bucket: &str,
   key: &str,
   expires_secs: u64,
-) -> Result<PresignedRequest, aws_sdk_s3::error::SdkError<aws_sdk_s3::operation::get_object::GetObjectError>>
-{
+) -> Result<
+  PresignedRequest,
+  aws_sdk_s3::error::SdkError<aws_sdk_s3::operation::get_object::GetObjectError>,
+> {
   client
     .get_object()
     .bucket(bucket)

@@ -9,14 +9,14 @@ use crate::repositories::channel_connections;
 
 #[derive(Serialize, Deserialize)]
 struct StoredEbayTokens {
-  access_token: String,                              // access token
-  refresh_token: String,                             // refresh token
+  access_token: String,  // access token
+  refresh_token: String, // refresh token
 }
 
 pub struct EbayTokenService<'a> {
-  pub pool: &'a PgPool,                               // pool
-  pub cfg: &'a EbayConfig,                            // config
-  pub crypto: &'a TokenCrypto,                        // crypto
+  pub pool: &'a PgPool,        // pool
+  pub cfg: &'a EbayConfig,     // config
+  pub crypto: &'a TokenCrypto, // crypto
 }
 
 const SKEW_SECS: i64 = 120;
@@ -40,7 +40,7 @@ impl<'a> EbayTokenService<'a> {
     if expired {
       let refreshed = oauth::refresh_access_token(self.cfg, &tok.refresh_token).await?;
       tok.access_token = refreshed.access_token;
-      
+
       if let Some(rt) = refreshed.refresh_token {
         tok.refresh_token = rt;
       }

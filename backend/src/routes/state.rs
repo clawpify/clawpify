@@ -46,7 +46,9 @@ impl AppState {
     let token_crypto = match TokenCrypto::from_env() {
       Ok(c) => Some(c),
       Err(crate::crypto::tokens::TokenCryptoError::MissingKey) => {
-        tracing::warn!("CHANNEL_ENCRYPTION_KEY is not set; encrypted channel tokens (eBay, etc.) will not work");
+        tracing::warn!(
+          "CHANNEL_ENCRYPTION_KEY is not set; encrypted channel tokens (eBay, etc.) will not work"
+        );
         None
       }
       Err(crate::crypto::tokens::TokenCryptoError::BadKey) => {

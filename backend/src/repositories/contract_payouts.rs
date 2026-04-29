@@ -20,10 +20,7 @@ pub async fn list_for_contract(
   .await
 }
 
-pub async fn count_for_contract<'e, E>(
-  executor: E,
-  contract_id: Uuid,
-) -> Result<i64, sqlx::Error>
+pub async fn count_for_contract<'e, E>(executor: E, contract_id: Uuid) -> Result<i64, sqlx::Error>
 where
   E: Executor<'e, Database = Postgres>,
 {

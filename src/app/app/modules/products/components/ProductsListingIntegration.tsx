@@ -180,8 +180,10 @@ function IntegrationDetailsModal({
   requirements,
   categoryId,
   conditionId,
+  localPickup,
   onCategoryChange,
   onConditionChange,
+  onLocalPickupChange,
   onClose,
   onCreateDraft,
   onPublish,
@@ -195,8 +197,10 @@ function IntegrationDetailsModal({
   requirements: Requirement[];
   categoryId: string;
   conditionId: string;
+  localPickup: boolean;
   onCategoryChange: (e: ChangeEvent<HTMLInputElement>) => void;
   onConditionChange: (e: ChangeEvent<HTMLInputElement>) => void;
+  onLocalPickupChange: (e: ChangeEvent<HTMLInputElement>) => void;
   onClose: () => void;
   onCreateDraft: () => void;
   onPublish: () => void;
@@ -252,31 +256,46 @@ function IntegrationDetailsModal({
           </div>
 
           <div className="mt-5 grid gap-3 sm:grid-cols-3">
-              <label className="grid gap-1.5 text-sm">
-                <span className="font-medium text-zinc-700">{copy.products.detailIntegrationMarketplace}</span>
-                <input
-                  value={MARKETPLACE_ID}
-                  readOnly
-                  className="rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2 text-zinc-500"
-                />
-              </label>
-              <label className="grid gap-1.5 text-sm">
-                <span className="font-medium text-zinc-700">{copy.products.detailIntegrationCategoryId}</span>
-                <input
-                  value={categoryId}
-                  onChange={onCategoryChange}
-                  className="rounded-md border border-zinc-200 bg-white px-3 py-2 text-zinc-900 outline-none transition focus:border-zinc-400"
-                />
-              </label>
-              <label className="grid gap-1.5 text-sm">
-                <span className="font-medium text-zinc-700">{copy.products.detailIntegrationConditionId}</span>
-                <input
-                  value={conditionId}
-                  onChange={onConditionChange}
-                  className="rounded-md border border-zinc-200 bg-white px-3 py-2 text-zinc-900 outline-none transition focus:border-zinc-400"
-                />
-              </label>
+            <label className="grid gap-1.5 text-sm">
+              <span className="font-medium text-zinc-700">{copy.products.detailIntegrationMarketplace}</span>
+              <input
+                value={MARKETPLACE_ID}
+                readOnly
+                className="rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2 text-zinc-500"
+              />
+            </label>
+            <label className="grid gap-1.5 text-sm">
+              <span className="font-medium text-zinc-700">{copy.products.detailIntegrationCategoryId}</span>
+              <input
+                value={categoryId}
+                onChange={onCategoryChange}
+                className="rounded-md border border-zinc-200 bg-white px-3 py-2 text-zinc-900 outline-none transition focus:border-zinc-400"
+              />
+            </label>
+            <label className="grid gap-1.5 text-sm">
+              <span className="font-medium text-zinc-700">{copy.products.detailIntegrationConditionId}</span>
+              <input
+                value={conditionId}
+                onChange={onConditionChange}
+                className="rounded-md border border-zinc-200 bg-white px-3 py-2 text-zinc-900 outline-none transition focus:border-zinc-400"
+              />
+            </label>
           </div>
+
+          <label className="mt-4 flex items-start gap-3 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-3 text-sm">
+            <input
+              type="checkbox"
+              checked={localPickup}
+              onChange={onLocalPickupChange}
+              className="mt-0.5 size-4 rounded border-zinc-300 text-zinc-950"
+            />
+            <span className="min-w-0">
+              <span className="block font-medium text-zinc-700">{copy.products.detailIntegrationLocalPickup}</span>
+              <span className="mt-0.5 block text-xs leading-5 text-zinc-500">
+                {copy.products.detailIntegrationLocalPickupHint}
+              </span>
+            </span>
+          </label>
 
           <div className="mt-6">
             <h3 className="text-sm font-semibold text-zinc-950">{copy.products.detailIntegrationRequirements}</h3>
@@ -352,6 +371,7 @@ export function ProductsListingIntegration({ listing }: { listing: ConsignmentLi
   const [published, setPublished] = useState<EbayPublishResponse | null>(null);
   const [categoryId, setCategoryId] = useState(DEFAULT_CATEGORY_ID);
   const [conditionId, setConditionId] = useState(DEFAULT_CONDITION_ID);
+  const [localPickup, setLocalPickup] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
 
   const connected = connectionStatus === "connected";
@@ -420,7 +440,7 @@ export function ProductsListingIntegration({ listing }: { listing: ConsignmentLi
     setBusy("drafting");
     setError(null);
     try {
-      const setupRes = await fetchAuth(ebaySellerSetupPath(MARKETPLACE_ID));
+      const setupRes = await fetchAuth(ebaySellerSetupPath(MARKETPLACE_ID, localPickup));
       const setup = await readJsonOrError<EbaySellerSetupResponse>(setupRes);
       const defaults = parseSellerDefaults(setup);
       if (!defaults.fulfillmentPolicyId || !defaults.paymentPolicyId || !defaults.returnPolicyId) {
@@ -456,7 +476,7 @@ export function ProductsListingIntegration({ listing }: { listing: ConsignmentLi
     } finally {
       setBusy("idle");
     }
-  }, [canCreateDraft, categoryId, conditionId, fetchAuth, listing.id, showToast]);
+  }, [canCreateDraft, categoryId, conditionId, fetchAuth, listing.id, localPickup, showToast]);
 
   const publishDraft = useCallback(async () => {
     if (!draft || busy !== "idle") return;
@@ -507,6 +527,10 @@ export function ProductsListingIntegration({ listing }: { listing: ConsignmentLi
 
   const onConditionChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
     setConditionId(e.target.value);
+  }, []);
+
+  const onLocalPickupChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
+    setLocalPickup(e.target.checked);
   }, []);
 
   const statusText = published
@@ -568,8 +592,10 @@ export function ProductsListingIntegration({ listing }: { listing: ConsignmentLi
           requirements={requirements}
           categoryId={categoryId}
           conditionId={conditionId}
+          localPickup={localPickup}
           onCategoryChange={onCategoryChange}
           onConditionChange={onConditionChange}
+          onLocalPickupChange={onLocalPickupChange}
           onClose={() => setDetailsOpen(false)}
           onCreateDraft={createDraft}
           onPublish={publishDraft}

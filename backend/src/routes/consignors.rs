@@ -89,8 +89,7 @@ async fn create_consignor(
   if body.display_name.is_empty() {
     return Err(error::bad_request("display_name required"));
   }
-  validate_payout_method_opt(body.default_payout_method.as_ref())
-    .map_err(error::bad_request)?;
+  validate_payout_method_opt(body.default_payout_method.as_ref()).map_err(error::bad_request)?;
   if let Some(ref raw) = body.phone_e164 {
     body.phone_e164 = Some(normalize_phone_e164(raw)?);
   }
@@ -141,8 +140,7 @@ async fn update_consignor(
   Path(id): Path<Uuid>,
   mut body: Json<UpdateConsignorRequest>,
 ) -> Result<Json<Consignor>, ApiError> {
-  validate_payout_method_opt(body.default_payout_method.as_ref())
-    .map_err(error::bad_request)?;
+  validate_payout_method_opt(body.default_payout_method.as_ref()).map_err(error::bad_request)?;
   if let Some(ref d) = body.display_name {
     let t = d.trim();
     if t.is_empty() {
@@ -203,10 +201,6 @@ async fn delete_consignor(
     update_consignor,
     delete_consignor
   ),
-  components(schemas(
-    Consignor,
-    CreateConsignorRequest,
-    UpdateConsignorRequest
-  ))
+  components(schemas(Consignor, CreateConsignorRequest, UpdateConsignorRequest))
 )]
 pub struct ConsignorsOpenApiDoc;

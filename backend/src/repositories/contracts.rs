@@ -3,9 +3,9 @@ use serde::Serialize;
 use sqlx::{Executor, PgPool, Postgres, QueryBuilder};
 use uuid::Uuid;
 
+use super::pagination::Pagination;
 use crate::dto::contracts::{ContractCreateRequest, ContractPatchRequest};
 use crate::models::contracts::Contract;
-use super::pagination::Pagination;
 
 pub async fn consignor_in_org<'e, E>(
   executor: E,
@@ -32,13 +32,11 @@ pub async fn get_consignor_id(
   org_id: &str,
   contract_id: Uuid,
 ) -> Result<Option<Uuid>, sqlx::Error> {
-  sqlx::query_scalar(
-    r#"SELECT consignor_id FROM contracts WHERE id = $1 AND org_id = $2"#,
-  )
-  .bind(contract_id)
-  .bind(org_id)
-  .fetch_optional(pool)
-  .await
+  sqlx::query_scalar(r#"SELECT consignor_id FROM contracts WHERE id = $1 AND org_id = $2"#)
+    .bind(contract_id)
+    .bind(org_id)
+    .fetch_optional(pool)
+    .await
 }
 
 pub async fn list(
@@ -178,12 +176,13 @@ pub async fn contract_summary(
     return Ok(None);
   }
 
-  let listing_count: i64 =
-    sqlx::query_scalar(r#"SELECT COUNT(*)::bigint FROM consignment_listings WHERE org_id = $1 AND contract_id = $2"#)
-      .bind(org_id)
-      .bind(contract_id)
-      .fetch_one(pool)
-      .await?;
+  let listing_count: i64 = sqlx::query_scalar(
+    r#"SELECT COUNT(*)::bigint FROM consignment_listings WHERE org_id = $1 AND contract_id = $2"#,
+  )
+  .bind(org_id)
+  .bind(contract_id)
+  .fetch_one(pool)
+  .await?;
 
   let disp_rows: Vec<(Option<String>, i64)> = sqlx::query_as(
     r#"SELECT post_contract_disposition, COUNT(*)::bigint
@@ -301,10 +300,7 @@ pub async fn run_expiry_rules(
       "donate_eligible".to_string()
     };
 
-    if as_of >= grace_end
-      && contract.contract_type == "donate_on"
-      && next == "donate_eligible"
-    {
+    if as_of >= grace_end && contract.contract_type == "donate_on" && next == "donate_eligible" {
       next = "donated".to_string();
     }
 

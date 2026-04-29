@@ -33,7 +33,9 @@ pub async fn update(
   agent_name: Option<String>,
   payload: Option<Value>,
 ) -> Result<Option<AgentActivity>, sqlx::Error> {
-  let agent_name = agent_name.map(|s| s.trim().to_string()).filter(|s| !s.is_empty());
+  let agent_name = agent_name
+    .map(|s| s.trim().to_string())
+    .filter(|s| !s.is_empty());
 
   sqlx::query_as::<_, AgentActivity>(
     r#"UPDATE agent_activity
@@ -99,9 +101,14 @@ mod tests {
     .expect("update activity")
     .expect("activity exists");
     assert_eq!(updated.agent_name, "agent-b");
-    assert_eq!(updated.payload, Some(serde_json::json!({ "updated": true })));
+    assert_eq!(
+      updated.payload,
+      Some(serde_json::json!({ "updated": true }))
+    );
 
-    let deleted = delete(&pool, "org-activity", created.id).await.expect("delete activity");
+    let deleted = delete(&pool, "org-activity", created.id)
+      .await
+      .expect("delete activity");
     assert!(deleted);
 
     let maybe = sqlx::query_scalar::<_, Uuid>("SELECT id FROM agent_activity WHERE id = $1")
@@ -139,7 +146,9 @@ mod tests {
     .expect("update should succeed with none");
     assert!(updated.is_none());
 
-    let deleted = delete(&pool, "org-wrong", created.id).await.expect("delete call");
+    let deleted = delete(&pool, "org-wrong", created.id)
+      .await
+      .expect("delete call");
     assert!(!deleted);
   }
 }

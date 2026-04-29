@@ -292,7 +292,10 @@ impl OpenAiProvider {
     self.complete_streaming_body(spec, None).await
   }
 
-  async fn complete_non_streaming(&self, spec: &SubAgentSpec) -> Result<ProviderCompletion, String> {
+  async fn complete_non_streaming(
+    &self,
+    spec: &SubAgentSpec,
+  ) -> Result<ProviderCompletion, String> {
     let body = self.build_request_body(spec);
     let client = http_client::shared();
 

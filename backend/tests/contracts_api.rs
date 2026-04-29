@@ -52,7 +52,9 @@ async fn contracts_crud_get_patch_and_summary(pool: PgPool) {
         .header(header::CONTENT_TYPE, "application/json")
         .header("X-Internal-User-Id", user)
         .header("X-Internal-Org-Id", org)
-        .body(Body::from(json!({ "display_name": "CRUD Consignor" }).to_string()))
+        .body(Body::from(
+          json!({ "display_name": "CRUD Consignor" }).to_string(),
+        ))
         .unwrap(),
     )
     .await
@@ -219,7 +221,9 @@ async fn contracts_create_idempotency_replays_same_contract(pool: PgPool) {
         .header(header::CONTENT_TYPE, "application/json")
         .header("X-Internal-User-Id", user)
         .header("X-Internal-Org-Id", org)
-        .body(Body::from(json!({ "display_name": "Idem Consignor" }).to_string()))
+        .body(Body::from(
+          json!({ "display_name": "Idem Consignor" }).to_string(),
+        ))
         .unwrap(),
     )
     .await

@@ -17,7 +17,10 @@ pub struct ProviderCompletion {
 
 #[async_trait]
 pub trait LlmProvider: Send + Sync {
-  async fn complete(&self, spec: &crate::llm::types::SubAgentSpec) -> Result<ProviderCompletion, String>;
+  async fn complete(
+    &self,
+    spec: &crate::llm::types::SubAgentSpec,
+  ) -> Result<ProviderCompletion, String>;
 
   async fn complete_with_events(
     &self,

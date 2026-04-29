@@ -70,7 +70,11 @@ async fn s3_e2e_ai_image_upload_download_delete(pool: PgPool) {
   let missing: Vec<&str> = REQUIRED
     .iter()
     .copied()
-    .filter(|v| std::env::var(v).map(|s| s.trim().is_empty()).unwrap_or(true))
+    .filter(|v| {
+      std::env::var(v)
+        .map(|s| s.trim().is_empty())
+        .unwrap_or(true)
+    })
     .collect();
   if !missing.is_empty() {
     eprintln!(
@@ -108,9 +112,7 @@ async fn s3_e2e_ai_image_upload_download_delete(pool: PgPool) {
     img_res.text().await.unwrap_or_default()
   );
   let img_json: Value = img_res.json().await.expect("openai json");
-  let b64 = img_json["data"][0]["b64_json"]
-    .as_str()
-    .expect("b64_json");
+  let b64 = img_json["data"][0]["b64_json"].as_str().expect("b64_json");
   let bytes = base64::engine::general_purpose::STANDARD
     .decode(b64.as_bytes())
     .expect("decode png");
@@ -172,7 +174,8 @@ async fn s3_e2e_ai_image_upload_download_delete(pool: PgPool) {
     .expect("download");
   assert_eq!(res.status(), StatusCode::OK);
   assert_eq!(
-    res.headers()
+    res
+      .headers()
       .get(header::CONTENT_TYPE)
       .and_then(|v| v.to_str().ok()),
     Some("image/png")

@@ -34,9 +34,15 @@ pub fn try_client_from_env() -> Option<(Client, String)> {
   let access_key = std::env::var("RAILWAY_BUCKET_ID").ok()?;
   let secret_key = std::env::var("SECRET_ACCESS_KEY").ok()?;
 
-  if [endpoint.trim(), region.trim(), bucket.trim(), access_key.trim(), secret_key.trim()]
-    .iter()
-    .any(|s| s.is_empty())
+  if [
+    endpoint.trim(),
+    region.trim(),
+    bucket.trim(),
+    access_key.trim(),
+    secret_key.trim(),
+  ]
+  .iter()
+  .any(|s| s.is_empty())
   {
     return None;
   }
@@ -49,10 +55,7 @@ pub fn try_client_from_env() -> Option<(Client, String)> {
     "railway-bucket",
   );
 
-  let force_path = std::env::var("BUCKET_FORCE_PATH_STYLE")
-    .ok()
-    .as_deref()
-    == Some("1");
+  let force_path = std::env::var("BUCKET_FORCE_PATH_STYLE").ok().as_deref() == Some("1");
 
   let conf = Builder::new()
     .behavior_version(BehaviorVersion::latest())

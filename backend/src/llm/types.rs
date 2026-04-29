@@ -29,7 +29,6 @@ pub struct WebSearchUserLocation {
   pub timezone: Option<String>,
 }
 
-
 #[derive(Clone, Debug, Serialize, Deserialize, ToSchema)]
 pub struct WebSearchToolConfig {
   /* allow web search to be used */

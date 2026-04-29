@@ -1,5 +1,7 @@
 use std::path::Path;
 
+use aws_sdk_s3::error::ProvideErrorMetadata;
+use aws_sdk_s3::primitives::ByteStream;
 use axum::{
   body::{Body, Bytes},
   extract::{DefaultBodyLimit, Query, State},
@@ -9,12 +11,10 @@ use axum::{
   response::Response,
   Json, Router,
 };
-use aws_sdk_s3::error::ProvideErrorMetadata;
-use aws_sdk_s3::primitives::ByteStream;
 use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
 use sqlx::PgPool;
 use url::form_urlencoded::Serializer;
+use utoipa::ToSchema;
 use uuid::Uuid;
 
 use super::extractors::{OrgId, UserId};
@@ -44,13 +44,14 @@ pub struct KeyQuery {
 }
 
 pub fn routes() -> Router<AppState> {
-  Router::new().route(
-    "/s3/objects",
-    axum::routing::post(upload_object.layer(DefaultBodyLimit::max(MAX_BYTES as usize)))
-      .get(download_object)
-      .delete(delete_object),
-  )
-  .route_layer(middleware::from_fn(mw::require_internal_auth))
+  Router::new()
+    .route(
+      "/s3/objects",
+      axum::routing::post(upload_object.layer(DefaultBodyLimit::max(MAX_BYTES as usize)))
+        .get(download_object)
+        .delete(delete_object),
+    )
+    .route_layer(middleware::from_fn(mw::require_internal_auth))
 }
 
 fn upload_prefix(org: &str, user: &str) -> String {
@@ -64,7 +65,9 @@ pub(crate) fn storage_key_owned_by_user(key: &str, org: &str, user: &str) -> boo
 
 /// Same-origin path for cookie-auth BFF clients (`GET` returns object bytes).
 pub(crate) fn stored_image_proxy_path(storage_key: &str) -> String {
-  let q = Serializer::new(String::new()).append_pair("key", storage_key).finish();
+  let q = Serializer::new(String::new())
+    .append_pair("key", storage_key)
+    .finish();
   format!("/api/s3/objects?{q}")
 }
 
@@ -175,7 +178,12 @@ async fn upload_object(
 
   let content_type = content_type_for_upload(&headers)?;
   let safe_name = basename(q.file_name.as_deref().unwrap_or("upload"));
-  let key = format!("{}{}_{}", upload_prefix(&org_id, &user_id), Uuid::new_v4(), safe_name);
+  let key = format!(
+    "{}{}_{}",
+    upload_prefix(&org_id, &user_id),
+    Uuid::new_v4(),
+    safe_name
+  );
   let len_i64 = i64::try_from(byte_size).map_err(|_| error::bad_request("body too large"))?;
 
   tracing::debug!(
@@ -196,8 +204,14 @@ async fn upload_object(
     .send()
     .await
     .map_err(|e| {
-      let code = e.as_service_error().and_then(|se| se.code()).unwrap_or("unknown");
-      let msg = e.as_service_error().and_then(|se| se.message()).unwrap_or("no message");
+      let code = e
+        .as_service_error()
+        .and_then(|se| se.code())
+        .unwrap_or("unknown");
+      let msg = e
+        .as_service_error()
+        .and_then(|se| se.message())
+        .unwrap_or("no message");
       tracing::error!(
         key = %key,
         bucket = %bucket,

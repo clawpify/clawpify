@@ -2,7 +2,10 @@ use sqlx::PgPool;
 
 use crate::models::channel_connection::{ChannelConnection, ChannelConnectionSecrets};
 
-pub async fn list_by_org(pool: &PgPool, org_id: &str) -> Result<Vec<ChannelConnection>, sqlx::Error> {
+pub async fn list_by_org(
+  pool: &PgPool,
+  org_id: &str,
+) -> Result<Vec<ChannelConnection>, sqlx::Error> {
   sqlx::query_as::<_, ChannelConnection>(
     r#"SELECT id, org_id, channel, shop_domain, scopes, token_expires_at, created_at, updated_at
        FROM channel_connections

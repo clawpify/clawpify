@@ -37,13 +37,15 @@ impl ClerkSessionClaims {
 
 /// RSA `(n,e)` for `kid`. JWKS may list non-RSA keys, so we scan entries instead of
 /// deserializing the full array into a single struct.
-fn rsa_components_for_kid(keys: &[serde_json::Value], kid: &str) -> Result<(String, String), String> {
+fn rsa_components_for_kid(
+  keys: &[serde_json::Value],
+  kid: &str,
+) -> Result<(String, String), String> {
   for k in keys {
-
     if k.get("kid").and_then(|v| v.as_str()) != Some(kid) {
       continue;
     }
-    
+
     if k.get("kty").and_then(|v| v.as_str()) != Some("RSA") {
       continue;
     }
@@ -77,9 +79,14 @@ fn decoding_key_from_rsa_components(n_b64: &str, e_b64: &str) -> Result<Decoding
   DecodingKey::from_rsa_pem(pem.as_bytes()).map_err(|e| format!("decoding key: {e}"))
 }
 
-pub async fn verify_session_token(jwks_url: &str, token: &str) -> Result<ClerkSessionClaims, String> {
+pub async fn verify_session_token(
+  jwks_url: &str,
+  token: &str,
+) -> Result<ClerkSessionClaims, String> {
   let hdr = decode_header(token).map_err(|e| format!("jwt header: {e}"))?;
-  let kid = hdr.kid.ok_or_else(|| "jwt header: missing kid".to_string())?;
+  let kid = hdr
+    .kid
+    .ok_or_else(|| "jwt header: missing kid".to_string())?;
   let alg = hdr.alg;
 
   if alg != jsonwebtoken::Algorithm::RS256 {
@@ -96,7 +103,9 @@ pub async fn verify_session_token(jwks_url: &str, token: &str) -> Result<ClerkSe
     .map_err(|e| format!("jwks body: {e}"))?;
 
   let v: serde_json::Value = serde_json::from_str(&body).map_err(|e| format!("jwks json: {e}"))?;
-  let keys = v["keys"].as_array().ok_or_else(|| "jwks: missing keys array".to_string())?;
+  let keys = v["keys"]
+    .as_array()
+    .ok_or_else(|| "jwks: missing keys array".to_string())?;
 
   let (n, e) = rsa_components_for_kid(keys, &kid)?;
   let key = decoding_key_from_rsa_components(&n, &e)?;

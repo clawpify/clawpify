@@ -6,8 +6,8 @@ use axum::{
 };
 
 use super::util;
-use crate::routes::AppState;
 use crate::error::ApiError;
+use crate::routes::AppState;
 
 const EBAY_OAUTH_QUERY_KEY: &str = "ebay_oauth";
 

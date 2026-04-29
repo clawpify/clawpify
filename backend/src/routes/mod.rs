@@ -1,6 +1,5 @@
 mod activity;
 mod app_redirect;
-mod spa_redirects;
 mod consignors;
 mod contracts;
 mod ebay;
@@ -11,10 +10,11 @@ mod intake;
 mod listings;
 mod llm;
 mod openapi;
+mod s3;
+mod spa_redirects;
 mod state;
 mod subscribers;
 mod webhooks;
-mod s3;
 
 pub use state::AppState;
 
@@ -49,10 +49,7 @@ fn core_routes() -> Router<AppState> {
 pub fn api_router(pool: PgPool) -> Router {
   let state = AppState::new(pool);
   Router::new()
-    .nest(
-      "/api/v1",
-      core_routes().with_state(state.clone()),
-    )
+    .nest("/api/v1", core_routes().with_state(state.clone()))
     .nest("/api", core_routes().with_state(state))
     .layer(from_fn(middleware::inject_clerk_bearer_as_internal))
 }

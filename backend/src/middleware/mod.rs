@@ -106,9 +106,8 @@ pub async fn log_requests(request: Request, next: Next) -> Response {
 pub fn cors_layer() -> CorsLayer {
   use axum::http::HeaderValue;
 
-  let allowed = std::env::var("CORS_ALLOWED_ORIGINS").unwrap_or_else(|_| {
-    "http://localhost:3001,http://127.0.0.1:3001".to_string()
-  });
+  let allowed = std::env::var("CORS_ALLOWED_ORIGINS")
+    .unwrap_or_else(|_| "http://localhost:3001,http://127.0.0.1:3001".to_string());
 
   let origins: Vec<HeaderValue> = allowed
     .split(',')

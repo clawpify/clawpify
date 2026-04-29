@@ -45,7 +45,8 @@ fn parse_form_params(body: &[u8]) -> BTreeMap<String, String> {
 }
 
 fn intake_app_link() -> String {
-  std::env::var("INTAKE_APP_URL").unwrap_or_else(|_| "https://clawpify.com/app/inventory".to_string())
+  std::env::var("INTAKE_APP_URL")
+    .unwrap_or_else(|_| "https://clawpify.com/app/inventory".to_string())
 }
 
 /// Body: `application/x-www-form-urlencoded` (Twilio webhook fields). Requires valid `X-Twilio-Signature`.
@@ -65,9 +66,8 @@ pub async fn twilio_messaging(
   body: Bytes,
 ) -> Response {
   let pool = &state.pool;
-  let path = std::env::var("TWILIO_WEBHOOK_PATH").unwrap_or_else(|_| {
-    "/api/v1/webhooks/twilio/messaging".to_string()
-  });
+  let path = std::env::var("TWILIO_WEBHOOK_PATH")
+    .unwrap_or_else(|_| "/api/v1/webhooks/twilio/messaging".to_string());
   let Ok(auth_token) = std::env::var("TWILIO_AUTH_TOKEN") else {
     tracing::error!(target: "twilio", "TWILIO_AUTH_TOKEN not set");
     return (StatusCode::SERVICE_UNAVAILABLE, "Twilio not configured").into_response();
@@ -93,7 +93,10 @@ pub async fn twilio_messaging(
 
   let from = params.get("From").cloned().unwrap_or_default();
   let from = from.trim().to_string();
-  let body_text = params.get("Body").map(|s| s.trim().to_string()).filter(|s| !s.is_empty());
+  let body_text = params
+    .get("Body")
+    .map(|s| s.trim().to_string())
+    .filter(|s| !s.is_empty());
 
   let num_media: u32 = params
     .get("NumMedia")
@@ -212,7 +215,10 @@ fn twiml_response(msg: &str) -> Response {
   let xml = twiml_message(msg);
   match Response::builder()
     .status(StatusCode::OK)
-    .header(axum::http::header::CONTENT_TYPE, "application/xml; charset=utf-8")
+    .header(
+      axum::http::header::CONTENT_TYPE,
+      "application/xml; charset=utf-8",
+    )
     .body(axum::body::Body::from(xml))
   {
     Ok(r) => r,

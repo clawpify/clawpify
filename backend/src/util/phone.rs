@@ -18,10 +18,7 @@ pub fn parse_e164(raw: &str) -> Result<String, &'static str> {
   if !digits.chars().all(|c| c.is_ascii_digit()) {
     return Err("only digits may appear after +");
   }
-  let first = digits
-    .chars()
-    .next()
-    .expect("len checked");
+  let first = digits.chars().next().expect("len checked");
   if !('1'..='9').contains(&first) {
     return Err("country code must not start with 0");
   }
@@ -39,10 +36,7 @@ mod tests {
 
   #[test]
   fn strips_formatting_chars() {
-    assert_eq!(
-      parse_e164("+1 (555) 123-4567").unwrap(),
-      "+15551234567"
-    );
+    assert_eq!(parse_e164("+1 (555) 123-4567").unwrap(), "+15551234567");
   }
 
   #[test]

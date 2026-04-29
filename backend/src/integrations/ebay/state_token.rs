@@ -44,8 +44,12 @@ pub fn sign_state(secret: &[u8], org_id: &str, ttl_secs: i64) -> Result<String, 
 
 pub fn verify_state(secret: &[u8], token: &str) -> Result<StatePayload, StateTokenError> {
   let (p, s) = token.split_once('.').ok_or(StateTokenError::Format)?;
-  let json = URL_SAFE_NO_PAD.decode(p).map_err(|_| StateTokenError::Format)?;
-  let sig = URL_SAFE_NO_PAD.decode(s).map_err(|_| StateTokenError::Format)?;
+  let json = URL_SAFE_NO_PAD
+    .decode(p)
+    .map_err(|_| StateTokenError::Format)?;
+  let sig = URL_SAFE_NO_PAD
+    .decode(s)
+    .map_err(|_| StateTokenError::Format)?;
   let mut mac = HmacSha256::new_from_slice(secret).map_err(|_| StateTokenError::Format)?;
   mac.update(&json);
   let expected = mac.finalize().into_bytes();

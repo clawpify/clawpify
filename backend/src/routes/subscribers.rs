@@ -1,8 +1,8 @@
 use std::net::{IpAddr, Ipv4Addr};
 use std::sync::Arc;
 
-use axum::{extract::State, routing::post, Json, Router};
 use axum::http::Request;
+use axum::{extract::State, routing::post, Json, Router};
 use tower_governor::{
   governor::GovernorConfigBuilder,
   key_extractor::{KeyExtractor, SmartIpKeyExtractor},
@@ -98,13 +98,12 @@ async fn subscribe(
     return Err(error::bad_request("Invalid email"));
   }
 
-  let exists: bool = sqlx::query_scalar(
-    r#"SELECT EXISTS(SELECT 1 FROM waitlist WHERE email = $1)"#,
-  )
-  .bind(&email)
-  .fetch_one(&state.pool)
-  .await
-  .map_err(error::db_error)?;
+  let exists: bool =
+    sqlx::query_scalar(r#"SELECT EXISTS(SELECT 1 FROM waitlist WHERE email = $1)"#)
+      .bind(&email)
+      .fetch_one(&state.pool)
+      .await
+      .map_err(error::db_error)?;
 
   if exists {
     return Ok(Json(SubscriberResponse {

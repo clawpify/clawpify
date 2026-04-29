@@ -104,11 +104,14 @@ pub struct EbayStatusResponse {
 pub struct EbaySellerSetupQuery {
   #[serde(default = "default_marketplace_id")]
   pub marketplace_id: String,
+  #[serde(default)]
+  pub local_pickup: bool,
 }
 
 #[derive(Serialize, ToSchema)]
 pub struct EbaySellerSetupResponse {
   pub marketplace_id: String,
+  pub local_pickup: bool,
   pub fulfillment_policies: serde_json::Value,
   pub payment_policies: serde_json::Value,
   pub return_policies: serde_json::Value,
@@ -155,7 +158,10 @@ async fn ebay_oauth_status(
   path = "/ebay/seller/setup",
   tag = "ebay",
   security(("internal_user" = []), ("internal_org" = [])),
-  params(("marketplace_id" = Option<String>, Query, description = "eBay marketplace id, defaults to EBAY_US")),
+  params(
+    ("marketplace_id" = Option<String>, Query, description = "eBay marketplace id, defaults to EBAY_US"),
+    ("local_pickup" = Option<bool>, Query, description = "Prefer fulfillment policies with matching localPickup, defaults to false")
+  ),
   responses(
     (status = 200, description = "Seller policies and inventory locations", body = EbaySellerSetupResponse),
     (status = 400, description = "Bad request", body = ErrorEnvelope),
@@ -190,12 +196,13 @@ async fn ebay_seller_setup(
     access_token: &bearer,
   };
   let setup = account
-    .seller_setup(&q.marketplace_id)
+    .seller_setup(&q.marketplace_id, q.local_pickup)
     .await
     .map_err(map_account_err)?;
 
   Ok(Json(EbaySellerSetupResponse {
     marketplace_id: q.marketplace_id,
+    local_pickup: q.local_pickup,
     fulfillment_policies: setup
       .get("fulfillment_policies")
       .cloned()
@@ -335,6 +342,10 @@ fn map_oauth_err(e: EbayOAuthError) -> ApiError {
 
 fn map_account_err(e: EbayAccountError) -> ApiError {
   match e {
+    EbayAccountError::NoMatchingFulfillmentPolicy { .. } => ApiError::bad_request(e.to_string()),
+    EbayAccountError::Api { body, .. } if body.contains("Business Policy") => ApiError::bad_gateway(
+      "eBay seller account is not eligible for Business Policies yet. Enable Seller Hub/Business Policies in eBay, then create or edit a fulfillment policy with localPickup: false.",
+    ),
     EbayAccountError::Api { .. } => ApiError::bad_gateway(e.to_string()),
     EbayAccountError::Http(_) | EbayAccountError::Json(_) => ApiError::bad_gateway(e.to_string()),
   }

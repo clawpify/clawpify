@@ -26,6 +26,7 @@ export type EbayOAuthStartResponse = {
 
 export type EbaySellerSetupResponse = {
   marketplace_id: string;
+  local_pickup: boolean;
   fulfillment_policies: unknown;
   payment_policies: unknown;
   return_policies: unknown;

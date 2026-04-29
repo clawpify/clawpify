@@ -11,6 +11,7 @@ use utoipa::ToSchema;
 use uuid::Uuid;
 
 use super::extractors::{OrgId, UserId};
+use super::s3::{storage_key_owned_by_user, stored_image_proxy_path};
 use super::state::AppState;
 use crate::dto::listings::{CreateListingRequest, UpdateListingRequest};
 use crate::error::{self, ApiError};
@@ -19,7 +20,6 @@ use crate::models::consignment_listing::ConsignmentListing;
 use crate::models::stored_image::{ListingImageWithUrl, StoredImage};
 use crate::repositories::contracts as contract_repo;
 use crate::repositories::{listings, pagination::Pagination, stored_images};
-use super::s3::{storage_key_owned_by_user, stored_image_proxy_path};
 
 const LISTING_NOT_FOUND: &str = "Listing not found";
 const CONTRACT_NOT_FOUND: &str = "Contract not found";
@@ -101,9 +101,7 @@ async fn align_contract_consignor_create(
     .map_err(error::db_error)?
     .ok_or_else(|| error::not_found(CONTRACT_NOT_FOUND))?;
   match body.consignor_id {
-    Some(co) if co != cc => Err(error::bad_request(
-      "consignor_id does not match contract",
-    )),
+    Some(co) if co != cc => Err(error::bad_request("consignor_id does not match contract")),
     Some(_) => Ok(()),
     None => {
       body.consignor_id = Some(cc);
@@ -128,9 +126,7 @@ async fn align_contract_consignor_update(
     .map_err(error::db_error)?
     .ok_or_else(|| error::not_found(CONTRACT_NOT_FOUND))?;
   match eff_consignor {
-    Some(co) if co != cc => Err(error::bad_request(
-      "consignor_id does not match contract",
-    )),
+    Some(co) if co != cc => Err(error::bad_request("consignor_id does not match contract")),
     None => {
       body.consignor_id = Some(cc);
       Ok(())
@@ -191,14 +187,9 @@ async fn create_listing(
     body.post_contract_disposition.as_deref(),
   )?;
   align_contract_consignor_create(&state.pool, org_id.as_ref(), &mut body).await?;
-  let row = listings::create(
-    &state.pool,
-    org_id.as_ref(),
-    Some(uid.as_ref()),
-    body.0,
-  )
-  .await
-  .map_err(error::db_error)?;
+  let row = listings::create(&state.pool, org_id.as_ref(), Some(uid.as_ref()), body.0)
+    .await
+    .map_err(error::db_error)?;
   Ok((StatusCode::CREATED, Json(row)))
 }
 
@@ -433,4 +424,3 @@ async fn detach_listing_image(
   ))
 )]
 pub struct ListingsOpenApiDoc;
-

@@ -30,7 +30,10 @@ pub async fn exchange_code_for_token(
   let res = client
     .post(cfg.oauth_token_url())
     .header(CONTENT_TYPE, "application/x-www-form-urlencoded")
-    .header(AUTHORIZATION, basic_auth_header(&cfg.client_id, &cfg.client_secret))
+    .header(
+      AUTHORIZATION,
+      basic_auth_header(&cfg.client_id, &cfg.client_secret),
+    )
     .form(&[
       ("grant_type", "authorization_code"),
       ("code", code),

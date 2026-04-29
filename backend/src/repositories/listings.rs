@@ -1,10 +1,10 @@
 use sqlx::{PgPool, Postgres, QueryBuilder};
 use uuid::Uuid;
 
-use crate::dto::listings::{CreateListingRequest, UpdateListingRequest};
-use crate::models::consignment_listing::ConsignmentListing;
 use super::organizations;
 use super::pagination::Pagination;
+use crate::dto::listings::{CreateListingRequest, UpdateListingRequest};
+use crate::models::consignment_listing::ConsignmentListing;
 
 const SELECT_LISTING: &str = r#"SELECT id, org_id, created_by_user_id, status, title, description_html, product_type, vendor,
               tags, price_cents, currency_code, sku, media_urls, ai_quality, ai_attributes,
@@ -29,7 +29,9 @@ pub async fn list_by_org(
   qb.push_bind(page.limit);
   qb.push(" OFFSET ");
   qb.push_bind(page.offset);
-  qb.build_query_as::<ConsignmentListing>().fetch_all(pool).await
+  qb.build_query_as::<ConsignmentListing>()
+    .fetch_all(pool)
+    .await
 }
 
 pub async fn get_by_id(
@@ -61,16 +63,10 @@ pub async fn create(
   let vendor = body.vendor.unwrap_or_default();
   let tags = body.tags.unwrap_or_default();
   let price_cents = body.price_cents.unwrap_or(0).max(0);
-  let currency_code = body
-    .currency_code
-    .unwrap_or_else(|| "USD".to_string());
+  let currency_code = body.currency_code.unwrap_or_else(|| "USD".to_string());
   let sku = body.sku.unwrap_or_default();
-  let media_urls = body
-    .media_urls
-    .unwrap_or_else(|| serde_json::json!([]));
-  let status = body
-    .status
-    .unwrap_or_else(|| "draft".to_string());
+  let media_urls = body.media_urls.unwrap_or_else(|| serde_json::json!([]));
+  let status = body.status.unwrap_or_else(|| "draft".to_string());
 
   let mut tx = pool.begin().await?;
   organizations::ensure_id(&mut *tx, org_id).await?;
@@ -227,9 +223,14 @@ mod tests {
     assert_eq!(row.title, "Jacket");
     assert_eq!(row.status, "draft");
 
-    let listed = list_by_org(&pool, "org-list-1", Some("draft"), Pagination::new(Some(10), Some(0)))
-      .await
-      .expect("list");
+    let listed = list_by_org(
+      &pool,
+      "org-list-1",
+      Some("draft"),
+      Pagination::new(Some(10), Some(0)),
+    )
+    .await
+    .expect("list");
     assert_eq!(listed.len(), 1);
   }
 }

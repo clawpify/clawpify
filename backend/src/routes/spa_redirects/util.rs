@@ -12,16 +12,23 @@ pub(crate) fn app_public_origin_str(state: &AppState) -> Result<&str, ApiError> 
 }
 
 pub(crate) fn absolute_url_from_origin(origin: &str, path: &str) -> Result<String, ApiError> {
-  let base =
-    Url::parse(origin).map_err(|_| error::bad_request("APP_PUBLIC_ORIGIN must be a valid URL with scheme"))?;
+  let base = Url::parse(origin)
+    .map_err(|_| error::bad_request("APP_PUBLIC_ORIGIN must be a valid URL with scheme"))?;
   let path = path.trim_start_matches('/');
-  let joined = base.join(path).map_err(|_| error::internal("redirect url join failed"))?;
+  let joined = base
+    .join(path)
+    .map_err(|_| error::internal("redirect url join failed"))?;
   Ok(joined.into())
 }
 
 /// SPA `/app` with a single fixed query pair (namespaced per integration, not user-controlled).
-pub(crate) fn app_url_with_query_pair(origin: &str, key: &str, value: &str) -> Result<String, ApiError> {
-  let mut u = Url::parse(origin).map_err(|_| error::bad_request("APP_PUBLIC_ORIGIN must be a valid URL with scheme"))?;
+pub(crate) fn app_url_with_query_pair(
+  origin: &str,
+  key: &str,
+  value: &str,
+) -> Result<String, ApiError> {
+  let mut u = Url::parse(origin)
+    .map_err(|_| error::bad_request("APP_PUBLIC_ORIGIN must be a valid URL with scheme"))?;
   u.path_segments_mut()
     .map_err(|_| error::internal("redirect url path failed"))?
     .push("app");
@@ -35,7 +42,8 @@ pub(crate) fn app_path_url_with_query_pair(
   key: &str,
   value: &str,
 ) -> Result<String, ApiError> {
-  let mut u = Url::parse(origin).map_err(|_| error::bad_request("APP_PUBLIC_ORIGIN must be a valid URL with scheme"))?;
+  let mut u = Url::parse(origin)
+    .map_err(|_| error::bad_request("APP_PUBLIC_ORIGIN must be a valid URL with scheme"))?;
   let path = app_path.trim_start_matches('/');
   u.path_segments_mut()
     .map_err(|_| error::internal("redirect url path failed"))?
