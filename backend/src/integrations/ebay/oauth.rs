@@ -58,13 +58,12 @@ pub async fn refresh_access_token(
 ) -> Result<TokenResponse, EbayOAuthError> {
   let client = http_client::shared();
 
-  let mut form: Vec<(&str, &str)> = vec![
+  // Omit scope on refresh so eBay defaults to the scopes granted during consent.
+  // Sending env scopes here can trigger invalid_scope if config drifts from the refresh token grant.
+  let form: Vec<(&str, &str)> = vec![
     ("grant_type", "refresh_token"),
     ("refresh_token", refresh_token),
   ];
-  if !cfg.oauth_scope.is_empty() {
-    form.push(("scope", cfg.oauth_scope.as_str()));
-  }
 
   let res = client
     .post(cfg.oauth_token_url())
