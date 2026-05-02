@@ -4,6 +4,7 @@ export const landingCopy = {
     signedInCtaLabel: "Sign in",
     links: [
       { label: "Features", href: "/#features" },
+      { label: "Software", href: "/consignment-management-software" },
       { label: "About", href: "/about" },
       { label: "Writing", href: "/blog" },
       { label: "Privacy", href: "/privacy" },
@@ -30,18 +31,21 @@ export const landingCopy = {
       title: "Track inventory",
       description: "Floor stock, online, and sold.",
       ctaLabel: "Inventory",
+      ctaHref: "/consignment-tracking-software",
       visual: "inventoryBubbles" as const,
     },
     {
       title: "Consignor agreements",
       description: "Terms and payouts stay on each item.",
       ctaLabel: "Agreements",
+      ctaHref: "/consignment-accounting-software",
       visual: "moneyMotif" as const,
     },
     {
       title: "Cross-post listings",
       description: "Draft once, push to your channels.",
       ctaLabel: "Listings",
+      ctaHref: "/ebay-consignment-software",
       visual: "channelLogos" as const,
     },
   ],
@@ -52,7 +56,19 @@ export const landingCopy = {
     navColumns: [
       {
         heading: "Product",
-        links: [{ label: "Pricing", href: "/#features" }],
+        links: [
+          { label: "Software", href: "/consignment-management-software" },
+          { label: "POS guide", href: "/consignment-store-pos-software" },
+          { label: "eBay", href: "/ebay-consignment-software" },
+        ],
+      },
+      {
+        heading: "Resources",
+        links: [
+          { label: "Tracking", href: "/consignment-tracking-software" },
+          { label: "Accounting", href: "/consignment-accounting-software" },
+          { label: "Reviews", href: "/best-consignment-shop-software-reviews" },
+        ],
       },
       {
         heading: "Company",

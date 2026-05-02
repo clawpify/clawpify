@@ -1,4 +1,8 @@
 import whyWeChoseToOpenSourceClawpify from "../posts/why-we-chose-to-open-source-clawpify.mdx" with { type: "text" };
+import whatDoesConsignmentSellingMean from "../posts/what-does-consignment-selling-mean.mdx" with { type: "text" };
+import consignmentVendorMeaning from "../posts/consignment-vendor-meaning.mdx" with { type: "text" };
+import consignmentProgramMeaning from "../posts/consignment-program-meaning.mdx" with { type: "text" };
+import consignmentStockExample from "../posts/consignment-stock-example.mdx" with { type: "text" };
 import type { BlogPost, BlogFrontmatter } from "../types";
 
 function parseFrontmatter(source: string): BlogPost {
@@ -58,4 +62,10 @@ function parseFrontmatter(source: string): BlogPost {
   };
 }
 
-export const posts: BlogPost[] = [whyWeChoseToOpenSourceClawpify].map(parseFrontmatter);
+export const posts: BlogPost[] = [
+  whatDoesConsignmentSellingMean,
+  consignmentVendorMeaning,
+  consignmentProgramMeaning,
+  consignmentStockExample,
+  whyWeChoseToOpenSourceClawpify,
+].map(parseFrontmatter);

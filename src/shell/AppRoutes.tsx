@@ -17,6 +17,26 @@ const WritingPage = lazy(() =>
 const WritingPostPage = lazy(() =>
   import("../app/writing/components/post").then((m) => ({ default: m.WritingPostPage })),
 );
+const ConsignmentManagementSoftwarePage = lazy(() =>
+  import("../app/seo-pages").then((m) => ({ default: m.ConsignmentManagementSoftwarePage })),
+);
+const ConsignmentStorePosSoftwarePage = lazy(() =>
+  import("../app/seo-pages").then((m) => ({ default: m.ConsignmentStorePosSoftwarePage })),
+);
+const EbayConsignmentSoftwarePage = lazy(() =>
+  import("../app/seo-pages").then((m) => ({ default: m.EbayConsignmentSoftwarePage })),
+);
+const ConsignmentTrackingSoftwarePage = lazy(() =>
+  import("../app/seo-pages").then((m) => ({ default: m.ConsignmentTrackingSoftwarePage })),
+);
+const ConsignmentAccountingSoftwarePage = lazy(() =>
+  import("../app/seo-pages").then((m) => ({ default: m.ConsignmentAccountingSoftwarePage })),
+);
+const BestConsignmentShopSoftwareReviewsPage = lazy(() =>
+  import("../app/seo-pages").then((m) => ({
+    default: m.BestConsignmentShopSoftwareReviewsPage,
+  })),
+);
 
 const appWorkspace = () => import("../app/app");
 const WorkspaceLayout = lazy(() =>
@@ -49,6 +69,27 @@ export function AppRoutes() {
         <Route path="/privacy" element={<PrivacyPage />} />
         <Route path="/blog" element={<WritingPage />} />
         <Route path="/blog/:slug" element={<WritingPostPage />} />
+        <Route
+          path="/consignment-management-software"
+          element={<ConsignmentManagementSoftwarePage />}
+        />
+        <Route
+          path="/consignment-store-pos-software"
+          element={<ConsignmentStorePosSoftwarePage />}
+        />
+        <Route path="/ebay-consignment-software" element={<EbayConsignmentSoftwarePage />} />
+        <Route
+          path="/consignment-tracking-software"
+          element={<ConsignmentTrackingSoftwarePage />}
+        />
+        <Route
+          path="/consignment-accounting-software"
+          element={<ConsignmentAccountingSoftwarePage />}
+        />
+        <Route
+          path="/best-consignment-shop-software-reviews"
+          element={<BestConsignmentShopSoftwareReviewsPage />}
+        />
         <Route path="/writing" element={<Navigate to="/blog" replace />} />
         <Route path="/writing/:slug" element={<WritingSlugRedirect />} />
         <Route path="/app" element={<WorkspaceLayout />}>
