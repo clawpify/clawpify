@@ -16,6 +16,60 @@ pub enum EbayAccountError {
   NoMatchingFulfillmentPolicy { local_pickup: bool },
 }
 
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+pub struct EbayPolicyOption {
+  pub id: String,
+  pub name: String,
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+pub struct EbayLocationOption {
+  pub key: String,
+  pub name: String,
+}
+
+pub fn policy_options(value: &Value, array_key: &str, id_key: &str) -> Vec<EbayPolicyOption> {
+  value
+    .get(array_key)
+    .and_then(|v| v.as_array())
+    .into_iter()
+    .flatten()
+    .filter_map(|p| {
+      let id = p.get(id_key)?.as_str()?.trim();
+      let name = p.get("name").and_then(|v| v.as_str()).unwrap_or(id).trim();
+      Some(EbayPolicyOption {
+        id: id.to_string(),
+        name: name.to_string(),
+      })
+    })
+    .collect()
+}
+
+pub fn location_options(value: &Value) -> Vec<EbayLocationOption> {
+  value
+    .get("locations")
+    .and_then(|v| v.as_array())
+    .into_iter()
+    .flatten()
+    .filter_map(|location| {
+      let key = location
+        .get("merchantLocationKey")
+        .or_else(|| location.get("locationKey"))?
+        .as_str()?
+        .trim();
+      let name = location
+        .get("name")
+        .and_then(|v| v.as_str())
+        .unwrap_or(key)
+        .trim();
+      Some(EbayLocationOption {
+        key: key.to_string(),
+        name: name.to_string(),
+      })
+    })
+    .collect()
+}
+
 pub struct EbayAccount<'a> {
   pub cfg: &'a EbayConfig,
   pub access_token: &'a str,

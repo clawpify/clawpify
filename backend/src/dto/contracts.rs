@@ -16,6 +16,7 @@ pub struct ContractCreateRequest {
   pub store_split_bps: i32, // store split bps
   #[serde(default = "default_donation_cutoff")]
   pub donation_price_cutoff_cents: i64, // donation price cutoff cents
+  #[serde(default)]
   pub opt_out_under_threshold_donation: bool, // opt out under threshold donation
   pub terms_version: Option<String>, // terms version
   pub notes: Option<String>, // notes

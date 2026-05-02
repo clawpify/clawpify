@@ -4,6 +4,7 @@ pub mod channel_connections;
 pub mod consignors;
 pub mod contract_payouts;
 pub mod contracts;
+pub mod ebay_policy_defaults;
 pub mod intake_batches;
 pub mod intake_phone_bindings;
 pub mod listing_publications;
