@@ -24,7 +24,7 @@ export function AppTopNav() {
             alignItems: "center",
           }}
         >
-          <UserButton afterSignOutUrl="/" />
+          <UserButton />
         </div>
       </Show>
     </nav>

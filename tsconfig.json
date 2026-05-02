@@ -21,7 +21,6 @@
     "noUncheckedIndexedAccess": true,
     "noImplicitOverride": true,
 
-    "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"],
       "@public/*": ["./public/*"]
@@ -33,5 +32,6 @@
     "noPropertyAccessFromIndexSignature": false
   },
 
+  "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.d.ts"],
   "exclude": ["dist", "node_modules"]
 }

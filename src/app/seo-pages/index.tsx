@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { landingOrangeBubbleClassName, landingOrangeBubbleStyle } from "../landing/components/Button";
 
 type SeoPageContent = {
   eyebrow: string;
@@ -118,7 +119,7 @@ const pages = {
     related: [
       { label: "Consignment management software", href: "/consignment-management-software" },
       { label: "Consignment tracking software", href: "/consignment-tracking-software" },
-      { label: "Consignment vendor meaning", href: "/blog/consignment-vendor-meaning" },
+      { label: "Consignment accounting software", href: "/consignment-accounting-software" },
     ],
   },
   ebay: {
@@ -214,14 +215,14 @@ const pages = {
     related: [
       { label: "Consignment accounting software", href: "/consignment-accounting-software" },
       { label: "eBay consignment software", href: "/ebay-consignment-software" },
-      { label: "Consignment stock example", href: "/blog/consignment-stock-example" },
+      { label: "Consignment management software", href: "/consignment-management-software" },
     ],
   },
   accounting: {
     eyebrow: "Consignment Accounting Software",
     title: "Consignment accounting software for splits, fees, and payout reports",
     answer:
-      "Consignment accounting software helps shops calculate commission splits, seller payouts, fees, and reports after items sell. Clawpify keeps the operational details that accounting depends on: item ownership, agreement terms, sale status, and payout context.",
+      "Consignment accounting software helps shops calculate commission splits, seller payouts, fees, and post-sale reports. Clawpify keeps the operational details that bookkeeping depends on: item ownership, agreement terms, sale status, and payout context.",
     sections: [
       {
         title: "What consignment accounting needs",
@@ -235,7 +236,7 @@ const pages = {
       },
       {
         title: "Operational records before ledger work",
-        body: "Clawpify is not positioned as a full general ledger. It supports the item and consignor data that shops need before final bookkeeping or accounting export.",
+        body: "Clawpify is not a QuickBooks replacement or a full general ledger. It supports the item and consignor data shops need before final bookkeeping or accounting export.",
       },
       {
         title: "Reduce payout disputes",
@@ -251,7 +252,7 @@ const pages = {
       {
         question: "Does Clawpify replace QuickBooks?",
         answer:
-          "No. Clawpify focuses on consignment operations and payout context. Shops can use accounting software for final bookkeeping.",
+          "No. Clawpify is not meant to replace QuickBooks or another accounting system. It organizes consignment operations and payout context so bookkeeping has cleaner source data.",
       },
       {
         question: "Why do consignor terms matter for accounting?",
@@ -262,7 +263,7 @@ const pages = {
     related: [
       { label: "Consignment management software", href: "/consignment-management-software" },
       { label: "Consignment tracking software", href: "/consignment-tracking-software" },
-      { label: "What does consignment selling mean?", href: "/blog/what-does-consignment-selling-mean" },
+      { label: "Best consignment shop software reviews", href: "/best-consignment-shop-software-reviews" },
     ],
   },
   reviews: {
@@ -338,9 +339,13 @@ function SeoPage({ content }: { content: SeoPageContent }) {
           <div className="mt-8 flex flex-wrap gap-3">
             <Link
               to="/sign-in"
-              className="landing-sans-copy rounded-full bg-zinc-900 px-5 py-3 text-sm font-medium text-white transition hover:bg-zinc-700"
+              className={[
+                landingOrangeBubbleClassName,
+                "landing-sans-copy inline-flex items-center justify-center px-6 py-3 text-center text-sm no-underline",
+              ].join(" ")}
+              style={landingOrangeBubbleStyle}
             >
-              {content.primaryCta ?? "Start with Clawpify"}
+              <span className="relative z-[2]">{content.primaryCta ?? "Start with Clawpify"}</span>
             </Link>
             <Link
               to="/blog"

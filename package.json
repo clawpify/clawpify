@@ -5,6 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "bun --hot --watch src/index.ts",
+    "lint": "tsc --noEmit",
+    "test": "bun run lint && bun run build",
+    "test:frontend": "bun run test",
     "test:backend": "cd backend && cargo test",
     "build": "bun build ./src/index.html --outdir=dist --sourcemap --target=browser --minify --define:process.env.NODE_ENV='\"production\"' --env='BUN_PUBLIC_*' --env='VITE_*'",
     "start": "CLAWPIFY_PROD=1 bun src/index.ts"
@@ -26,6 +29,7 @@
     "@types/react-dom": "^19",
     "@types/turndown": "^5.0.6",
     "bun-plugin-tailwind": "^0.1.2",
-    "tailwindcss": "^4.2.1"
+    "tailwindcss": "^4.2.1",
+    "typescript": "^6.0.3"
   }
 }
