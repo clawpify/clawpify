@@ -104,8 +104,6 @@ pub struct EbayStatusResponse {
 pub struct EbaySellerSetupQuery {
   #[serde(default = "default_marketplace_id")]
   pub marketplace_id: String,
-  #[serde(default)]
-  pub local_pickup: bool,
 }
 
 #[derive(Serialize, ToSchema)]
@@ -159,8 +157,7 @@ async fn ebay_oauth_status(
   tag = "ebay",
   security(("internal_user" = []), ("internal_org" = [])),
   params(
-    ("marketplace_id" = Option<String>, Query, description = "eBay marketplace id, defaults to EBAY_US"),
-    ("local_pickup" = Option<bool>, Query, description = "Prefer fulfillment policies with matching localPickup, defaults to false")
+    ("marketplace_id" = Option<String>, Query, description = "eBay marketplace id, defaults to EBAY_US")
   ),
   responses(
     (status = 200, description = "Seller policies and inventory locations", body = EbaySellerSetupResponse),
@@ -195,14 +192,17 @@ async fn ebay_seller_setup(
     cfg,
     access_token: &bearer,
   };
+  // Clawpify currently creates shipping-only eBay drafts. Ignore stale clients that still send
+  // local_pickup=true so seller setup always selects a shipping fulfillment policy.
+  let local_pickup = false;
   let setup = account
-    .seller_setup(&q.marketplace_id, q.local_pickup)
+    .seller_setup(&q.marketplace_id, local_pickup)
     .await
     .map_err(map_account_err)?;
 
   Ok(Json(EbaySellerSetupResponse {
     marketplace_id: q.marketplace_id,
-    local_pickup: q.local_pickup,
+    local_pickup,
     fulfillment_policies: setup
       .get("fulfillment_policies")
       .cloned()
