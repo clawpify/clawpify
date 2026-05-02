@@ -180,10 +180,8 @@ function IntegrationDetailsModal({
   requirements,
   categoryId,
   conditionId,
-  localPickup,
   onCategoryChange,
   onConditionChange,
-  onLocalPickupChange,
   onClose,
   onCreateDraft,
   onPublish,
@@ -197,10 +195,8 @@ function IntegrationDetailsModal({
   requirements: Requirement[];
   categoryId: string;
   conditionId: string;
-  localPickup: boolean;
   onCategoryChange: (e: ChangeEvent<HTMLInputElement>) => void;
   onConditionChange: (e: ChangeEvent<HTMLInputElement>) => void;
-  onLocalPickupChange: (e: ChangeEvent<HTMLInputElement>) => void;
   onClose: () => void;
   onCreateDraft: () => void;
   onPublish: () => void;
@@ -282,21 +278,6 @@ function IntegrationDetailsModal({
             </label>
           </div>
 
-          <label className="mt-4 flex items-start gap-3 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-3 text-sm">
-            <input
-              type="checkbox"
-              checked={localPickup}
-              onChange={onLocalPickupChange}
-              className="mt-0.5 size-4 rounded border-zinc-300 text-zinc-950"
-            />
-            <span className="min-w-0">
-              <span className="block font-medium text-zinc-700">{copy.products.detailIntegrationLocalPickup}</span>
-              <span className="mt-0.5 block text-xs leading-5 text-zinc-500">
-                {copy.products.detailIntegrationLocalPickupHint}
-              </span>
-            </span>
-          </label>
-
           <div className="mt-6">
             <h3 className="text-sm font-semibold text-zinc-950">{copy.products.detailIntegrationRequirements}</h3>
             <div className="mt-3 grid gap-2 sm:grid-cols-2">
@@ -371,7 +352,6 @@ export function ProductsListingIntegration({ listing }: { listing: ConsignmentLi
   const [published, setPublished] = useState<EbayPublishResponse | null>(null);
   const [categoryId, setCategoryId] = useState(DEFAULT_CATEGORY_ID);
   const [conditionId, setConditionId] = useState(DEFAULT_CONDITION_ID);
-  const [localPickup, setLocalPickup] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
 
   const connected = connectionStatus === "connected";
@@ -440,7 +420,7 @@ export function ProductsListingIntegration({ listing }: { listing: ConsignmentLi
     setBusy("drafting");
     setError(null);
     try {
-      const setupRes = await fetchAuth(ebaySellerSetupPath(MARKETPLACE_ID, localPickup));
+      const setupRes = await fetchAuth(ebaySellerSetupPath(MARKETPLACE_ID, false));
       const setup = await readJsonOrError<EbaySellerSetupResponse>(setupRes);
       const defaults = parseSellerDefaults(setup);
       if (!defaults.fulfillmentPolicyId || !defaults.paymentPolicyId || !defaults.returnPolicyId) {
@@ -476,7 +456,7 @@ export function ProductsListingIntegration({ listing }: { listing: ConsignmentLi
     } finally {
       setBusy("idle");
     }
-  }, [canCreateDraft, categoryId, conditionId, fetchAuth, listing.id, localPickup, showToast]);
+  }, [canCreateDraft, categoryId, conditionId, fetchAuth, listing.id, showToast]);
 
   const publishDraft = useCallback(async () => {
     if (!draft || busy !== "idle") return;
@@ -527,10 +507,6 @@ export function ProductsListingIntegration({ listing }: { listing: ConsignmentLi
 
   const onConditionChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
     setConditionId(e.target.value);
-  }, []);
-
-  const onLocalPickupChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
-    setLocalPickup(e.target.checked);
   }, []);
 
   const statusText = published
@@ -592,10 +568,8 @@ export function ProductsListingIntegration({ listing }: { listing: ConsignmentLi
           requirements={requirements}
           categoryId={categoryId}
           conditionId={conditionId}
-          localPickup={localPickup}
           onCategoryChange={onCategoryChange}
           onConditionChange={onConditionChange}
-          onLocalPickupChange={onLocalPickupChange}
           onClose={() => setDetailsOpen(false)}
           onCreateDraft={createDraft}
           onPublish={publishDraft}
