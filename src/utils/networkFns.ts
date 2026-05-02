@@ -154,6 +154,13 @@ export function ebaySellerSetupPath(marketplaceId = "EBAY_US", localPickup = fal
   return `/api/ebay/seller/setup?${params.toString()}`;
 }
 
+export function ebayPoliciesPath(marketplaceId = "EBAY_US"): string {
+  const params = new URLSearchParams({ marketplace_id: marketplaceId });
+  return `/api/ebay/policies?${params.toString()}`;
+}
+
+export const ebayPolicyDefaultsPath = "/api/ebay/policies/defaults";
+
 export function listingEbayDraftPath(listingId: string): string {
   return `/api/listings/${encodeURIComponent(listingId)}/ebay/draft`;
 }

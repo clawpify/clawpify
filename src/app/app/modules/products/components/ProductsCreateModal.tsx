@@ -10,6 +10,7 @@ import { ListingMediaGallery } from "./listing-media/ListingMediaGallery";
 
 const MAX_IMAGES = 8;
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+const MODAL_TRANSITION_MS = 180;
 
 const CATEGORY_CUSTOM = "__custom__";
 
@@ -43,6 +44,8 @@ export function ProductsCreateModal({ open, onClose, onCreated }: ProductsCreate
   const [form, setForm]                       = useState(() => initialForm());
   const [heroIndex, setHeroIndex]             = useState(0);
   const [submitAttempted, setSubmitAttempted] = useState(false);
+  const [rendered, setRendered]               = useState(open);
+  const [visible, setVisible]                 = useState(false);
   const titleRef                              = useRef<HTMLInputElement>(null);
   const descriptionRef                        = useRef<HTMLTextAreaElement>(null);
   const fileRef                               = useRef<HTMLInputElement>(null);
@@ -52,6 +55,24 @@ export function ProductsCreateModal({ open, onClose, onCreated }: ProductsCreate
 
   formRef.current = form;
   heroIndexRef.current = heroIndex;
+
+  useEffect(() => {
+    let frame: number | undefined;
+    let timeout: number | undefined;
+
+    if (open) {
+      setRendered(true);
+      frame = window.requestAnimationFrame(() => setVisible(true));
+    } else {
+      setVisible(false);
+      timeout = window.setTimeout(() => setRendered(false), MODAL_TRANSITION_MS);
+    }
+
+    return () => {
+      if (frame !== undefined) window.cancelAnimationFrame(frame);
+      if (timeout !== undefined) window.clearTimeout(timeout);
+    };
+  }, [open]);
 
   const categoryPresets = useMemo(
     () =>
@@ -110,22 +131,26 @@ export function ProductsCreateModal({ open, onClose, onCreated }: ProductsCreate
   }, [open]);
 
   useEffect(() => {
-    if (!open) return;
+    if (!rendered) return;
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
       document.body.style.overflow = prevOverflow;
     };
-  }, [open]);
+  }, [rendered]);
+
+  const requestClose = useCallback(() => {
+    if (!creating) onClose();
+  }, [creating, onClose]);
 
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && !creating) onClose();
+      if (e.key === "Escape") requestClose();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open, onClose, creating]);
+  }, [open, requestClose]);
 
   const setField = <K extends keyof ProductCreateFormState>(key: K, value: ProductCreateFormState[K]) => {
     setForm((f) => ({ ...f, [key]: value }));
@@ -216,7 +241,7 @@ export function ProductsCreateModal({ open, onClose, onCreated }: ProductsCreate
         files
       );
       onCreated(created.id);
-      onClose();
+      requestClose();
     } catch {
       /* createError in context */
     }
@@ -225,20 +250,26 @@ export function ProductsCreateModal({ open, onClose, onCreated }: ProductsCreate
   const catSelectVal = categorySelectValue(form.productType, presetValues);
   const showCustomCategory = catSelectVal === CATEGORY_CUSTOM;
 
-  if (!open) return null;
+  if (!rendered) return null;
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-zinc-950/40 p-4 backdrop-blur-[2px] sm:p-6"
+      className={[
+        "fixed inset-0 z-[100] flex items-center justify-center bg-zinc-950/40 p-4 backdrop-blur-[2px] transition-opacity duration-200 motion-reduce:transition-none sm:p-6",
+        visible ? "opacity-100" : "opacity-0",
+      ].join(" ")}
       role="presentation"
-      onClick={() => !creating && onClose()}
+      onClick={requestClose}
       style={{ fontFamily: "var(--workspace-font)" }}
     >
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby="products-create-modal-title"
-        className="flex max-h-[min(92vh,880px)] w-full max-w-[min(96vw,800px)] flex-col overflow-hidden rounded-xl border border-zinc-200/90 bg-white shadow-[0_16px_48px_-6px_rgba(15,23,42,0.18),0_4px_16px_-4px_rgba(15,23,42,0.08)]"
+        className={[
+          "flex max-h-[min(92vh,880px)] w-full max-w-[min(96vw,800px)] flex-col overflow-hidden rounded-xl border border-zinc-200/90 bg-white shadow-[0_16px_48px_-6px_rgba(15,23,42,0.18),0_4px_16px_-4px_rgba(15,23,42,0.08)] transition duration-200 motion-reduce:transition-none",
+          visible ? "translate-y-0 scale-100 opacity-100" : "translate-y-1 scale-[0.985] opacity-0",
+        ].join(" ")}
         onClick={(e) => e.stopPropagation()}
       >
         <header className="flex shrink-0 items-center justify-between gap-3 border-b border-zinc-100 px-5 py-2.5 sm:px-7 sm:py-3">
@@ -247,7 +278,7 @@ export function ProductsCreateModal({ open, onClose, onCreated }: ProductsCreate
           </span>
           <button
             type="button"
-            onClick={() => !creating && onClose()}
+            onClick={requestClose}
             className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-zinc-400 transition hover:bg-zinc-100 hover:text-zinc-600"
             aria-label={copy.products.createModalClose}
           >

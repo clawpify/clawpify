@@ -10,13 +10,13 @@ import type {
   EbayDraftResponse,
   EbayOAuthStartResponse,
   EbayOAuthStatusResponse,
+  EbayPoliciesResponse,
   EbayPublishResponse,
-  EbaySellerSetupResponse,
 } from "../types";
 import {
   ebayOAuthStartPath,
   ebayOAuthStatusPath,
-  ebaySellerSetupPath,
+  ebayPoliciesPath,
   listingEbayDraftPath,
   listingEbayPublishPath,
 } from "@/utils/networkFns";
@@ -27,13 +27,6 @@ type EbayBusyState = "idle" | "connecting" | "drafting" | "publishing";
 const MARKETPLACE_ID = "EBAY_US";
 const DEFAULT_CATEGORY_ID = "57988";
 const DEFAULT_CONDITION_ID = "USED_EXCELLENT";
-
-type SellerDefaults = {
-  fulfillmentPolicyId: string;
-  paymentPolicyId: string;
-  returnPolicyId: string;
-  merchantLocationKey?: string;
-};
 
 type Requirement = {
   label: string;
@@ -49,60 +42,6 @@ type ChannelRowProps = {
   disabled?: boolean;
   muted?: boolean;
 };
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
-}
-
-function collectRecords(value: unknown, out: Record<string, unknown>[] = [], depth = 0) {
-  if (depth > 5) return out;
-  if (Array.isArray(value)) {
-    for (const item of value) collectRecords(item, out, depth + 1);
-    return out;
-  }
-  if (!isRecord(value)) return out;
-  out.push(value);
-  for (const next of Object.values(value)) collectRecords(next, out, depth + 1);
-  return out;
-}
-
-function firstStringField(value: unknown, keys: string[]): string {
-  for (const obj of collectRecords(value)) {
-    for (const key of keys) {
-      const raw = obj[key];
-      if (typeof raw === "string" && raw.trim()) return raw.trim();
-    }
-  }
-  return "";
-}
-
-function parseSellerDefaults(setup: EbaySellerSetupResponse): SellerDefaults {
-  return {
-    fulfillmentPolicyId: firstStringField(setup.fulfillment_policies, [
-      "fulfillmentPolicyId",
-      "fulfillment_policy_id",
-      "id",
-    ]),
-    paymentPolicyId: firstStringField(setup.payment_policies, [
-      "paymentPolicyId",
-      "payment_policy_id",
-      "id",
-    ]),
-    returnPolicyId: firstStringField(setup.return_policies, [
-      "returnPolicyId",
-      "return_policy_id",
-      "id",
-    ]),
-    merchantLocationKey:
-      firstStringField(setup.locations, [
-        "merchantLocationKey",
-        "merchant_location_key",
-        "locationKey",
-        "location_key",
-        "name",
-      ]) || undefined,
-  };
-}
 
 function ebayListingUrl(listingId: string | null): string | null {
   const id = listingId?.trim();
@@ -420,24 +359,32 @@ export function ProductsListingIntegration({ listing }: { listing: ConsignmentLi
     setBusy("drafting");
     setError(null);
     try {
-      const setupRes = await fetchAuth(ebaySellerSetupPath(MARKETPLACE_ID, false));
-      const setup = await readJsonOrError<EbaySellerSetupResponse>(setupRes);
-      const defaults = parseSellerDefaults(setup);
-      if (!defaults.fulfillmentPolicyId || !defaults.paymentPolicyId || !defaults.returnPolicyId) {
-        throw new Error("Missing eBay seller policies. Create fulfillment, payment, and return policies in eBay first.");
+      const policiesRes = await fetchAuth(ebayPoliciesPath(MARKETPLACE_ID));
+      const policies = await readJsonOrError<EbayPoliciesResponse>(policiesRes);
+      if (policies.missing.length > 0) {
+        throw new Error(
+          `Missing eBay setup: ${policies.missing.join(", ")}. Refresh eBay policies in Settings.`
+        );
+      }
+      if (!policies.defaults) {
+        throw new Error(
+          "Choose eBay listing policies in Settings > Integrations > eBay > Listing Details."
+        );
       }
 
       const body: EbayDraftRequest = {
         marketplace_id: MARKETPLACE_ID,
         category_id: categoryId.trim(),
         condition_id: conditionId.trim(),
-        fulfillment_policy_id: defaults.fulfillmentPolicyId,
-        payment_policy_id: defaults.paymentPolicyId,
-        return_policy_id: defaults.returnPolicyId,
+        fulfillment_policy_id: policies.defaults.fulfillment_policy_id,
+        payment_policy_id: policies.defaults.payment_policy_id,
+        return_policy_id: policies.defaults.return_policy_id,
         quantity: 1,
         aspects: {},
       };
-      if (defaults.merchantLocationKey) body.merchant_location_key = defaults.merchantLocationKey;
+      if (policies.defaults.merchant_location_key) {
+        body.merchant_location_key = policies.defaults.merchant_location_key;
+      }
 
       const draftRes = await fetchAuth(listingEbayDraftPath(listing.id), {
         method: "POST",

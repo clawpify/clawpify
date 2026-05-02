@@ -5,13 +5,24 @@ import { useToast } from "../../../../lib/toast";
 import { SettingsIcon } from "../../../../icons/workspace-icons";
 import { useWorkspaceHeader } from "../../context/WorkspaceHeaderContext";
 import { copy } from "../../utils/copy";
-import { ebayOAuthStartPath, ebayOAuthStatusPath } from "@/utils/networkFns";
+import {
+  ebayOAuthStartPath,
+  ebayOAuthStatusPath,
+  ebayPoliciesPath,
+  ebayPolicyDefaultsPath,
+} from "@/utils/networkFns";
+import type {
+  EbayPoliciesResponse,
+  EbayPolicyDefaults,
+  SaveEbayPolicyDefaultsRequest,
+} from "../products/types";
 import {
   landingOrangeBubbleClassName,
   landingOrangeBubbleStyle,
 } from "../../../landing/components/Button";
 
 type EbayStatus = "loading" | "connected" | "disconnected";
+const MARKETPLACE_ID = "EBAY_US";
 
 const SETTINGS_HEADER_CONTEXT = copy.settings.title;
 const SETTINGS_HEADER_CONFIG = {
@@ -22,6 +33,14 @@ const SETTINGS_HEADER_CONFIG = {
     </span>
   ),
 };
+
+async function readJsonOrError<T>(res: Response): Promise<T> {
+  const body = await res.json().catch(() => undefined);
+  if (!res.ok) {
+    throw new Error(messageFromErrorBody(body) ?? `Request failed: ${res.status}`);
+  }
+  return body as T;
+}
 
 export function SettingsPage() {
   const { setConfig } = useWorkspaceHeader();
@@ -64,7 +83,24 @@ function EbayIntegrationCard() {
   const { showToast } = useToast();
   const [status, setStatus] = useState<EbayStatus>("loading");
   const [connectLoading, setConnectLoading] = useState(false);
+  const [policies, setPolicies] = useState<EbayPoliciesResponse | null>(null);
+  const [policiesLoading, setPoliciesLoading] = useState(false);
+  const [policiesSaving, setPoliciesSaving] = useState(false);
+  const [policyError, setPolicyError] = useState<string | null>(null);
+  const [fulfillmentPolicyId, setFulfillmentPolicyId] = useState("");
+  const [paymentPolicyId, setPaymentPolicyId] = useState("");
+  const [returnPolicyId, setReturnPolicyId] = useState("");
+  const [merchantLocationKey, setMerchantLocationKey] = useState("");
   const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const applyDefaults = useCallback((next: EbayPoliciesResponse) => {
+    setFulfillmentPolicyId(
+      next.defaults?.fulfillment_policy_id || next.fulfillment_policies[0]?.id || ""
+    );
+    setPaymentPolicyId(next.defaults?.payment_policy_id || next.payment_policies[0]?.id || "");
+    setReturnPolicyId(next.defaults?.return_policy_id || next.return_policies[0]?.id || "");
+    setMerchantLocationKey(next.defaults?.merchant_location_key || next.locations[0]?.key || "");
+  }, []);
 
   const refreshStatus = useCallback(async (opts?: { quiet?: boolean }): Promise<EbayStatus> => {
     if (!opts?.quiet) setStatus("loading");
@@ -85,6 +121,23 @@ function EbayIntegrationCard() {
       pollTimerRef.current = null;
     }
   }, []);
+
+  const loadPolicies = useCallback(async () => {
+    setPoliciesLoading(true);
+    setPolicyError(null);
+    try {
+      const res = await fetchAuth(ebayPoliciesPath(MARKETPLACE_ID));
+      const next = await readJsonOrError<EbayPoliciesResponse>(res);
+      setPolicies(next);
+      applyDefaults(next);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Could not load eBay policies";
+      setPolicyError(msg);
+      showToast(msg);
+    } finally {
+      setPoliciesLoading(false);
+    }
+  }, [applyDefaults, fetchAuth, showToast]);
 
   const startStatusPoll = useCallback(() => {
     clearStatusPoll();
@@ -110,6 +163,14 @@ function EbayIntegrationCard() {
       document.removeEventListener("visibilitychange", onVisibility);
     };
   }, [refreshStatus]);
+
+  useEffect(() => {
+    if (status === "connected") void loadPolicies();
+    if (status === "disconnected") {
+      setPolicies(null);
+      setPolicyError(null);
+    }
+  }, [loadPolicies, status]);
 
   useEffect(() => clearStatusPoll, [clearStatusPoll]);
 
@@ -146,7 +207,47 @@ function EbayIntegrationCard() {
     }
   }, [fetchAuth, showToast, startStatusPoll]);
 
+  const onSavePolicies = useCallback(async () => {
+    const body: SaveEbayPolicyDefaultsRequest = {
+      marketplace_id: MARKETPLACE_ID,
+      fulfillment_policy_id: fulfillmentPolicyId,
+      payment_policy_id: paymentPolicyId,
+      return_policy_id: returnPolicyId,
+      merchant_location_key: merchantLocationKey || null,
+    };
+
+    setPoliciesSaving(true);
+    setPolicyError(null);
+    try {
+      const res = await fetchAuth(ebayPolicyDefaultsPath, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const saved = await readJsonOrError<EbayPolicyDefaults>(res);
+      setPolicies((current) => (current ? { ...current, defaults: saved } : current));
+      showToast("eBay listing defaults saved.");
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Could not save eBay listing defaults";
+      setPolicyError(msg);
+      showToast(msg);
+    } finally {
+      setPoliciesSaving(false);
+    }
+  }, [
+    fetchAuth,
+    fulfillmentPolicyId,
+    merchantLocationKey,
+    paymentPolicyId,
+    returnPolicyId,
+    showToast,
+  ]);
+
   const connected = status === "connected";
+  const canSavePolicies =
+    connected &&
+    !policiesSaving &&
+    Boolean(fulfillmentPolicyId && paymentPolicyId && returnPolicyId);
   const statusText =
     status === "loading"
       ? copy.settings.integrationStatusChecking
@@ -155,42 +256,152 @@ function EbayIntegrationCard() {
         : copy.settings.integrationStatusDisconnected;
 
   return (
-    <div className="flex flex-col gap-5 p-5 sm:flex-row sm:items-center sm:justify-between">
-      <div className="min-w-0">
-        <div className="flex items-center gap-3">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-zinc-950 text-sm font-semibold text-white">
-            eBay
+    <div className="p-5">
+      <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <div className="flex items-center gap-3">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-zinc-950 text-sm font-semibold text-white">
+              eBay
+            </div>
+            <div className="min-w-0">
+              <h2 className="text-base font-semibold text-zinc-950">{copy.settings.ebayTitle}</h2>
+              <p className="mt-0.5 text-sm text-zinc-600">{copy.settings.ebayBody}</p>
+            </div>
           </div>
-          <div className="min-w-0">
-            <h2 className="text-base font-semibold text-zinc-950">{copy.settings.ebayTitle}</h2>
-            <p className="mt-0.5 text-sm text-zinc-600">{copy.settings.ebayBody}</p>
+          <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-zinc-50 px-2.5 py-1 text-xs font-medium text-zinc-600">
+            <span
+              className={`size-2 rounded-full ${
+                connected ? "bg-emerald-500" : status === "loading" ? "bg-zinc-300" : "bg-zinc-400"
+              }`}
+              aria-hidden
+            />
+            {statusText}
           </div>
         </div>
-        <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-zinc-50 px-2.5 py-1 text-xs font-medium text-zinc-600">
-          <span
-            className={`size-2 rounded-full ${
-              connected ? "bg-emerald-500" : status === "loading" ? "bg-zinc-300" : "bg-zinc-400"
-            }`}
-            aria-hidden
-          />
-          {statusText}
-        </div>
+
+        <button
+          type="button"
+          disabled={connectLoading || status === "loading"}
+          onClick={onConnect}
+          className={[
+            landingOrangeBubbleClassName,
+            "landing-sans-copy inline-flex w-full items-center justify-center px-6 py-3 text-center text-[13px] font-semibold no-underline disabled:pointer-events-none sm:w-auto",
+          ].join(" ")}
+          style={landingOrangeBubbleStyle}
+        >
+          <span className="relative z-[2]">
+            {connected ? copy.settings.ebayReconnect : copy.settings.ebayConnect}
+          </span>
+        </button>
       </div>
 
-      <button
-        type="button"
-        disabled={connectLoading || status === "loading"}
-        onClick={onConnect}
-        className={[
-          landingOrangeBubbleClassName,
-          "landing-sans-copy inline-flex w-full items-center justify-center px-6 py-3 text-center text-[13px] font-semibold no-underline disabled:pointer-events-none sm:w-auto",
-        ].join(" ")}
-        style={landingOrangeBubbleStyle}
-      >
-        <span className="relative z-[2]">
-          {connected ? copy.settings.ebayReconnect : copy.settings.ebayConnect}
-        </span>
-      </button>
+      {connected ? (
+        <div className="mt-5 border-t border-zinc-100 pt-5">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h3 className="text-sm font-semibold text-zinc-950">Listing Details</h3>
+              <p className="mt-1 max-w-2xl text-sm leading-6 text-zinc-600">
+                Choose the default eBay business policies Clawpify should use when creating
+                listing drafts.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => void loadPolicies()}
+              disabled={policiesLoading}
+              className="rounded-md border border-zinc-200 bg-white px-3 py-1.5 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {policiesLoading ? "Refreshing..." : "Refresh policies"}
+            </button>
+          </div>
+
+          {policies?.missing.length ? (
+            <p className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+              Missing from eBay: {policies.missing.join(", ")}. Create the missing setup in eBay,
+              then refresh policies.
+            </p>
+          ) : null}
+          {policyError ? (
+            <p className="mt-4 rounded-lg border border-red-100 bg-red-50 px-3 py-2 text-sm text-red-700">
+              {policyError}
+            </p>
+          ) : null}
+
+          <div className="mt-4 grid gap-3 md:grid-cols-2">
+            <label className="grid gap-1.5 text-sm">
+              <span className="font-medium text-zinc-700">Shipping policy</span>
+              <select
+                value={fulfillmentPolicyId}
+                onChange={(e) => setFulfillmentPolicyId(e.target.value)}
+                className="rounded-md border border-zinc-200 bg-white px-3 py-2 text-zinc-900 outline-none transition focus:border-zinc-400"
+              >
+                <option value="">Select shipping policy</option>
+                {policies?.fulfillment_policies.map((policy) => (
+                  <option key={policy.id} value={policy.id}>
+                    {policy.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="grid gap-1.5 text-sm">
+              <span className="font-medium text-zinc-700">Payment policy</span>
+              <select
+                value={paymentPolicyId}
+                onChange={(e) => setPaymentPolicyId(e.target.value)}
+                className="rounded-md border border-zinc-200 bg-white px-3 py-2 text-zinc-900 outline-none transition focus:border-zinc-400"
+              >
+                <option value="">Select payment policy</option>
+                {policies?.payment_policies.map((policy) => (
+                  <option key={policy.id} value={policy.id}>
+                    {policy.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="grid gap-1.5 text-sm">
+              <span className="font-medium text-zinc-700">Return policy</span>
+              <select
+                value={returnPolicyId}
+                onChange={(e) => setReturnPolicyId(e.target.value)}
+                className="rounded-md border border-zinc-200 bg-white px-3 py-2 text-zinc-900 outline-none transition focus:border-zinc-400"
+              >
+                <option value="">Select return policy</option>
+                {policies?.return_policies.map((policy) => (
+                  <option key={policy.id} value={policy.id}>
+                    {policy.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="grid gap-1.5 text-sm">
+              <span className="font-medium text-zinc-700">Inventory location</span>
+              <select
+                value={merchantLocationKey}
+                onChange={(e) => setMerchantLocationKey(e.target.value)}
+                className="rounded-md border border-zinc-200 bg-white px-3 py-2 text-zinc-900 outline-none transition focus:border-zinc-400"
+              >
+                <option value="">No default location</option>
+                {policies?.locations.map((location) => (
+                  <option key={location.key} value={location.key}>
+                    {location.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+
+          <div className="mt-4 flex justify-end">
+            <button
+              type="button"
+              disabled={!canSavePolicies}
+              onClick={() => void onSavePolicies()}
+              className="rounded-md bg-zinc-950 px-4 py-2 text-sm font-medium text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {policiesSaving ? "Saving..." : "Save listing defaults"}
+            </button>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

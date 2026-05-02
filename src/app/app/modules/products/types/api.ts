@@ -33,6 +33,43 @@ export type EbaySellerSetupResponse = {
   locations: unknown;
 };
 
+export type EbayPolicyOption = {
+  id: string;
+  name: string;
+};
+
+export type EbayLocationOption = {
+  key: string;
+  name: string;
+};
+
+export type EbayPolicyDefaults = {
+  org_id: string;
+  marketplace_id: string;
+  fulfillment_policy_id: string;
+  payment_policy_id: string;
+  return_policy_id: string;
+  merchant_location_key?: string | null;
+};
+
+export type EbayPoliciesResponse = {
+  marketplace_id: string;
+  fulfillment_policies: EbayPolicyOption[];
+  payment_policies: EbayPolicyOption[];
+  return_policies: EbayPolicyOption[];
+  locations: EbayLocationOption[];
+  defaults: EbayPolicyDefaults | null;
+  missing: string[];
+};
+
+export type SaveEbayPolicyDefaultsRequest = {
+  marketplace_id: string;
+  fulfillment_policy_id: string;
+  payment_policy_id: string;
+  return_policy_id: string;
+  merchant_location_key?: string | null;
+};
+
 export type EbayDraftRequest = {
   marketplace_id: string;
   category_id: string;
