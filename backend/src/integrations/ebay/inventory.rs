@@ -195,37 +195,7 @@ impl<'a> EbayInventory<'a> {
     input: &CreateOfferRequest,
   ) -> Result<String, EbayInventoryError> {
     let url = format!("{}/sell/inventory/v1/offer", self.base());
-
-    let mut body = json!({
-      "sku": input.sku,
-      "marketplaceId": input.marketplace_id,
-      "format": "FIXED_PRICE",
-      "categoryId": input.category_id,
-      "availableQuantity": input.available_quantity,
-      "listingPolicies": {
-        "fulfillmentPolicyId": input.fulfillment_policy_id,
-        "paymentPolicyId": input.payment_policy_id,
-        "returnPolicyId": input.return_policy_id,
-      },
-      "pricingSummary": {
-        "price": {
-          "value": input.price_value,
-          "currency": input.currency,
-        }
-      }
-    });
-
-    if let Some(key) = &input.merchant_location_key {
-      body["merchantLocationKey"] = json!(key);
-    }
-
-    if let Some(limit) = input.quantity_limit_per_buyer {
-      body["quantityLimitPerBuyer"] = json!(limit);
-    }
-
-    if let Some(include) = input.include_catalog_product_details {
-      body["includeCatalogProductDetails"] = json!(include);
-    }
+    let body = offer_body(input, true);
 
     let v: Value = self
       .send_json(http_client::shared().post(url).json(&body))
@@ -243,6 +213,24 @@ impl<'a> EbayInventory<'a> {
     Ok(offer_id.to_string())
   }
 
+  /// Update an unpublished offer before publish, keeping reused drafts aligned with current policy choices.
+  pub async fn update_offer(
+    &self,
+    offer_id: &str,
+    input: &CreateOfferRequest,
+  ) -> Result<Value, EbayInventoryError> {
+    let url = format!(
+      "{}/sell/inventory/v1/offer/{}",
+      self.base(),
+      urlencoding::encode(offer_id),
+    );
+    let body = offer_body(input, false);
+
+    self
+      .send_json(http_client::shared().put(url).json(&body))
+      .await
+  }
+
   /// Publish an existing unpublished offer.
   pub async fn publish_offer(&self, offer_id: &str) -> Result<Value, EbayInventoryError> {
     let url = format!(
@@ -251,5 +239,87 @@ impl<'a> EbayInventory<'a> {
       urlencoding::encode(offer_id),
     );
     self.send_json(http_client::shared().post(url)).await
+  }
+}
+
+fn offer_body(input: &CreateOfferRequest, include_sku: bool) -> Value {
+  let mut body = json!({
+    "marketplaceId": input.marketplace_id,
+    "format": "FIXED_PRICE",
+    "categoryId": input.category_id,
+    "availableQuantity": input.available_quantity,
+    "listingPolicies": {
+      "fulfillmentPolicyId": input.fulfillment_policy_id,
+      "paymentPolicyId": input.payment_policy_id,
+      "returnPolicyId": input.return_policy_id,
+    },
+    "pricingSummary": {
+      "price": {
+        "value": input.price_value,
+        "currency": input.currency,
+      }
+    }
+  });
+
+  if include_sku {
+    body["sku"] = json!(input.sku);
+  }
+
+  if let Some(key) = &input.merchant_location_key {
+    body["merchantLocationKey"] = json!(key);
+  }
+
+  if let Some(limit) = input.quantity_limit_per_buyer {
+    body["quantityLimitPerBuyer"] = json!(limit);
+  }
+
+  if let Some(include) = input.include_catalog_product_details {
+    body["includeCatalogProductDetails"] = json!(include);
+  }
+
+  body
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  fn request() -> CreateOfferRequest {
+    CreateOfferRequest {
+      sku: "sku-1".to_string(),
+      marketplace_id: "EBAY_US".to_string(),
+      category_id: "123".to_string(),
+      price_value: "10.00".to_string(),
+      currency: "USD".to_string(),
+      available_quantity: 1,
+      fulfillment_policy_id: "fulfillment".to_string(),
+      payment_policy_id: "payment".to_string(),
+      return_policy_id: "return".to_string(),
+      merchant_location_key: Some("warehouse".to_string()),
+      quantity_limit_per_buyer: Some(1),
+      include_catalog_product_details: Some(true),
+    }
+  }
+
+  #[test]
+  fn offer_body_includes_publish_required_policies_and_location() {
+    let body = offer_body(&request(), true);
+
+    assert_eq!(body["sku"], "sku-1");
+    assert_eq!(
+      body["listingPolicies"]["fulfillmentPolicyId"],
+      "fulfillment"
+    );
+    assert_eq!(body["listingPolicies"]["paymentPolicyId"], "payment");
+    assert_eq!(body["listingPolicies"]["returnPolicyId"], "return");
+    assert_eq!(body["merchantLocationKey"], "warehouse");
+  }
+
+  #[test]
+  fn update_offer_body_omits_create_only_sku() {
+    let body = offer_body(&request(), false);
+
+    assert!(body.get("sku").is_none());
+    assert_eq!(body["marketplaceId"], "EBAY_US");
   }
 }

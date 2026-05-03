@@ -146,6 +146,7 @@ fn map_ebay_listing_error(e: EbayListingServiceError) -> ApiError {
     EbayListingServiceError::Db(e) => error::db_error(e),
     EbayListingServiceError::Token(e) => ApiError::bad_request(e.to_string()),
     EbayListingServiceError::Inventory(e) => ApiError::bad_gateway(e.to_string()),
+    EbayListingServiceError::Account(e) => ApiError::bad_gateway(e.to_string()),
   }
 }
 

@@ -36,6 +36,8 @@ export type EbaySellerSetupResponse = {
 export type EbayPolicyOption = {
   id: string;
   name: string;
+  supports_shipping?: boolean | null;
+  local_pickup?: boolean | null;
 };
 
 export type EbayLocationOption = {
@@ -60,6 +62,12 @@ export type EbayPoliciesResponse = {
   locations: EbayLocationOption[];
   defaults: EbayPolicyDefaults | null;
   missing: string[];
+  counts?: {
+    fulfillment: number;
+    payment: number;
+    returns: number;
+    locations: number;
+  };
 };
 
 export type SaveEbayPolicyDefaultsRequest = {
@@ -77,7 +85,7 @@ export type EbayDraftRequest = {
   fulfillment_policy_id: string;
   payment_policy_id: string;
   return_policy_id: string;
-  merchant_location_key?: string;
+  merchant_location_key: string;
   quantity?: number;
   aspects?: Record<string, unknown>;
   brand?: string;

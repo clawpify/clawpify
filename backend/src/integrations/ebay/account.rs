@@ -20,12 +20,56 @@ pub enum EbayAccountError {
 pub struct EbayPolicyOption {
   pub id: String,
   pub name: String,
+  pub supports_shipping: Option<bool>,
+  pub local_pickup: Option<bool>,
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
 pub struct EbayLocationOption {
   pub key: String,
   pub name: String,
+}
+
+fn json_scalar_string(value: &Value) -> Option<String> {
+  if let Some(s) = value.as_str() {
+    let trimmed = s.trim();
+    return (!trimmed.is_empty()).then(|| trimmed.to_string());
+  }
+  if value.is_number() || value.is_boolean() {
+    return Some(value.to_string());
+  }
+  None
+}
+
+fn json_bool(value: &Value) -> Option<bool> {
+  if let Some(b) = value.as_bool() {
+    return Some(b);
+  }
+  if value.is_object() {
+    return Some(true);
+  }
+  None
+}
+
+fn has_non_empty_array(value: &Value, key: &str) -> bool {
+  value
+    .get(key)
+    .and_then(|v| v.as_array())
+    .is_some_and(|items| !items.is_empty())
+}
+
+fn shipping_support(value: &Value) -> (Option<bool>, Option<bool>) {
+  let local_pickup = value.get("localPickup").and_then(json_bool);
+  let has_shipping_options = has_non_empty_array(value, "shippingOptions");
+  let supports_shipping = if has_shipping_options || local_pickup == Some(false) {
+    Some(true)
+  } else if local_pickup == Some(true) {
+    Some(false)
+  } else {
+    None
+  };
+
+  (supports_shipping, local_pickup)
 }
 
 pub fn policy_options(value: &Value, array_key: &str, id_key: &str) -> Vec<EbayPolicyOption> {
@@ -35,11 +79,17 @@ pub fn policy_options(value: &Value, array_key: &str, id_key: &str) -> Vec<EbayP
     .into_iter()
     .flatten()
     .filter_map(|p| {
-      let id = p.get(id_key)?.as_str()?.trim();
-      let name = p.get("name").and_then(|v| v.as_str()).unwrap_or(id).trim();
+      let id = json_scalar_string(p.get(id_key)?)?;
+      let name = p
+        .get("name")
+        .and_then(json_scalar_string)
+        .unwrap_or_else(|| id.clone());
+      let (supports_shipping, local_pickup) = shipping_support(p);
       Some(EbayPolicyOption {
-        id: id.to_string(),
-        name: name.to_string(),
+        id,
+        name,
+        supports_shipping,
+        local_pickup,
       })
     })
     .collect()
@@ -52,27 +102,200 @@ pub fn location_options(value: &Value) -> Vec<EbayLocationOption> {
     .into_iter()
     .flatten()
     .filter_map(|location| {
-      let key = location
-        .get("merchantLocationKey")
-        .or_else(|| location.get("locationKey"))?
-        .as_str()?
-        .trim();
+      let key = json_scalar_string(
+        location
+          .get("merchantLocationKey")
+          .or_else(|| location.get("locationKey"))?,
+      )?;
       let name = location
         .get("name")
-        .and_then(|v| v.as_str())
-        .unwrap_or(key)
-        .trim();
-      Some(EbayLocationOption {
-        key: key.to_string(),
-        name: name.to_string(),
-      })
+        .and_then(json_scalar_string)
+        .unwrap_or_else(|| key.clone());
+      Some(EbayLocationOption { key, name })
     })
     .collect()
+}
+
+pub fn normalize_location_key(key: Option<&str>) -> Option<String> {
+  key
+    .map(str::trim)
+    .filter(|value| !value.is_empty())
+    .map(str::to_string)
+}
+
+#[derive(Debug, thiserror::Error, PartialEq, Eq)]
+pub enum EbayPolicyValidationError {
+  #[error("marketplace_id is required")]
+  MissingMarketplace,
+  #[error("fulfillment_policy_id is required")]
+  MissingFulfillmentPolicy,
+  #[error("payment_policy_id is required")]
+  MissingPaymentPolicy,
+  #[error("return_policy_id is required")]
+  MissingReturnPolicy,
+  #[error("merchant_location_key is required for eBay publish-ready offers")]
+  MissingMerchantLocationKey,
+  #[error("Selected eBay shipping policy was not found")]
+  UnknownFulfillmentPolicy,
+  #[error("Selected eBay payment policy was not found")]
+  UnknownPaymentPolicy,
+  #[error("Selected eBay return policy was not found")]
+  UnknownReturnPolicy,
+  #[error("Selected eBay inventory location was not found")]
+  UnknownMerchantLocationKey,
+  #[error("Selected eBay fulfillment policy does not support shipping")]
+  FulfillmentPolicyNotShipping,
+}
+
+fn find_policy<'a>(policies: &'a [EbayPolicyOption], id: &str) -> Option<&'a EbayPolicyOption> {
+  policies.iter().find(|policy| policy.id == id)
+}
+
+pub fn validate_policy_selection(
+  marketplace_id: &str,
+  fulfillment_policies: &[EbayPolicyOption],
+  payment_policies: &[EbayPolicyOption],
+  return_policies: &[EbayPolicyOption],
+  locations: &[EbayLocationOption],
+  fulfillment_policy_id: &str,
+  payment_policy_id: &str,
+  return_policy_id: &str,
+  merchant_location_key: Option<&str>,
+) -> Result<String, EbayPolicyValidationError> {
+  if marketplace_id.trim().is_empty() {
+    return Err(EbayPolicyValidationError::MissingMarketplace);
+  }
+  if fulfillment_policy_id.trim().is_empty() {
+    return Err(EbayPolicyValidationError::MissingFulfillmentPolicy);
+  }
+  if payment_policy_id.trim().is_empty() {
+    return Err(EbayPolicyValidationError::MissingPaymentPolicy);
+  }
+  if return_policy_id.trim().is_empty() {
+    return Err(EbayPolicyValidationError::MissingReturnPolicy);
+  }
+
+  let merchant_location_key = normalize_location_key(merchant_location_key)
+    .ok_or(EbayPolicyValidationError::MissingMerchantLocationKey)?;
+
+  let fulfillment = find_policy(fulfillment_policies, fulfillment_policy_id)
+    .ok_or(EbayPolicyValidationError::UnknownFulfillmentPolicy)?;
+  if fulfillment.supports_shipping == Some(false) {
+    return Err(EbayPolicyValidationError::FulfillmentPolicyNotShipping);
+  }
+  if find_policy(payment_policies, payment_policy_id).is_none() {
+    return Err(EbayPolicyValidationError::UnknownPaymentPolicy);
+  }
+  if find_policy(return_policies, return_policy_id).is_none() {
+    return Err(EbayPolicyValidationError::UnknownReturnPolicy);
+  }
+  if !locations
+    .iter()
+    .any(|location| location.key == merchant_location_key)
+  {
+    return Err(EbayPolicyValidationError::UnknownMerchantLocationKey);
+  }
+
+  Ok(merchant_location_key)
 }
 
 pub struct EbayAccount<'a> {
   pub cfg: &'a EbayConfig,
   pub access_token: &'a str,
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use serde_json::json;
+
+  fn policy(id: &str, supports_shipping: Option<bool>) -> EbayPolicyOption {
+    EbayPolicyOption {
+      id: id.to_string(),
+      name: id.to_string(),
+      supports_shipping,
+      local_pickup: None,
+    }
+  }
+
+  fn location(key: &str) -> EbayLocationOption {
+    EbayLocationOption {
+      key: key.to_string(),
+      name: key.to_string(),
+    }
+  }
+
+  #[test]
+  fn policy_options_marks_local_pickup_only_policy() {
+    let out = policy_options(
+      &json!({
+        "fulfillmentPolicies": [
+          { "fulfillmentPolicyId": "pickup", "name": "Pickup", "localPickup": true },
+          { "fulfillmentPolicyId": "ship", "name": "Ship", "localPickup": false }
+        ]
+      }),
+      "fulfillmentPolicies",
+      "fulfillmentPolicyId",
+    );
+
+    assert_eq!(out[0].supports_shipping, Some(false));
+    assert_eq!(out[0].local_pickup, Some(true));
+    assert_eq!(out[1].supports_shipping, Some(true));
+  }
+
+  #[test]
+  fn validate_policy_selection_requires_location() {
+    let err = validate_policy_selection(
+      "EBAY_US",
+      &[policy("f1", Some(true))],
+      &[policy("p1", None)],
+      &[policy("r1", None)],
+      &[location("loc1")],
+      "f1",
+      "p1",
+      "r1",
+      None,
+    )
+    .unwrap_err();
+
+    assert_eq!(err, EbayPolicyValidationError::MissingMerchantLocationKey);
+  }
+
+  #[test]
+  fn validate_policy_selection_rejects_local_pickup_only_policy() {
+    let err = validate_policy_selection(
+      "EBAY_US",
+      &[policy("f1", Some(false))],
+      &[policy("p1", None)],
+      &[policy("r1", None)],
+      &[location("loc1")],
+      "f1",
+      "p1",
+      "r1",
+      Some("loc1"),
+    )
+    .unwrap_err();
+
+    assert_eq!(err, EbayPolicyValidationError::FulfillmentPolicyNotShipping);
+  }
+
+  #[test]
+  fn validate_policy_selection_returns_trimmed_location() {
+    let location = validate_policy_selection(
+      "EBAY_US",
+      &[policy("f1", Some(true))],
+      &[policy("p1", None)],
+      &[policy("r1", None)],
+      &[location("loc1")],
+      "f1",
+      "p1",
+      "r1",
+      Some(" loc1 "),
+    )
+    .unwrap();
+
+    assert_eq!(location, "loc1");
+  }
 }
 
 impl<'a> EbayAccount<'a> {

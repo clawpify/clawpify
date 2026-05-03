@@ -3,10 +3,15 @@ use serde_json::{json, Value};
 use sqlx::PgPool;
 use uuid::Uuid;
 
+use super::account::{
+  location_options, policy_options, validate_policy_selection, EbayAccount, EbayAccountError,
+  EbayPolicyValidationError,
+};
 use super::config::EbayConfig;
 use super::inventory::{CreateOfferRequest, EbayInventory, PutInventoryItemRequest};
 use super::token_service::EbayTokenService;
 use crate::crypto::tokens::TokenCrypto;
+use crate::models::consignment_listing::ConsignmentListing;
 use crate::repositories::{channel_connections, listing_publications, listings};
 
 #[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
@@ -54,7 +59,7 @@ impl<'a> EbayListingService<'a> {
     &self,
     org_id: &str,
     listing_id: Uuid,
-    req: EbayDraftRequest,
+    mut req: EbayDraftRequest,
   ) -> Result<EbayDraftResponse, EbayListingServiceError> {
     let listing = listings::get_by_id(self.pool, org_id, listing_id)
       .await?
@@ -86,6 +91,21 @@ impl<'a> EbayListingService<'a> {
     .bearer_for_org(org_id)
     .await?;
 
+    req.marketplace_id = req.marketplace_id.trim().to_string();
+    req.category_id = req.category_id.trim().to_string();
+    req.condition_id = req.condition_id.trim().to_string();
+    req.fulfillment_policy_id = req.fulfillment_policy_id.trim().to_string();
+    req.payment_policy_id = req.payment_policy_id.trim().to_string();
+    req.return_policy_id = req.return_policy_id.trim().to_string();
+
+    let account = EbayAccount {
+      cfg: self.cfg,
+      access_token: &bearer,
+    };
+    let setup = account.seller_setup(&req.marketplace_id, false).await?;
+    let merchant_location_key = validate_draft_policy_selection(&setup, &req)?;
+    req.merchant_location_key = Some(merchant_location_key);
+
     let inv = EbayInventory {
       cfg: self.cfg,
       access_token: &bearer,
@@ -104,11 +124,18 @@ impl<'a> EbayListingService<'a> {
       })));
     }
 
+    let image_urls: Vec<String> =
+      serde_json::from_value(listing.media_urls.clone()).unwrap_or_default();
+    let price = format!("{:.2}", listing.price_cents as f64 / 100.0);
+    let quantity = req.quantity.unwrap_or(1).max(1);
+    let offer_request = offer_request(&listing, &req, &sku, price, quantity);
+
     if let Some(existing) = offers
       .iter()
       .find(|o| o.get("offerId").and_then(|x| x.as_str()).is_some())
     {
       let offer_id = existing["offerId"].as_str().unwrap().to_string();
+      let updated_offer = inv.update_offer(&offer_id, &offer_request).await?;
       let snapshot = json!({
         "sku": sku,
         "offerId": offer_id,
@@ -116,6 +143,8 @@ impl<'a> EbayListingService<'a> {
         "categoryId": req.category_id,
         "reusedExistingOffer": true,
         "offer": existing,
+        "updatedOffer": updated_offer,
+        "request": req,
       });
 
       let publication_id =
@@ -129,11 +158,6 @@ impl<'a> EbayListingService<'a> {
         reused_existing_offer: true,
       });
     }
-
-    let image_urls: Vec<String> =
-      serde_json::from_value(listing.media_urls.clone()).unwrap_or_default();
-    let price = format!("{:.2}", listing.price_cents as f64 / 100.0);
-    let quantity = req.quantity.unwrap_or(1).max(1);
 
     inv
       .put_inventory_item(&PutInventoryItemRequest {
@@ -149,22 +173,7 @@ impl<'a> EbayListingService<'a> {
       })
       .await?;
 
-    let offer_id = inv
-      .create_offer(&CreateOfferRequest {
-        sku: sku.clone(),
-        marketplace_id: req.marketplace_id.clone(),
-        category_id: req.category_id.clone(),
-        price_value: price,
-        currency: listing.currency_code.clone(),
-        available_quantity: quantity,
-        fulfillment_policy_id: req.fulfillment_policy_id.clone(),
-        payment_policy_id: req.payment_policy_id.clone(),
-        return_policy_id: req.return_policy_id.clone(),
-        merchant_location_key: req.merchant_location_key.clone(),
-        quantity_limit_per_buyer: req.quantity_limit_per_buyer,
-        include_catalog_product_details: req.include_catalog_product_details,
-      })
-      .await?;
+    let offer_id = inv.create_offer(&offer_request).await?;
 
     let snapshot = json!({
       "sku": sku,
@@ -252,6 +261,66 @@ impl<'a> EbayListingService<'a> {
   }
 }
 
+fn validate_draft_policy_selection(
+  setup: &Value,
+  req: &EbayDraftRequest,
+) -> Result<String, EbayListingServiceError> {
+  let fulfillment_raw = setup
+    .get("fulfillment_policies")
+    .unwrap_or(&serde_json::Value::Null);
+  let payment_raw = setup
+    .get("payment_policies")
+    .unwrap_or(&serde_json::Value::Null);
+  let return_raw = setup
+    .get("return_policies")
+    .unwrap_or(&serde_json::Value::Null);
+  let locations_raw = setup.get("locations").unwrap_or(&serde_json::Value::Null);
+
+  validate_policy_selection(
+    &req.marketplace_id,
+    &policy_options(
+      fulfillment_raw,
+      "fulfillmentPolicies",
+      "fulfillmentPolicyId",
+    ),
+    &policy_options(payment_raw, "paymentPolicies", "paymentPolicyId"),
+    &policy_options(return_raw, "returnPolicies", "returnPolicyId"),
+    &location_options(locations_raw),
+    &req.fulfillment_policy_id,
+    &req.payment_policy_id,
+    &req.return_policy_id,
+    req.merchant_location_key.as_deref(),
+  )
+  .map_err(policy_validation_error)
+}
+
+fn policy_validation_error(error: EbayPolicyValidationError) -> EbayListingServiceError {
+  EbayListingServiceError::BadRequest(error.to_string())
+}
+
+fn offer_request(
+  listing: &ConsignmentListing,
+  req: &EbayDraftRequest,
+  sku: &str,
+  price: String,
+  quantity: i64,
+) -> CreateOfferRequest {
+  CreateOfferRequest {
+    sku: sku.to_string(),
+    marketplace_id: req.marketplace_id.clone(),
+    category_id: req.category_id.clone(),
+    price_value: price,
+    currency: listing.currency_code.clone(),
+    available_quantity: quantity,
+    fulfillment_policy_id: req.fulfillment_policy_id.clone(),
+    payment_policy_id: req.payment_policy_id.clone(),
+    return_policy_id: req.return_policy_id.clone(),
+    merchant_location_key: req.merchant_location_key.clone(),
+    quantity_limit_per_buyer: req.quantity_limit_per_buyer,
+    include_catalog_product_details: req.include_catalog_product_details,
+  }
+}
+
 #[derive(Debug, thiserror::Error)]
 pub enum EbayListingServiceError {
   #[error("Listing not found")]
@@ -266,4 +335,116 @@ pub enum EbayListingServiceError {
   Token(#[from] super::token_service::EbayTokenError),
   #[error(transparent)]
   Inventory(#[from] super::inventory::EbayInventoryError),
+  #[error(transparent)]
+  Account(#[from] EbayAccountError),
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use serde_json::json;
+
+  fn draft_request() -> EbayDraftRequest {
+    EbayDraftRequest {
+      marketplace_id: "EBAY_US".to_string(),
+      category_id: "123".to_string(),
+      condition_id: "NEW".to_string(),
+      fulfillment_policy_id: "ship".to_string(),
+      payment_policy_id: "pay".to_string(),
+      return_policy_id: "ret".to_string(),
+      merchant_location_key: Some("loc".to_string()),
+      quantity: Some(1),
+      aspects: None,
+      brand: None,
+      mpn: None,
+      quantity_limit_per_buyer: None,
+      include_catalog_product_details: None,
+    }
+  }
+
+  fn setup() -> Value {
+    json!({
+      "fulfillment_policies": {
+        "fulfillmentPolicies": [
+          { "fulfillmentPolicyId": "ship", "name": "Ship", "localPickup": false }
+        ]
+      },
+      "payment_policies": {
+        "paymentPolicies": [
+          { "paymentPolicyId": "pay", "name": "Pay" }
+        ]
+      },
+      "return_policies": {
+        "returnPolicies": [
+          { "returnPolicyId": "ret", "name": "Return" }
+        ]
+      },
+      "locations": {
+        "locations": [
+          { "merchantLocationKey": "loc", "name": "Warehouse" }
+        ]
+      }
+    })
+  }
+
+  fn listing() -> ConsignmentListing {
+    ConsignmentListing {
+      id: Uuid::nil(),
+      org_id: "org".to_string(),
+      created_by_user_id: None,
+      status: "draft".to_string(),
+      title: "Title".to_string(),
+      description_html: "<p>Desc</p>".to_string(),
+      product_type: "".to_string(),
+      vendor: "".to_string(),
+      tags: Vec::new(),
+      price_cents: 1000,
+      currency_code: "USD".to_string(),
+      sku: "sku".to_string(),
+      media_urls: json!([]),
+      ai_quality: None,
+      ai_attributes: None,
+      suggested_price_cents: None,
+      created_at: chrono::Utc::now(),
+      updated_at: chrono::Utc::now(),
+      consignor_id: None,
+      contract_id: None,
+      acceptance_status: None,
+      decline_reason: None,
+      post_contract_disposition: None,
+    }
+  }
+
+  #[test]
+  fn draft_validation_accepts_live_policy_selection() {
+    let location = validate_draft_policy_selection(&setup(), &draft_request()).unwrap();
+
+    assert_eq!(location, "loc");
+  }
+
+  #[test]
+  fn draft_validation_rejects_stale_policy_id() {
+    let mut req = draft_request();
+    req.payment_policy_id = "deleted".to_string();
+
+    let err = validate_draft_policy_selection(&setup(), &req).unwrap_err();
+
+    assert!(err.to_string().contains("payment policy was not found"));
+  }
+
+  #[test]
+  fn reused_offer_request_uses_current_policy_selection() {
+    let mut req = draft_request();
+    req.fulfillment_policy_id = "new-ship".to_string();
+    req.payment_policy_id = "new-pay".to_string();
+    req.return_policy_id = "new-return".to_string();
+    req.merchant_location_key = Some("new-location".to_string());
+
+    let out = offer_request(&listing(), &req, "sku", "10.00".to_string(), 1);
+
+    assert_eq!(out.fulfillment_policy_id, "new-ship");
+    assert_eq!(out.payment_policy_id, "new-pay");
+    assert_eq!(out.return_policy_id, "new-return");
+    assert_eq!(out.merchant_location_key.as_deref(), Some("new-location"));
+  }
 }

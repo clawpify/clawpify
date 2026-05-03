@@ -371,6 +371,11 @@ export function ProductsListingIntegration({ listing }: { listing: ConsignmentLi
           "Choose eBay listing policies in Settings > Integrations > eBay > Listing Details."
         );
       }
+      if (!policies.defaults.merchant_location_key) {
+        throw new Error(
+          "Choose an eBay inventory location in Settings > Integrations > eBay > Listing Details."
+        );
+      }
 
       const body: EbayDraftRequest = {
         marketplace_id: MARKETPLACE_ID,
@@ -379,12 +384,10 @@ export function ProductsListingIntegration({ listing }: { listing: ConsignmentLi
         fulfillment_policy_id: policies.defaults.fulfillment_policy_id,
         payment_policy_id: policies.defaults.payment_policy_id,
         return_policy_id: policies.defaults.return_policy_id,
+        merchant_location_key: policies.defaults.merchant_location_key,
         quantity: 1,
         aspects: {},
       };
-      if (policies.defaults.merchant_location_key) {
-        body.merchant_location_key = policies.defaults.merchant_location_key;
-      }
 
       const draftRes = await fetchAuth(listingEbayDraftPath(listing.id), {
         method: "POST",

@@ -42,6 +42,27 @@ async function readJsonOrError<T>(res: Response): Promise<T> {
   return body as T;
 }
 
+function ebayPolicySetupHint(policies: EbayPoliciesResponse): string | null {
+  if (!policies.missing.length) return null;
+  const counts = policies.counts ?? {
+    fulfillment: policies.fulfillment_policies.length,
+    payment: policies.payment_policies.length,
+    returns: policies.return_policies.length,
+    locations: policies.locations.length,
+  };
+  const allEmpty =
+    counts.fulfillment === 0 &&
+    counts.payment === 0 &&
+    counts.returns === 0 &&
+    counts.locations === 0;
+
+  if (allEmpty) {
+    return `eBay API returned 0 shipping, payment, return, and inventory location records for ${policies.marketplace_id}. Make sure the connected eBay account is the same Seller Hub account and that policies are created for this marketplace.`;
+  }
+
+  return `Missing from eBay API for ${policies.marketplace_id}: ${policies.missing.join(", ")}. Business policies and inventory locations are separate eBay setup items.`;
+}
+
 export function SettingsPage() {
   const { setConfig } = useWorkspaceHeader();
 
@@ -257,10 +278,11 @@ function EbayIntegrationCard() {
   ]);
 
   const connected = status === "connected";
+  const policySetupHint = policies ? ebayPolicySetupHint(policies) : null;
   const canSavePolicies =
     connected &&
     !policiesSaving &&
-    Boolean(fulfillmentPolicyId && paymentPolicyId && returnPolicyId);
+    Boolean(fulfillmentPolicyId && paymentPolicyId && returnPolicyId && merchantLocationKey);
   const statusText =
     status === "loading"
       ? copy.settings.integrationStatusChecking
@@ -328,10 +350,18 @@ function EbayIntegrationCard() {
             </button>
           </div>
 
-          {policies?.missing.length ? (
+          {policySetupHint ? (
             <p className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
-              Missing from eBay: {policies.missing.join(", ")}. Create the missing setup in eBay,
-              then refresh policies.
+              {policySetupHint}{" "}
+              <a
+                href="https://www.bizpolicy.ebay.com/businesspolicy/manage"
+                target="_blank"
+                rel="noreferrer"
+                className="font-medium underline decoration-amber-500 underline-offset-2"
+              >
+                Open eBay business policies
+              </a>
+              .
             </p>
           ) : null}
           {policyError ? (
@@ -351,7 +381,9 @@ function EbayIntegrationCard() {
                 <option value="">Select shipping policy</option>
                 {policies?.fulfillment_policies.map((policy) => (
                   <option key={policy.id} value={policy.id}>
-                    {policy.name}
+                    {policy.supports_shipping === false
+                      ? `${policy.name} (local pickup only)`
+                      : policy.name}
                   </option>
                 ))}
               </select>
@@ -393,7 +425,7 @@ function EbayIntegrationCard() {
                 onChange={(e) => setMerchantLocationKey(e.target.value)}
                 className="rounded-md border border-zinc-200 bg-white px-3 py-2 text-zinc-900 outline-none transition focus:border-zinc-400"
               >
-                <option value="">No default location</option>
+                <option value="">Select inventory location</option>
                 {policies?.locations.map((location) => (
                   <option key={location.key} value={location.key}>
                     {location.name}

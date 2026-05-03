@@ -12,8 +12,8 @@ use super::extractors::OrgId;
 use super::state::AppState;
 use crate::error::{self, ApiError};
 use crate::integrations::ebay::account::{
-  location_options, policy_options, EbayAccount, EbayAccountError, EbayLocationOption,
-  EbayPolicyOption,
+  location_options, normalize_location_key, policy_options, validate_policy_selection, EbayAccount,
+  EbayAccountError, EbayLocationOption, EbayPolicyOption,
 };
 use crate::integrations::ebay::oauth::{self, EbayOAuthError};
 use crate::integrations::ebay::state_token::{self, StateTokenError};
@@ -69,6 +69,14 @@ impl EbayOAuthStartQuery {
 }
 
 #[derive(serde::Serialize, utoipa::ToSchema)]
+pub struct EbayPolicyCounts {
+  pub fulfillment: usize,
+  pub payment: usize,
+  pub returns: usize,
+  pub locations: usize,
+}
+
+#[derive(serde::Serialize, utoipa::ToSchema)]
 pub struct EbayPoliciesResponse {
   pub marketplace_id: String,
   pub fulfillment_policies: Vec<EbayPolicyOption>,
@@ -77,6 +85,7 @@ pub struct EbayPoliciesResponse {
   pub locations: Vec<EbayLocationOption>,
   pub defaults: Option<EbayPolicyDefaults>,
   pub missing: Vec<String>,
+  pub counts: EbayPolicyCounts,
 }
 
 #[derive(serde::Deserialize, utoipa::ToSchema)]
@@ -196,17 +205,6 @@ fn setup_missing(
   missing
 }
 
-fn contains_policy(policies: &[EbayPolicyOption], id: &str) -> bool {
-  policies.iter().any(|policy| policy.id == id)
-}
-
-fn contains_location(locations: &[EbayLocationOption], key: Option<&str>) -> bool {
-  match key.map(str::trim).filter(|value| !value.is_empty()) {
-    Some(key) => locations.iter().any(|location| location.key == key),
-    None => true,
-  }
-}
-
 async fn fetch_ebay_policies(
   state: &AppState,
   org_id: &str,
@@ -264,6 +262,21 @@ async fn fetch_ebay_policies(
     &return_policies,
     &locations,
   );
+  let counts = EbayPolicyCounts {
+    fulfillment: fulfillment_policies.len(),
+    payment: payment_policies.len(),
+    returns: return_policies.len(),
+    locations: locations.len(),
+  };
+  tracing::info!(
+    marketplace_id,
+    fulfillment = counts.fulfillment,
+    payment = counts.payment,
+    returns = counts.returns,
+    locations = counts.locations,
+    missing = ?missing,
+    "loaded eBay seller policy setup"
+  );
   let defaults = ebay_policy_defaults::get(&state.pool, org_id, marketplace_id)
     .await
     .map_err(error::db_error)?;
@@ -276,6 +289,7 @@ async fn fetch_ebay_policies(
     locations,
     defaults,
     missing,
+    counts,
   })
 }
 
@@ -420,9 +434,7 @@ async fn save_ebay_policy_defaults(
   let merchant_location_key = req
     .merchant_location_key
     .as_deref()
-    .map(str::trim)
-    .filter(|value| !value.is_empty())
-    .map(str::to_string);
+    .and_then(|value| normalize_location_key(Some(value)));
 
   if marketplace_id.is_empty()
     || fulfillment_policy_id.is_empty()
@@ -433,28 +445,25 @@ async fn save_ebay_policy_defaults(
       "marketplace_id, fulfillment_policy_id, payment_policy_id, and return_policy_id are required",
     ));
   }
+  if merchant_location_key.is_none() {
+    return Err(error::bad_request(
+      "merchant_location_key is required for eBay publish-ready offers",
+    ));
+  }
 
   let policies = fetch_ebay_policies(&state, org.as_ref(), marketplace_id).await?;
-  if !contains_policy(&policies.fulfillment_policies, fulfillment_policy_id) {
-    return Err(error::bad_request(
-      "Selected eBay shipping policy was not found",
-    ));
-  }
-  if !contains_policy(&policies.payment_policies, payment_policy_id) {
-    return Err(error::bad_request(
-      "Selected eBay payment policy was not found",
-    ));
-  }
-  if !contains_policy(&policies.return_policies, return_policy_id) {
-    return Err(error::bad_request(
-      "Selected eBay return policy was not found",
-    ));
-  }
-  if !contains_location(&policies.locations, merchant_location_key.as_deref()) {
-    return Err(error::bad_request(
-      "Selected eBay inventory location was not found",
-    ));
-  }
+  let merchant_location_key = validate_policy_selection(
+    marketplace_id,
+    &policies.fulfillment_policies,
+    &policies.payment_policies,
+    &policies.return_policies,
+    &policies.locations,
+    fulfillment_policy_id,
+    payment_policy_id,
+    return_policy_id,
+    merchant_location_key.as_deref(),
+  )
+  .map_err(|e| error::bad_request(&e.to_string()))?;
 
   let saved = ebay_policy_defaults::upsert(
     &state.pool,
@@ -464,7 +473,7 @@ async fn save_ebay_policy_defaults(
       fulfillment_policy_id: fulfillment_policy_id.to_string(),
       payment_policy_id: payment_policy_id.to_string(),
       return_policy_id: return_policy_id.to_string(),
-      merchant_location_key,
+      merchant_location_key: Some(merchant_location_key),
     },
   )
   .await
@@ -598,12 +607,32 @@ fn map_oauth_err(e: EbayOAuthError) -> ApiError {
 fn map_account_err(e: EbayAccountError) -> ApiError {
   match e {
     EbayAccountError::NoMatchingFulfillmentPolicy { .. } => ApiError::bad_request(e.to_string()),
-    EbayAccountError::Api { body, .. } if body.contains("Business Policy") => ApiError::bad_gateway(
-      "eBay seller account is not eligible for Business Policies yet. Enable Seller Hub/Business Policies in eBay, then create or edit a fulfillment policy with localPickup: false.",
-    ),
-    EbayAccountError::Api { .. } => ApiError::bad_gateway(e.to_string()),
+    EbayAccountError::Api { status, body } => {
+      let message = ebay_error_message(&body).unwrap_or(body);
+      if message.to_ascii_lowercase().contains("business polic") {
+        ApiError::bad_gateway(
+          "eBay seller account is not eligible for Business Policies yet. Enable Seller Hub/Business Policies in eBay, then create or edit a shipping fulfillment policy.",
+        )
+      } else {
+        ApiError::bad_gateway(format!("ebay api {status}: {message}"))
+      }
+    }
     EbayAccountError::Http(_) | EbayAccountError::Json(_) => ApiError::bad_gateway(e.to_string()),
   }
+}
+
+fn ebay_error_message(body: &str) -> Option<String> {
+  let value: serde_json::Value = serde_json::from_str(body).ok()?;
+  let errors = value.get("errors").and_then(|v| v.as_array())?;
+  let first = errors.first()?;
+
+  first
+    .get("longMessage")
+    .or_else(|| first.get("message"))
+    .and_then(|v| v.as_str())
+    .map(str::trim)
+    .filter(|s| !s.is_empty())
+    .map(str::to_string)
 }
 
 #[derive(utoipa::OpenApi)]
@@ -622,6 +651,7 @@ fn map_account_err(e: EbayAccountError) -> ApiError {
     EbayStatusResponse,
     EbaySellerSetupQuery,
     EbaySellerSetupResponse,
+    EbayPolicyCounts,
     EbayPoliciesResponse,
     SaveEbayPolicyDefaultsRequest,
     EbayPolicyDefaults
