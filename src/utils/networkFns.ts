@@ -144,7 +144,12 @@ export function listingImagesPath(listingId: string): string {
 
 export const ebayOAuthStatusPath = "/api/oauth/ebay/status";
 
-export const ebayOAuthStartPath = "/api/oauth/ebay/start";
+export function ebayOAuthStartPath(opts?: { reconnect?: boolean }): string {
+  const params = new URLSearchParams();
+  if (opts?.reconnect) params.set("reconnect", "1");
+  const qs = params.toString();
+  return `/api/oauth/ebay/start${qs ? `?${qs}` : ""}`;
+}
 
 export function ebaySellerSetupPath(marketplaceId = "EBAY_US", localPickup = false): string {
   const params = new URLSearchParams({

@@ -50,6 +50,12 @@ pub struct EbayCallbackQuery {
   pub error_description: Option<String>,
 }
 
+#[derive(Deserialize, ToSchema)]
+pub struct EbayOAuthStartQuery {
+  #[serde(default)]
+  pub reconnect: bool,
+}
+
 #[derive(serde::Serialize, utoipa::ToSchema)]
 pub struct EbayPoliciesResponse {
   pub marketplace_id: String,
@@ -97,6 +103,7 @@ pub fn routes() -> Router<AppState> {
 )]
 async fn ebay_oauth_start(
   State(state): State<AppState>,
+  Query(q): Query<EbayOAuthStartQuery>,
   org: OrgId,
 ) -> Result<Json<EbayOAuthStartResponse>, ApiError> {
   let cfg = state
@@ -110,7 +117,7 @@ async fn ebay_oauth_start(
   let st = state_token::sign_state(secret.as_bytes(), org.as_ref(), 900)
     .map_err(|_| error::bad_request("state"))?;
 
-  let url = oauth::authorize_url(cfg, &st);
+  let url = oauth::authorize_url(cfg, &st, q.reconnect);
 
   Ok(Json(EbayOAuthStartResponse { url }))
 }
@@ -553,6 +560,10 @@ async fn ebay_oauth_callback(
   )
   .await
   .map_err(error::db_error)?;
+
+  ebay_policy_defaults::delete_for_org(&state.pool, &payload.org_id)
+    .await
+    .map_err(error::db_error)?;
 
   if let Some(origin) = spa_redirect_origin(&state) {
     let target = settings_redirect(&origin, "connected")?;

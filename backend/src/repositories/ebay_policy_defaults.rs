@@ -31,6 +31,15 @@ pub async fn get(
   .await
 }
 
+pub async fn delete_for_org(pool: &PgPool, org_id: &str) -> Result<u64, sqlx::Error> {
+  let result = sqlx::query("DELETE FROM ebay_policy_defaults WHERE org_id = $1")
+    .bind(org_id)
+    .execute(pool)
+    .await?;
+
+  Ok(result.rows_affected())
+}
+
 pub async fn upsert(
   pool: &PgPool,
   defaults: &EbayPolicyDefaults,

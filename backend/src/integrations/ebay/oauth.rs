@@ -86,7 +86,7 @@ pub async fn refresh_access_token(
   Ok(serde_json::from_str(&body)?)
 }
 
-pub fn authorize_url(cfg: &EbayConfig, state: &str) -> String {
+pub fn authorize_url(cfg: &EbayConfig, state: &str, reconnect: bool) -> String {
   // eBay rejects `scope` when spaces are encoded as `+` in the query string; use `%20` between scope URLs.
   let scope_enc = urlencoding::encode(&cfg.oauth_scope).replace('+', "%20");
   let client_id_prefix: String = cfg.client_id.chars().take(8).collect();
@@ -97,22 +97,57 @@ pub fn authorize_url(cfg: &EbayConfig, state: &str) -> String {
     client_id_prefix = %client_id_prefix,
     redirect_uri = %cfg.oauth_ru_name,
     redirect_uri_looks_like_url,
+    reconnect,
     scope_count = cfg.oauth_scope.split_whitespace().count(),
     scope_len = cfg.oauth_scope.len(),
     "building eBay OAuth authorize URL; EBAY_OAUTH_REDIRECT_URI must contain the eBay RuName"
   );
-  format!(
+  let mut url = format!(
     "{}?client_id={}&redirect_uri={}&response_type=code&scope={}&state={}",
     cfg.auth_authorize_url(),
     urlencoding::encode(&cfg.client_id),
     urlencoding::encode(&cfg.oauth_ru_name),
     scope_enc,
     urlencoding::encode(state),
-  )
+  );
+  if reconnect {
+    url.push_str("&prompt=login");
+  }
+  url
 }
 
 pub fn parse_oauth_error_body(raw: &str) -> Option<String> {
   serde_json::from_str::<OAuthErrorBody>(raw)
     .ok()
     .map(|e| e.error_description.unwrap_or(e.error))
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  fn cfg() -> EbayConfig {
+    EbayConfig {
+      sandbox: true,
+      client_id: "client id".to_string(),
+      client_secret: "secret".to_string(),
+      oauth_ru_name: "Example-RuName".to_string(),
+      oauth_scope: "https://api.ebay.com/oauth/api_scope sell.inventory".to_string(),
+      oauth_success_redirect: "http://localhost:3001/app/settings".to_string(),
+    }
+  }
+
+  #[test]
+  fn authorize_url_omits_prompt_by_default() {
+    let url = authorize_url(&cfg(), "state value", false);
+
+    assert!(!url.contains("prompt=login"));
+  }
+
+  #[test]
+  fn authorize_url_adds_login_prompt_for_reconnect() {
+    let url = authorize_url(&cfg(), "state value", true);
+
+    assert!(url.contains("prompt=login"));
+  }
 }

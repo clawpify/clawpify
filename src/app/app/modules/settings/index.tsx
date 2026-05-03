@@ -176,8 +176,19 @@ function EbayIntegrationCard() {
 
   const onConnect = useCallback(async () => {
     setConnectLoading(true);
+    const reconnect = status === "connected";
+    let redirecting = false;
+    if (reconnect) {
+      setPolicies(null);
+      setPolicyError(null);
+      setFulfillmentPolicyId("");
+      setPaymentPolicyId("");
+      setReturnPolicyId("");
+      setMerchantLocationKey("");
+      setStatus("loading");
+    }
     try {
-      const res = await fetchAuth(ebayOAuthStartPath);
+      const res = await fetchAuth(ebayOAuthStartPath({ reconnect }));
       const payload = await res.json().catch(() => undefined);
 
       if (res.ok && payload && typeof payload === "object" && "url" in payload) {
@@ -187,6 +198,7 @@ function EbayIntegrationCard() {
             : "";
 
         if (url) {
+          redirecting = true;
           window.location.assign(url);
           startStatusPoll();
           return;
@@ -203,9 +215,10 @@ function EbayIntegrationCard() {
     } catch (e) {
       showToast(e instanceof Error ? e.message : "Could not start eBay link");
     } finally {
+      if (reconnect && !redirecting) void refreshStatus({ quiet: true });
       setConnectLoading(false);
     }
-  }, [fetchAuth, showToast, startStatusPoll]);
+  }, [fetchAuth, refreshStatus, showToast, startStatusPoll, status]);
 
   const onSavePolicies = useCallback(async () => {
     const body: SaveEbayPolicyDefaultsRequest = {

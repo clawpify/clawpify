@@ -336,7 +336,7 @@ export function ProductsListingIntegration({ listing }: { listing: ConsignmentLi
     setBusy("connecting");
     setError(null);
     try {
-      const res = await fetchAuth(ebayOAuthStartPath);
+      const res = await fetchAuth(ebayOAuthStartPath());
       const payload = await readJsonOrError<EbayOAuthStartResponse>(res);
       const url = payload.url.trim();
       if (!url) throw new Error("eBay authorize URL was empty");
