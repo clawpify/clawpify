@@ -2,6 +2,7 @@ use reqwest::StatusCode;
 use serde_json::Value;
 
 use super::config::EbayConfig;
+use super::error_utils::is_transient_ebay_error;
 use crate::http_client;
 
 #[derive(Debug, thiserror::Error)]
@@ -306,20 +307,28 @@ impl<'a> EbayAccount<'a> {
 
   /// Send an authenticated GET request and preserve eBay error bodies.
   async fn get_json(&self, url: String) -> Result<Value, EbayAccountError> {
-    let res = http_client::shared()
-      .get(url)
-      .header("Authorization", format!("Bearer {}", self.access_token))
-      .send()
-      .await?;
+    let mut attempt = 0;
+    loop {
+      let res = http_client::shared()
+        .get(&url)
+        .header("Authorization", format!("Bearer {}", self.access_token))
+        .send()
+        .await?;
 
-    let status = res.status();
-    let body = res.text().await?;
+      let status = res.status();
+      let body = res.text().await?;
 
-    if !status.is_success() {
-      return Err(EbayAccountError::Api { status, body });
+      if !status.is_success() {
+        if attempt < 2 && is_transient_ebay_error(status, &body) {
+          attempt += 1;
+          tokio::time::sleep(std::time::Duration::from_millis(250 * attempt)).await;
+          continue;
+        }
+        return Err(EbayAccountError::Api { status, body });
+      }
+
+      return Ok(serde_json::from_str(&body)?);
     }
-
-    Ok(serde_json::from_str(&body)?)
   }
 
   /// Fetch seller policies and inventory locations needed to create offers.

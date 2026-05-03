@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
 use super::config::EbayConfig;
+use super::error_utils::is_transient_ebay_error;
 use crate::http_client;
 
 #[derive(Debug, thiserror::Error)]
@@ -15,6 +16,8 @@ pub enum EbayInventoryError {
   Api { status: StatusCode, body: String },
   #[error("ebay response missing {0}")]
   MissingField(&'static str),
+  #[error("ebay request could not be retried")]
+  RequestClone,
 }
 
 pub struct EbayInventory<'a> {
@@ -66,12 +69,42 @@ impl<'a> EbayInventory<'a> {
     &self,
     req: reqwest::RequestBuilder,
   ) -> Result<T, EbayInventoryError> {
-    let res = req
+    let req = req
       .header("Authorization", format!("Bearer {}", self.access_token))
-      .header("Content-Type", "application/json")
-      .send()
-      .await?;
+      .header("Content-Type", "application/json");
+    let Some(template) = req.try_clone() else {
+      return self.send_json_once(req).await;
+    };
 
+    let mut attempt = 0;
+    loop {
+      let res = template
+        .try_clone()
+        .ok_or(EbayInventoryError::RequestClone)?
+        .send()
+        .await?;
+
+      let status = res.status();
+      let body = res.text().await?;
+
+      if !status.is_success() {
+        if attempt < 2 && is_transient_ebay_error(status, &body) {
+          attempt += 1;
+          tokio::time::sleep(std::time::Duration::from_millis(250 * attempt)).await;
+          continue;
+        }
+        return Err(EbayInventoryError::Api { status, body });
+      }
+
+      return parse_json_body(&body);
+    }
+  }
+
+  async fn send_json_once<T: serde::de::DeserializeOwned>(
+    &self,
+    req: reqwest::RequestBuilder,
+  ) -> Result<T, EbayInventoryError> {
+    let res = req.send().await?;
     let status = res.status();
     let body = res.text().await?;
 
@@ -79,11 +112,7 @@ impl<'a> EbayInventory<'a> {
       return Err(EbayInventoryError::Api { status, body });
     }
 
-    if body.trim().is_empty() {
-      return Ok(serde_json::from_value(Value::Null)?);
-    }
-
-    Ok(serde_json::from_str(&body)?)
+    parse_json_body(&body)
   }
 
   /**
@@ -99,24 +128,32 @@ impl<'a> EbayInventory<'a> {
       urlencoding::encode(sku),
     );
 
-    let res = http_client::shared()
-      .get(url)
-      .header("Authorization", format!("Bearer {}", self.access_token))
-      .send()
-      .await?;
+    let mut attempt = 0;
+    loop {
+      let res = http_client::shared()
+        .get(&url)
+        .header("Authorization", format!("Bearer {}", self.access_token))
+        .send()
+        .await?;
 
-    if res.status() == StatusCode::NOT_FOUND {
-      return Ok(None);
+      if res.status() == StatusCode::NOT_FOUND {
+        return Ok(None);
+      }
+
+      let status = res.status();
+      let body = res.text().await?;
+
+      if !status.is_success() {
+        if attempt < 2 && is_transient_ebay_error(status, &body) {
+          attempt += 1;
+          tokio::time::sleep(std::time::Duration::from_millis(250 * attempt)).await;
+          continue;
+        }
+        return Err(EbayInventoryError::Api { status, body });
+      }
+
+      return Ok(Some(serde_json::from_str(&body)?));
     }
-
-    let status = res.status();
-    let body = res.text().await?;
-
-    if !status.is_success() {
-      return Err(EbayInventoryError::Api { status, body });
-    }
-
-    Ok(Some(serde_json::from_str(&body)?))
   }
 
   /// Get all offers associated with a SKU, including unpublished offers.
@@ -240,6 +277,14 @@ impl<'a> EbayInventory<'a> {
     );
     self.send_json(http_client::shared().post(url)).await
   }
+}
+
+fn parse_json_body<T: serde::de::DeserializeOwned>(body: &str) -> Result<T, EbayInventoryError> {
+  if body.trim().is_empty() {
+    return Ok(serde_json::from_value(Value::Null)?);
+  }
+
+  Ok(serde_json::from_str(body)?)
 }
 
 fn offer_body(input: &CreateOfferRequest, include_sku: bool) -> Value {

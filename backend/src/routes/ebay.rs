@@ -15,6 +15,7 @@ use crate::integrations::ebay::account::{
   location_options, normalize_location_key, policy_options, validate_policy_selection, EbayAccount,
   EbayAccountError, EbayLocationOption, EbayPolicyOption,
 };
+use crate::integrations::ebay::error_utils::{ebay_error_message, public_ebay_api_error};
 use crate::integrations::ebay::oauth::{self, EbayOAuthError};
 use crate::integrations::ebay::state_token::{self, StateTokenError};
 use crate::integrations::ebay::token_service::EbayTokenService;
@@ -598,7 +599,11 @@ fn map_oauth_err(e: EbayOAuthError) -> ApiError {
   match e {
     EbayOAuthError::Ebay { status, body } => {
       tracing::warn!(%status, body_len = body.len(), "ebay token error");
-      error::bad_gateway(oauth::parse_oauth_error_body(&body).unwrap_or(body))
+      if let Some(message) = oauth::parse_oauth_error_body(&body) {
+        error::bad_gateway(message)
+      } else {
+        error::bad_gateway(public_ebay_api_error(status, body))
+      }
     }
     _ => error::bad_gateway("ebay token request failed"),
   }
@@ -614,25 +619,11 @@ fn map_account_err(e: EbayAccountError) -> ApiError {
           "eBay seller account is not eligible for Business Policies yet. Enable Seller Hub/Business Policies in eBay, then create or edit a shipping fulfillment policy.",
         )
       } else {
-        ApiError::bad_gateway(format!("ebay api {status}: {message}"))
+        ApiError::bad_gateway(public_ebay_api_error(status, message))
       }
     }
     EbayAccountError::Http(_) | EbayAccountError::Json(_) => ApiError::bad_gateway(e.to_string()),
   }
-}
-
-fn ebay_error_message(body: &str) -> Option<String> {
-  let value: serde_json::Value = serde_json::from_str(body).ok()?;
-  let errors = value.get("errors").and_then(|v| v.as_array())?;
-  let first = errors.first()?;
-
-  first
-    .get("longMessage")
-    .or_else(|| first.get("message"))
-    .and_then(|v| v.as_str())
-    .map(str::trim)
-    .filter(|s| !s.is_empty())
-    .map(str::to_string)
 }
 
 #[derive(utoipa::OpenApi)]

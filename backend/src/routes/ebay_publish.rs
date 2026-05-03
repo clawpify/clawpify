@@ -9,6 +9,8 @@ use uuid::Uuid;
 use super::extractors::OrgId;
 use super::state::AppState;
 use crate::error::{self, ApiError};
+use crate::integrations::ebay::error_utils::public_ebay_api_error;
+use crate::integrations::ebay::inventory::EbayInventoryError;
 use crate::integrations::ebay::listing_service::{
   EbayDraftRequest, EbayDraftResponse, EbayListingService, EbayListingServiceError,
   EbayPublishResponse,
@@ -145,7 +147,13 @@ fn map_ebay_listing_error(e: EbayListingServiceError) -> ApiError {
     EbayListingServiceError::Conflict(v) => ApiError::conflict(v.to_string()),
     EbayListingServiceError::Db(e) => error::db_error(e),
     EbayListingServiceError::Token(e) => ApiError::bad_request(e.to_string()),
+    EbayListingServiceError::Inventory(EbayInventoryError::Api { status, body }) => {
+      ApiError::bad_gateway(public_ebay_api_error(status, body))
+    }
     EbayListingServiceError::Inventory(e) => ApiError::bad_gateway(e.to_string()),
+    EbayListingServiceError::Account(
+      crate::integrations::ebay::account::EbayAccountError::Api { status, body },
+    ) => ApiError::bad_gateway(public_ebay_api_error(status, body)),
     EbayListingServiceError::Account(e) => ApiError::bad_gateway(e.to_string()),
   }
 }

@@ -1,5 +1,6 @@
 pub mod account;
 pub mod config;
+pub mod error_utils;
 pub mod inventory;
 pub mod listing_service;
 pub mod oauth;
