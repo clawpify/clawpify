@@ -1,3 +1,4 @@
+use reqwest::header::{ACCEPT, CONTENT_TYPE};
 use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -70,8 +71,9 @@ impl<'a> EbayInventory<'a> {
     req: reqwest::RequestBuilder,
   ) -> Result<T, EbayInventoryError> {
     let req = req
-      .header("Authorization", format!("Bearer {}", self.access_token))
-      .header("Content-Type", "application/json");
+      .bearer_auth(self.access_token)
+      .header(ACCEPT, "application/json")
+      .header(CONTENT_TYPE, "application/json");
     let Some(template) = req.try_clone() else {
       return self.send_json_once(req).await;
     };
@@ -132,7 +134,8 @@ impl<'a> EbayInventory<'a> {
     loop {
       let res = http_client::shared()
         .get(&url)
-        .header("Authorization", format!("Bearer {}", self.access_token))
+        .bearer_auth(self.access_token)
+        .header(ACCEPT, "application/json")
         .send()
         .await?;
 

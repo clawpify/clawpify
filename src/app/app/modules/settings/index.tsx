@@ -354,7 +354,7 @@ function EbayIntegrationCard() {
             <p className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
               {policySetupHint}{" "}
               <a
-                href="https://www.bizpolicy.ebay.com/businesspolicy/manage"
+                href="https://www.ebay.com/bp/manage"
                 target="_blank"
                 rel="noreferrer"
                 className="font-medium underline decoration-amber-500 underline-offset-2"

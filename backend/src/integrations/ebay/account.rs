@@ -1,3 +1,4 @@
+use reqwest::header::ACCEPT;
 use reqwest::StatusCode;
 use serde_json::Value;
 
@@ -311,7 +312,8 @@ impl<'a> EbayAccount<'a> {
     loop {
       let res = http_client::shared()
         .get(&url)
-        .header("Authorization", format!("Bearer {}", self.access_token))
+        .bearer_auth(self.access_token)
+        .header(ACCEPT, "application/json")
         .send()
         .await?;
 
