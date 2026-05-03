@@ -52,8 +52,20 @@ pub struct EbayCallbackQuery {
 
 #[derive(Deserialize, ToSchema)]
 pub struct EbayOAuthStartQuery {
-  #[serde(default)]
-  pub reconnect: bool,
+  pub reconnect: Option<String>,
+}
+
+impl EbayOAuthStartQuery {
+  fn reconnect_enabled(&self) -> Result<bool, ApiError> {
+    let Some(raw) = self.reconnect.as_deref() else {
+      return Ok(false);
+    };
+    match raw.trim().to_ascii_lowercase().as_str() {
+      "" | "0" | "false" | "no" | "off" => Ok(false),
+      "1" | "true" | "yes" | "on" => Ok(true),
+      _ => Err(error::bad_request("reconnect must be true or false")),
+    }
+  }
 }
 
 #[derive(serde::Serialize, utoipa::ToSchema)]
@@ -117,7 +129,7 @@ async fn ebay_oauth_start(
   let st = state_token::sign_state(secret.as_bytes(), org.as_ref(), 900)
     .map_err(|_| error::bad_request("state"))?;
 
-  let url = oauth::authorize_url(cfg, &st, q.reconnect);
+  let url = oauth::authorize_url(cfg, &st, q.reconnect_enabled()?);
 
   Ok(Json(EbayOAuthStartResponse { url }))
 }
