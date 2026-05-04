@@ -4,6 +4,28 @@ export type HeroProps = {
   className?: string;
 };
 
+export type InputProps = {
+  className?: string;
+};
+
+export type ExploreAiIconProps = {
+  name: LandingFooterExploreProviderKey;
+  /** Override sizing (footer uses default; hero floats use larger) */
+  iconClassName?: string;
+};
+
+export type HeroFloatingProductsProps = {
+  className?: string;
+};
+
+export type HeroFloatItemConfig = {
+  readonly key: string;
+  readonly positionClass: string;
+  readonly sizeClass: string;
+  readonly productAsset: string;
+  readonly imageSrc: string;
+};
+
 export type FeatureCardVisual = "inventoryBubbles" | "moneyMotif" | "channelLogos";
 
 export type FeatureCardProps = {
@@ -13,6 +35,24 @@ export type FeatureCardProps = {
   visual: FeatureCardVisual;
   ctaHref?: string;
   className?: string;
+};
+
+export type FeaturesIntro = {
+  readonly headline: string;
+  readonly subline?: string;
+};
+
+export type FeatureItem = {
+  readonly title: string;
+  readonly description: string;
+  readonly ctaLabel: string;
+  readonly visual: FeatureCardVisual;
+  readonly ctaHref?: string;
+};
+
+export type FeaturesSectionProps = {
+  intro: FeaturesIntro;
+  features: readonly FeatureItem[];
 };
 
 export type LandingFooterLink = {

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type ChangeEvent, type MouseEvent } from "react";
 import { createPortal } from "react-dom";
 import { useAuthenticatedFetch } from "../../../../../lib/api";
-import { messageFromErrorBody } from "../../../../../lib/messageFromErrorBody";
+import { readJsonOrError } from "../../../../../lib/readJsonOrError";
 import { useToast } from "../../../../../lib/toast";
 import { copy } from "../../../utils/copy";
 import type {
@@ -47,14 +47,6 @@ function ebayListingUrl(listingId: string | null): string | null {
   const id = listingId?.trim();
   if (!id) return null;
   return `https://www.ebay.com/itm/${encodeURIComponent(id)}`;
-}
-
-async function readJsonOrError<T>(res: Response): Promise<T> {
-  const body = await res.json().catch(() => undefined);
-  if (!res.ok) {
-    throw new Error(messageFromErrorBody(body) ?? `Request failed: ${res.status}`);
-  }
-  return body as T;
 }
 
 function RequirementRow({ label, ok }: Requirement) {

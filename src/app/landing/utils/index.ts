@@ -1,5 +1,5 @@
 export { aquaOrangeTheme } from "./aquaOrangeTheme";
-export { heroFloatItems, type HeroFloatItemConfig } from "./heroFloatAssets";
+export { heroFloatItems } from "./heroFloatAssets";
 export { landingAccentOrange, landingPalette } from "./landingPalette";
 export { landingHeroTheme } from "./landingHeroTheme";
 export { vintageChromeTheme } from "./vintageChromeTheme";

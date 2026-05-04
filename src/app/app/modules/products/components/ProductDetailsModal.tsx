@@ -5,11 +5,7 @@ import type {
   ProductDetailsFormState,
   ProductDetailsModalProps,
 } from "../types";
-import { suggestListingSku } from "../utils/generalFns";
-
-function centsToDollars(value: number): string {
-  return (value / 100).toFixed(2);
-}
+import { centsToPriceInputString, suggestListingSku } from "../utils/generalFns";
 
 const usd = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
 
@@ -147,7 +143,7 @@ function toFormState(listing: ConsignmentListingDto): ProductDetailsFormState {
     vendor: listing.vendor ?? "",
     productType: listing.product_type ?? "",
     tags: (listing.tags ?? []).join(", "),
-    priceDollars: centsToDollars(listing.price_cents ?? 0),
+    priceDollars: centsToPriceInputString(listing.price_cents ?? 0),
     descriptionHtml: listing.description_html ?? "",
   };
 }

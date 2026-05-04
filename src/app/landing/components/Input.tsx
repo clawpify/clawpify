@@ -1,7 +1,8 @@
 import { useId, useState, type CSSProperties, type FormEvent } from "react";
 import { subscribe } from "../../../lib/subscribe";
+import type { InputProps } from "../types";
 import { landingCopy, landingPalette } from "../utils";
-import { landingOrangeBubbleClassName, landingOrangeBubbleStyle } from "./Button";
+import { orangeBubbleClassName, orangeBubbleStyle } from "@/components/buttonSurface";
 
 const waitlistOuterStyle: CSSProperties = {
   background: landingPalette.mainPanel.background,
@@ -19,13 +20,9 @@ const waitlistOuterClassName = [
 ].join(" ");
 
 const submitClassName = [
-  landingOrangeBubbleClassName,
+  orangeBubbleClassName,
   "landing-sans-copy inline-flex shrink-0 items-center justify-center rounded-full px-5 py-2.5 text-sm",
 ].join(" ");
-
-type InputProps = {
-  className?: string;
-};
 
 export function Input({ className = "" }: InputProps) {
   const inputId = useId();
@@ -84,7 +81,7 @@ export function Input({ className = "" }: InputProps) {
                   type="submit"
                   disabled={loading}
                   className={[submitClassName, "w-full justify-center sm:w-auto"].join(" ")}
-                  style={landingOrangeBubbleStyle}
+                  style={orangeBubbleStyle}
                 >
                   <span className="relative z-[2]">
                     {loading ? heroWaitlist.submittingLabel : heroWaitlist.submitLabel}

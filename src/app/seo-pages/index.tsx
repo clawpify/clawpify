@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { landingOrangeBubbleClassName, landingOrangeBubbleStyle } from "../landing/components/Button";
+import { orangeBubbleClassName, orangeBubbleStyle } from "@/components/buttonSurface";
 
 type SeoPageContent = {
   eyebrow: string;
@@ -340,10 +340,10 @@ function SeoPage({ content }: { content: SeoPageContent }) {
             <Link
               to="/sign-in"
               className={[
-                landingOrangeBubbleClassName,
+                orangeBubbleClassName,
                 "landing-sans-copy inline-flex items-center justify-center px-6 py-3 text-center text-sm no-underline",
               ].join(" ")}
-              style={landingOrangeBubbleStyle}
+              style={orangeBubbleStyle}
             >
               <span className="relative z-[2]">{content.primaryCta ?? "Start with Clawpify"}</span>
             </Link>

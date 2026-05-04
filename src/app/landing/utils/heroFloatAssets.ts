@@ -1,10 +1,4 @@
-export type HeroFloatItemConfig = {
-  readonly key: string;
-  readonly positionClass: string;
-  readonly sizeClass: string;
-  readonly productAsset: string;
-  readonly imageSrc: string;
-};
+import type { HeroFloatItemConfig } from "../types";
 
 export function landingPublicImageUrl(filename: string): string {
   return `/image/${encodeURIComponent(filename)}`;

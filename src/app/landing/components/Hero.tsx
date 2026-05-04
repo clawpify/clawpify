@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import type { HeroProps } from "../types";
 import { landingCopy, landingPalette } from "../utils";
-import { landingOrangeBubbleClassName, landingOrangeBubbleStyle } from "./Button";
+import { orangeBubbleClassName, orangeBubbleStyle } from "@/components/buttonSurface";
 import { HeroFloatingProducts } from "./HeroFloatingProducts";
 import { Input } from "./Input";
 
@@ -31,10 +31,10 @@ export function Hero({ className = "" }: HeroProps) {
         <Link
           to="/sign-in"
           className={[
-            landingOrangeBubbleClassName,
+            orangeBubbleClassName,
             "landing-sans-copy inline-flex items-center justify-center px-6 py-3 text-center text-sm no-underline",
           ].join(" ")}
-          style={landingOrangeBubbleStyle}
+          style={orangeBubbleStyle}
         >
           <span className="relative z-[2]">{hero.ctaLabel}</span>
         </Link>

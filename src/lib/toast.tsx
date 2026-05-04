@@ -9,10 +9,10 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import {
-  landingOrangeBubbleClassName,
-  landingOrangeBubbleStyle,
-  landingWhiteBubbleClassName,
-} from "../app/landing/components/Button";
+  orangeBubbleClassName,
+  orangeBubbleStyle,
+  whiteBubbleClassName,
+} from "@/components/buttonSurface";
 
 export type ActionToastPayload = {
   message: string;
@@ -117,7 +117,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                   disabled={actionPayload.secondaryDisabled === true}
                   onClick={actionPayload.onSecondary}
                   className={[
-                    landingWhiteBubbleClassName,
+                    whiteBubbleClassName,
                     "landing-sans-copy inline-flex min-h-9 items-center justify-center px-4 py-2 text-sm",
                   ].join(" ")}
                 >
@@ -128,10 +128,10 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                   disabled={actionPayload.primaryDisabled === true}
                   onClick={actionPayload.onPrimary}
                   className={[
-                    landingOrangeBubbleClassName,
+                    orangeBubbleClassName,
                     "landing-sans-copy inline-flex min-h-9 items-center justify-center px-4 py-2 text-sm",
                   ].join(" ")}
-                  style={landingOrangeBubbleStyle}
+                  style={orangeBubbleStyle}
                 >
                   <span className="relative z-[2]">{actionPayload.primaryLabel}</span>
                 </button>

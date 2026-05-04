@@ -1,26 +1,8 @@
 import { LiquidGlassCard } from "@/components/LiquidGlassCard";
 import { containerChromeStyle } from "@/components/Container";
 import { FeatureCard } from "./FeatureCard";
-import type { FeatureCardVisual } from "../types";
+import type { FeaturesSectionProps } from "../types";
 import { landingPalette } from "../utils";
-
-type FeaturesIntro = {
-  readonly headline: string;
-  readonly subline?: string;
-};
-
-type FeatureItem = {
-  readonly title: string;
-  readonly description: string;
-  readonly ctaLabel: string;
-  readonly visual: FeatureCardVisual;
-  readonly ctaHref?: string;
-};
-
-type FeaturesSectionProps = {
-  intro: FeaturesIntro;
-  features: readonly FeatureItem[];
-};
 
 const mainClassName = [
   "relative z-10 mx-auto flex w-full flex-1 flex-col items-center",

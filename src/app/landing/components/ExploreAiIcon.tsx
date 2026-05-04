@@ -1,13 +1,7 @@
-import type { LandingFooterExploreProviderKey } from "../types";
-
-type Props = {
-  name: LandingFooterExploreProviderKey;
-  /** Override sizing (footer uses default; hero floats use larger) */
-  iconClassName?: string;
-};
+import type { ExploreAiIconProps } from "../types";
 
 /** Brand marks aligned with legacy HeroSearchSection icons */
-export function ExploreAiIcon({ name, iconClassName }: Props) {
+export function ExploreAiIcon({ name, iconClassName }: ExploreAiIconProps) {
   const cn = iconClassName ?? "block h-3.5 w-3.5 shrink-0";
 
   switch (name) {

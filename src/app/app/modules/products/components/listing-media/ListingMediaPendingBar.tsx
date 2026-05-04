@@ -1,9 +1,9 @@
 import { createPortal } from "react-dom";
 import {
-  landingOrangeBubbleClassName,
-  landingOrangeBubbleStyle,
-  landingWhiteBubbleClassName,
-} from "../../../../../landing/components/Button";
+  orangeBubbleClassName,
+  orangeBubbleStyle,
+  whiteBubbleClassName,
+} from "@/components/buttonSurface";
 import { copy } from "../../../../utils/copy";
 
 function fillCount(s: string, count: number) {
@@ -41,7 +41,7 @@ export function ListingMediaPendingBar({ count, disabled, onSave, onCancel }: Pr
           disabled={disabled}
           onClick={onCancel}
           className={[
-            landingWhiteBubbleClassName,
+            whiteBubbleClassName,
             "landing-sans-copy inline-flex min-h-9 items-center justify-center px-4 py-2 text-sm",
           ].join(" ")}
         >
@@ -52,10 +52,10 @@ export function ListingMediaPendingBar({ count, disabled, onSave, onCancel }: Pr
           disabled={disabled}
           onClick={onSave}
           className={[
-            landingOrangeBubbleClassName,
+            orangeBubbleClassName,
             "landing-sans-copy inline-flex min-h-9 items-center justify-center px-4 py-2 text-sm",
           ].join(" ")}
-          style={landingOrangeBubbleStyle}
+          style={orangeBubbleStyle}
         >
           <span className="relative z-[2]">{copy.products.detailMediaPendingSave}</span>
         </button>

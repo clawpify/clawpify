@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuthenticatedFetch } from "../../../../lib/api";
 import { messageFromErrorBody } from "../../../../lib/messageFromErrorBody";
+import { readJsonOrError } from "../../../../lib/readJsonOrError";
 import { useToast } from "../../../../lib/toast";
 import { SettingsIcon } from "../../../../icons/workspace-icons";
 import { useWorkspaceHeader } from "../../context/WorkspaceHeaderContext";
@@ -17,12 +18,13 @@ import type {
   SaveEbayPolicyDefaultsRequest,
 } from "../products/types";
 import {
-  landingOrangeBubbleClassName,
-  landingOrangeBubbleStyle,
-} from "../../../landing/components/Button";
+  orangeBubbleClassName,
+  orangeBubbleStyle,
+} from "@/components/buttonSurface";
+import type { EbaySetupHint, EbayStatus } from "./types";
 
-type EbayStatus = "loading" | "connected" | "disconnected";
 const MARKETPLACE_ID = "EBAY_US";
+const EBAY_BUSINESS_POLICIES_URL = "https://www.ebay.com/bp/manage";
 
 const SETTINGS_HEADER_CONTEXT = copy.settings.title;
 const SETTINGS_HEADER_CONFIG = {
@@ -34,15 +36,8 @@ const SETTINGS_HEADER_CONFIG = {
   ),
 };
 
-async function readJsonOrError<T>(res: Response): Promise<T> {
-  const body = await res.json().catch(() => undefined);
-  if (!res.ok) {
-    throw new Error(messageFromErrorBody(body) ?? `Request failed: ${res.status}`);
-  }
-  return body as T;
-}
-
-function ebayPolicySetupHint(policies: EbayPoliciesResponse): string | null {
+// Build a setup warning that keeps eBay policies separate from inventory locations.
+function ebayPolicySetupHint(policies: EbayPoliciesResponse): EbaySetupHint | null {
   if (!policies.missing.length) return null;
   const counts = policies.counts ?? {
     fulfillment: policies.fulfillment_policies.length,
@@ -57,12 +52,38 @@ function ebayPolicySetupHint(policies: EbayPoliciesResponse): string | null {
     counts.locations === 0;
 
   if (allEmpty) {
-    return `eBay API returned 0 shipping, payment, return, and inventory location records for ${policies.marketplace_id}. Make sure the connected eBay account is the same Seller Hub account and that policies are created for this marketplace.`;
+    return {
+      message: `eBay API returned 0 business policy and inventory location records for ${policies.marketplace_id}. Make sure the connected eBay account is the same Seller Hub account, policies exist for this marketplace, and an inventory location exists in eBay.`,
+      showBusinessPoliciesLink: true,
+    };
   }
 
-  return `Missing from eBay API for ${policies.marketplace_id}: ${policies.missing.join(", ")}. Business policies and inventory locations are separate eBay setup items.`;
+  // eBay stores ship-from locations in Inventory API, separate from Account API policies.
+  const missingBusinessPolicies = policies.missing.filter(
+    (item) => item !== "inventory location"
+  );
+  const missingInventoryLocation = policies.missing.includes("inventory location");
+  const parts: string[] = [];
+
+  if (missingBusinessPolicies.length) {
+    parts.push(
+      `Missing eBay business policies for ${policies.marketplace_id}: ${missingBusinessPolicies.join(", ")}.`
+    );
+  }
+  if (missingInventoryLocation) {
+    parts.push(
+      `Missing ship-from inventory location for ${policies.marketplace_id}. Create an inventory location in eBay, then refresh.`
+    );
+  }
+  parts.push("Business policies and inventory locations are separate eBay setup items.");
+
+  return {
+    message: parts.join(" "),
+    showBusinessPoliciesLink: missingBusinessPolicies.length > 0,
+  };
 }
 
+// Render workspace settings and attach the settings header context.
 export function SettingsPage() {
   const { setConfig } = useWorkspaceHeader();
 
@@ -99,6 +120,7 @@ export function SettingsPage() {
   );
 }
 
+// Manage eBay connection state and default listing setup.
 function EbayIntegrationCard() {
   const fetchAuth = useAuthenticatedFetch();
   const { showToast } = useToast();
@@ -114,6 +136,10 @@ function EbayIntegrationCard() {
   const [merchantLocationKey, setMerchantLocationKey] = useState("");
   const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  /**
+   * Apply the default policies and inventory location to the UI.
+   * @param next - The eBay policies response from the API.
+   */
   const applyDefaults = useCallback((next: EbayPoliciesResponse) => {
     setFulfillmentPolicyId(
       next.defaults?.fulfillment_policy_id || next.fulfillment_policies[0]?.id || ""
@@ -123,6 +149,7 @@ function EbayIntegrationCard() {
     setMerchantLocationKey(next.defaults?.merchant_location_key || next.locations[0]?.key || "");
   }, []);
 
+  // Check whether this workspace has an active eBay connection.
   const refreshStatus = useCallback(async (opts?: { quiet?: boolean }): Promise<EbayStatus> => {
     if (!opts?.quiet) setStatus("loading");
     const res = await fetchAuth(ebayOAuthStatusPath);
@@ -136,6 +163,7 @@ function EbayIntegrationCard() {
     return "disconnected";
   }, [fetchAuth]);
 
+  // Stop OAuth completion polling after connect/reconnect attempts finish.
   const clearStatusPoll = useCallback(() => {
     if (pollTimerRef.current) {
       clearInterval(pollTimerRef.current);
@@ -143,6 +171,7 @@ function EbayIntegrationCard() {
     }
   }, []);
 
+  // Load eBay business policies plus inventory locations for default selection.
   const loadPolicies = useCallback(async () => {
     setPoliciesLoading(true);
     setPolicyError(null);
@@ -160,6 +189,7 @@ function EbayIntegrationCard() {
     }
   }, [applyDefaults, fetchAuth, showToast]);
 
+  // Poll briefly after redirect starts so returning from eBay updates the UI.
   const startStatusPoll = useCallback(() => {
     clearStatusPoll();
     const stopAt = Date.now() + 60_000;
@@ -171,6 +201,7 @@ function EbayIntegrationCard() {
     pollTimerRef.current = setInterval(() => void tick(), 2_000);
   }, [clearStatusPoll, refreshStatus]);
 
+  // Refresh connection status on first render and when user returns to this tab.
   useEffect(() => {
     void refreshStatus();
     const onFocus = () => void refreshStatus({ quiet: true });
@@ -185,6 +216,7 @@ function EbayIntegrationCard() {
     };
   }, [refreshStatus]);
 
+  // Fetch setup only while connected; clear stale setup when disconnected.
   useEffect(() => {
     if (status === "connected") void loadPolicies();
     if (status === "disconnected") {
@@ -193,8 +225,10 @@ function EbayIntegrationCard() {
     }
   }, [loadPolicies, status]);
 
+  // Clean up any active polling timer when the card unmounts.
   useEffect(() => clearStatusPoll, [clearStatusPoll]);
 
+  // Start eBay OAuth, using reconnect mode to reset stale saved setup.
   const onConnect = useCallback(async () => {
     setConnectLoading(true);
     const reconnect = status === "connected";
@@ -241,6 +275,7 @@ function EbayIntegrationCard() {
     }
   }, [fetchAuth, refreshStatus, showToast, startStatusPoll, status]);
 
+  // Persist selected policies and ship-from inventory location for future drafts.
   const onSavePolicies = useCallback(async () => {
     const body: SaveEbayPolicyDefaultsRequest = {
       marketplace_id: MARKETPLACE_ID,
@@ -319,10 +354,10 @@ function EbayIntegrationCard() {
           disabled={connectLoading || status === "loading"}
           onClick={onConnect}
           className={[
-            landingOrangeBubbleClassName,
+            orangeBubbleClassName,
             "landing-sans-copy inline-flex w-full items-center justify-center px-6 py-3 text-center text-[13px] font-semibold no-underline disabled:pointer-events-none sm:w-auto",
           ].join(" ")}
-          style={landingOrangeBubbleStyle}
+          style={orangeBubbleStyle}
         >
           <span className="relative z-[2]">
             {connected ? copy.settings.ebayReconnect : copy.settings.ebayConnect}
@@ -336,8 +371,8 @@ function EbayIntegrationCard() {
             <div>
               <h3 className="text-sm font-semibold text-zinc-950">Listing Details</h3>
               <p className="mt-1 max-w-2xl text-sm leading-6 text-zinc-600">
-                Choose the default eBay business policies Clawpify should use when creating
-                listing drafts.
+                Choose the default eBay business policies and ship-from inventory location
+                Clawpify should use when creating listing drafts.
               </p>
             </div>
             <button
@@ -346,22 +381,27 @@ function EbayIntegrationCard() {
               disabled={policiesLoading}
               className="rounded-md border border-zinc-200 bg-white px-3 py-1.5 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {policiesLoading ? "Refreshing..." : "Refresh policies"}
+              {policiesLoading ? "Refreshing..." : "Refresh setup"}
             </button>
           </div>
 
           {policySetupHint ? (
             <p className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
-              {policySetupHint}{" "}
-              <a
-                href="https://www.ebay.com/bp/manage"
-                target="_blank"
-                rel="noreferrer"
-                className="font-medium underline decoration-amber-500 underline-offset-2"
-              >
-                Open eBay business policies
-              </a>
-              .
+              {policySetupHint.message}
+              {policySetupHint.showBusinessPoliciesLink ? (
+                <>
+                  {" "}
+                  <a
+                    href={EBAY_BUSINESS_POLICIES_URL}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="font-medium underline decoration-amber-500 underline-offset-2"
+                  >
+                    Open eBay business policies
+                  </a>
+                  .
+                </>
+              ) : null}
             </p>
           ) : null}
           {policyError ? (
@@ -419,7 +459,7 @@ function EbayIntegrationCard() {
               </select>
             </label>
             <label className="grid gap-1.5 text-sm">
-              <span className="font-medium text-zinc-700">Inventory location</span>
+              <span className="font-medium text-zinc-700">Inventory location (ship from)</span>
               <select
                 value={merchantLocationKey}
                 onChange={(e) => setMerchantLocationKey(e.target.value)}
@@ -432,6 +472,9 @@ function EbayIntegrationCard() {
                   </option>
                 ))}
               </select>
+              <span className="text-xs leading-5 text-zinc-500">
+                eBay Inventory API location used as the ship-from address for offers.
+              </span>
             </label>
           </div>
 

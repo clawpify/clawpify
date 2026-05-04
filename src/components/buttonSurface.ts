@@ -1,0 +1,45 @@
+import type { CSSProperties } from "react";
+import { aquaOrangeTheme } from "./aquaOrangeTheme";
+
+export const orangeBubbleStyle: CSSProperties = {
+  background: aquaOrangeTheme.gradient,
+  borderColor: aquaOrangeTheme.rim,
+  boxShadow: [
+    `inset 0 1px 0 0 ${aquaOrangeTheme.insetHighlight}`,
+    `inset 0 -1px 0 0 ${aquaOrangeTheme.insetShadow}`,
+    "0 1px 0 rgba(255, 255, 255, 0.35)",
+    "0 6px 14px rgba(154, 52, 18, 0.28)",
+    "0 2px 4px rgba(0, 0, 0, 0.08)",
+  ].join(", "),
+};
+
+export const orangeBubbleClassName = [
+  "relative isolate overflow-hidden rounded-full",
+  "border font-medium antialiased text-white shadow-md",
+  "transition-[filter,opacity]",
+  "before:pointer-events-none before:absolute before:inset-x-[12%] before:top-px before:z-[1] before:h-[42%] before:rounded-[999px]",
+  "before:bg-gradient-to-b before:from-white/50 before:via-white/15 before:to-transparent",
+  "after:pointer-events-none after:absolute after:inset-x-0 after:bottom-0 after:top-[55%] after:rounded-b-full",
+  "after:bg-gradient-to-t after:from-black/10 after:to-transparent",
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2",
+  "active:brightness-[0.97]",
+  "disabled:cursor-not-allowed disabled:opacity-45",
+].join(" ");
+
+export const whiteBubbleClassName = [
+  "relative isolate overflow-hidden rounded-full border border-zinc-200/90",
+  "bg-gradient-to-b from-white to-zinc-100/95 font-medium text-zinc-800 antialiased",
+  "shadow-[inset_0_1px_0_rgba(255,255,255,0.85),0_2px_8px_rgba(15,23,42,0.08),0_1px_2px_rgba(15,23,42,0.06)]",
+  "transition-[filter,opacity,background-color]",
+  "before:pointer-events-none before:absolute before:inset-x-[12%] before:top-px before:z-[1] before:h-[42%] before:rounded-[999px]",
+  "before:bg-gradient-to-b before:from-white/55 before:via-white/12 before:to-transparent",
+  "after:pointer-events-none after:absolute after:inset-x-0 after:bottom-0 after:top-[55%] after:rounded-b-full",
+  "after:bg-gradient-to-t after:from-black/[0.06] after:to-transparent",
+  "hover:border-zinc-300/95 hover:from-zinc-50 hover:to-zinc-100",
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2",
+  "active:brightness-[0.97]",
+  "disabled:cursor-not-allowed disabled:opacity-45",
+].join(" ");
+
+export const SurfaceClassName = orangeBubbleClassName;
+export const SurfaceStyle = orangeBubbleStyle;

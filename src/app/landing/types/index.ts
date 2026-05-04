@@ -1,8 +1,15 @@
 export type { ButtonProps } from "./button";
 export type {
   HeroProps,
+  InputProps,
+  ExploreAiIconProps,
+  HeroFloatingProductsProps,
+  HeroFloatItemConfig,
   FeatureCardProps,
   FeatureCardVisual,
+  FeaturesIntro,
+  FeatureItem,
+  FeaturesSectionProps,
   LandingFooterProps,
   LandingFooterLink,
   LandingFooterNavColumn,

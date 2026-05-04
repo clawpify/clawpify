@@ -1,8 +1,5 @@
+import type { HeroFloatingProductsProps } from "../types";
 import { heroFloatItems } from "../utils/heroFloatAssets";
-
-type HeroFloatingProductsProps = {
-  className?: string;
-};
 
 const driftClass = ["landing-hero-float-bubble--a", "landing-hero-float-bubble--b", "landing-hero-float-bubble--c"] as const;
 

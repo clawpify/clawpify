@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { landingOrangeBubbleClassName, landingOrangeBubbleStyle } from "../../../../landing/components/Button";
+import { orangeBubbleClassName, orangeBubbleStyle } from "@/components/buttonSurface";
 import { XMarkIcon } from "../../../../../icons/workspace-icons";
 import { copy } from "../../../utils/copy";
 import { useProducts } from "../context/ProductsContext";
@@ -399,13 +399,13 @@ export function ProductsCreateModal({ open, onClose, onCreated }: ProductsCreate
             onClick={() => void submit()}
             disabled={creating}
             className={[
-              landingOrangeBubbleClassName,
+              orangeBubbleClassName,
               "landing-sans-copy inline-flex min-h-9 items-center justify-center px-5 py-2 text-[13px] font-semibold disabled:cursor-not-allowed disabled:opacity-50",
               !creating && !canSubmit ? "opacity-50" : "",
             ]
               .filter(Boolean)
               .join(" ")}
-            style={landingOrangeBubbleStyle}
+            style={orangeBubbleStyle}
           >
             <span className="relative z-[2]">
               {creating ? copy.products.creating : copy.products.createModalSubmit}

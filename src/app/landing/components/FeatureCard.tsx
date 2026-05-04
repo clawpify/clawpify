@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import type { FeatureCardProps, FeatureCardVisual } from "../types";
-import { landingOrangeBubbleClassName, landingOrangeBubbleStyle } from "./Button";
+import { orangeBubbleClassName, orangeBubbleStyle } from "@/components/buttonSurface";
 import { FeatureCardChannelsVisual } from "./feature-visuals/FeatureCardChannelsVisual";
 import { FeatureCardInventoryVisual } from "./feature-visuals/FeatureCardInventoryVisual";
 import { FeatureCardMoneyVisual } from "./feature-visuals/FeatureCardMoneyVisual";
@@ -45,10 +45,10 @@ export function FeatureCard({
           <Link
             to={ctaHref}
             className={[
-              landingOrangeBubbleClassName,
+              orangeBubbleClassName,
               "landing-sans-copy flex w-full items-center justify-center px-6 py-3 text-center text-sm no-underline",
             ].join(" ")}
-            style={landingOrangeBubbleStyle}
+            style={orangeBubbleStyle}
           >
             <span className="relative z-[2]">{ctaLabel}</span>
           </Link>
@@ -56,10 +56,10 @@ export function FeatureCard({
           <span
             aria-disabled
             className={[
-              landingOrangeBubbleClassName,
+              orangeBubbleClassName,
               "landing-sans-copy inline-flex w-full cursor-default select-none items-center justify-center px-6 py-3 text-center text-sm",
             ].join(" ")}
-            style={landingOrangeBubbleStyle}
+            style={orangeBubbleStyle}
           >
             <span className="relative z-[2]">{ctaLabel}</span>
           </span>
