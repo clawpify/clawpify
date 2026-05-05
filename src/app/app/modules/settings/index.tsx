@@ -56,6 +56,7 @@ function ebayPolicySetupHint(policies: EbayPoliciesResponse): EbaySetupHint | nu
     return {
       message: `eBay API returned 0 business policy and inventory location records for ${policies.marketplace_id}. Make sure the connected eBay account is the same Seller Hub account, policies exist for this marketplace, and an inventory location exists in eBay.`,
       showBusinessPoliciesLink: true,
+      showInventoryLocationsLink: true,
     };
   }
 
@@ -81,6 +82,7 @@ function ebayPolicySetupHint(policies: EbayPoliciesResponse): EbaySetupHint | nu
   return {
     message: parts.join(" "),
     showBusinessPoliciesLink: missingBusinessPolicies.length > 0,
+    showInventoryLocationsLink: missingInventoryLocation,
   };
 }
 
@@ -407,10 +409,10 @@ function EbayIntegrationCard() {
         <div className="mt-5 border-t border-zinc-100 pt-5">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <h3 className="text-sm font-semibold text-zinc-950">Listing Details</h3>
+              <h3 className="text-sm font-semibold text-zinc-950">Listing defaults</h3>
               <p className="mt-1 max-w-2xl text-sm leading-6 text-zinc-600">
-                Choose the default eBay business policies and ship-from inventory location
-                Clawpify should use when creating listing drafts.
+                Choose the eBay business policies and separate ship-from location Clawpify
+                should use when creating listing drafts.
               </p>
             </div>
             <button
@@ -442,6 +444,20 @@ function EbayIntegrationCard() {
                   .
                 </>
               ) : null}
+              {policySetupHint.showInventoryLocationsLink ? (
+                <>
+                  {" "}
+                  <a
+                    href={EBAY_INVENTORY_LOCATIONS_URL}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="font-medium underline decoration-amber-500 underline-offset-2"
+                  >
+                    Open eBay inventory locations
+                  </a>
+                  .
+                </>
+              ) : null}
             </p>
           ) : null}
           {policyError ? (
@@ -450,77 +466,96 @@ function EbayIntegrationCard() {
             </p>
           ) : null}
 
-          <div className="mt-4 grid gap-3 md:grid-cols-2">
-            <label className="grid gap-1.5 text-sm">
-              <span className="font-medium text-zinc-700">Shipping policy</span>
-              <select
-                value={fulfillmentPolicyId}
-                onChange={(e) => setFulfillmentPolicyId(e.target.value)}
-                className="rounded-md border border-zinc-200 bg-white px-3 py-2 text-zinc-900 outline-none transition focus:border-zinc-400"
-              >
-                <option value="">Select shipping policy</option>
-                {policies?.fulfillment_policies.map((policy) => (
-                  <option key={policy.id} value={policy.id}>
-                    {policy.supports_shipping === false
-                      ? `${policy.name} (local pickup only)`
-                      : policy.name}
+          <div className="mt-4 grid gap-4">
+            <div className="rounded-lg border border-zinc-100 bg-zinc-50/50 p-3">
+              <div>
+                <h4 className="text-sm font-semibold text-zinc-950">Business policies</h4>
+                <p className="mt-1 text-xs leading-5 text-zinc-500">
+                  eBay policies for buyer-facing shipping, payment, and returns.
+                </p>
+              </div>
+              <div className="mt-3 grid gap-3 md:grid-cols-3">
+                <label className="grid gap-1.5 text-sm">
+                  <span className="font-medium text-zinc-700">Shipping policy</span>
+                  <select
+                    value={fulfillmentPolicyId}
+                    onChange={(e) => setFulfillmentPolicyId(e.target.value)}
+                    className="rounded-md border border-zinc-200 bg-white px-3 py-2 text-zinc-900 outline-none transition focus:border-zinc-400"
+                  >
+                    <option value="">Select shipping policy</option>
+                    {policies?.fulfillment_policies.map((policy) => (
+                      <option key={policy.id} value={policy.id}>
+                        {policy.supports_shipping === false
+                          ? `${policy.name} (local pickup only)`
+                          : policy.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="grid gap-1.5 text-sm">
+                  <span className="font-medium text-zinc-700">Payment policy</span>
+                  <select
+                    value={paymentPolicyId}
+                    onChange={(e) => setPaymentPolicyId(e.target.value)}
+                    className="rounded-md border border-zinc-200 bg-white px-3 py-2 text-zinc-900 outline-none transition focus:border-zinc-400"
+                  >
+                    <option value="">Select payment policy</option>
+                    {policies?.payment_policies.map((policy) => (
+                      <option key={policy.id} value={policy.id}>
+                        {policy.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="grid gap-1.5 text-sm">
+                  <span className="font-medium text-zinc-700">Return policy</span>
+                  <select
+                    value={returnPolicyId}
+                    onChange={(e) => setReturnPolicyId(e.target.value)}
+                    className="rounded-md border border-zinc-200 bg-white px-3 py-2 text-zinc-900 outline-none transition focus:border-zinc-400"
+                  >
+                    <option value="">Select return policy</option>
+                    {policies?.return_policies.map((policy) => (
+                      <option key={policy.id} value={policy.id}>
+                        {policy.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+            </div>
+
+            <div className="rounded-lg border border-zinc-100 bg-white p-3">
+              <div>
+                <h4 className="text-sm font-semibold text-zinc-950">Ship-from location</h4>
+                <p className="mt-1 text-xs leading-5 text-zinc-500">
+                  Not a business policy. eBay uses this Inventory API location as the offer
+                  ship-from address.
+                </p>
+              </div>
+              <label className="mt-3 grid gap-1.5 text-sm md:max-w-xl">
+                <span className="font-medium text-zinc-700">Inventory location</span>
+                <select
+                  value={merchantLocationKey}
+                  onChange={(e) => setMerchantLocationKey(e.target.value)}
+                  className="rounded-md border border-zinc-200 bg-white px-3 py-2 text-zinc-900 outline-none transition focus:border-zinc-400"
+                >
+                  <option value="">
+                    {policies?.locations.length
+                      ? "Select inventory location"
+                      : "Create an eBay inventory location, then refresh"}
                   </option>
-                ))}
-              </select>
-            </label>
-            <label className="grid gap-1.5 text-sm">
-              <span className="font-medium text-zinc-700">Payment policy</span>
-              <select
-                value={paymentPolicyId}
-                onChange={(e) => setPaymentPolicyId(e.target.value)}
-                className="rounded-md border border-zinc-200 bg-white px-3 py-2 text-zinc-900 outline-none transition focus:border-zinc-400"
-              >
-                <option value="">Select payment policy</option>
-                {policies?.payment_policies.map((policy) => (
-                  <option key={policy.id} value={policy.id}>
-                    {policy.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="grid gap-1.5 text-sm">
-              <span className="font-medium text-zinc-700">Return policy</span>
-              <select
-                value={returnPolicyId}
-                onChange={(e) => setReturnPolicyId(e.target.value)}
-                className="rounded-md border border-zinc-200 bg-white px-3 py-2 text-zinc-900 outline-none transition focus:border-zinc-400"
-              >
-                <option value="">Select return policy</option>
-                {policies?.return_policies.map((policy) => (
-                  <option key={policy.id} value={policy.id}>
-                    {policy.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="grid gap-1.5 text-sm">
-              <span className="font-medium text-zinc-700">Inventory location (ship from)</span>
-              <select
-                value={merchantLocationKey}
-                onChange={(e) => setMerchantLocationKey(e.target.value)}
-                className="rounded-md border border-zinc-200 bg-white px-3 py-2 text-zinc-900 outline-none transition focus:border-zinc-400"
-              >
-                <option value="">
-                  {policies?.locations.length
-                    ? "Select inventory location"
-                    : "Create an eBay inventory location, then refresh"}
-                </option>
-                {policies?.locations.map((location) => (
-                  <option key={location.key} value={location.key}>
-                    {location.name}
-                  </option>
-                ))}
-              </select>
-              <span className="text-xs leading-5 text-zinc-500">
-                Ship-from address for offers. Use a location like Warehouse, Store, or Home
-                office.
-              </span>
-            </label>
+                  {policies?.locations.map((location) => (
+                    <option key={location.key} value={location.key}>
+                      {location.name}
+                    </option>
+                  ))}
+                </select>
+                <span className="text-xs leading-5 text-zinc-500">
+                  Use a location like Warehouse, Store, or Home office.
+                </span>
+              </label>
+            </div>
           </div>
 
           <div className="mt-4 flex justify-end">
