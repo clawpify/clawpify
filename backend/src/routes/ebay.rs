@@ -223,6 +223,16 @@ fn is_canadian_postal_code(value: &str) -> bool {
     && chars[5].is_ascii_digit()
 }
 
+fn normalize_postal_code(value: &str) -> String {
+  let cleaned = cleaned_field(value).to_ascii_uppercase();
+  let compact: String = cleaned.chars().filter(|ch| !ch.is_whitespace()).collect();
+  if is_canadian_postal_code(&compact) {
+    format!("{} {}", &compact[..3], &compact[3..])
+  } else {
+    cleaned
+  }
+}
+
 fn inferred_location_country(country: &str, postal_code: &str) -> String {
   let country = cleaned_field(country).to_ascii_uppercase();
   if !country.is_empty() {
@@ -533,7 +543,7 @@ async fn create_ebay_location(
   let address_line1 = cleaned_field(&req.address_line1);
   let city = cleaned_field(&req.city);
   let state_or_province = cleaned_field(&req.state_or_province);
-  let postal_code = cleaned_field(&req.postal_code);
+  let postal_code = normalize_postal_code(&req.postal_code);
   let country = inferred_location_country(&req.country, &postal_code);
   let has_postal_address = !postal_code.is_empty();
   let has_city_region_address = !city.is_empty() && !state_or_province.is_empty();
@@ -584,7 +594,7 @@ async fn create_ebay_location(
       country: normalized_req.country,
     })
     .await
-    .map_err(map_inventory_err)?;
+    .map_err(|e| map_inventory_err(e, &key))?;
 
   Ok(Json(EbayLocationOption { key, name }))
 }
@@ -804,14 +814,28 @@ fn map_account_err(e: EbayAccountError) -> ApiError {
   }
 }
 
-fn map_inventory_err(e: EbayInventoryError) -> ApiError {
+fn map_inventory_err(e: EbayInventoryError, merchant_location_key: &str) -> ApiError {
   match e {
     EbayInventoryError::Api { status, body } => {
+      tracing::warn!(
+        %status,
+        merchant_location_key,
+        body = %body,
+        "ebay inventory location create failed"
+      );
       let message = ebay_error_message(&body).unwrap_or(body);
       let lower = message.to_ascii_lowercase();
       if lower.contains("scope") || lower.contains("authorization") || lower.contains("oauth") {
         ApiError::bad_gateway(
           "Reconnect eBay so Clawpify can create ship-from locations for this seller account.",
+        )
+      } else if status.as_u16() == 400
+        && (lower.contains("\"path\"")
+          || lower.contains("bad request")
+          || lower.contains("invalid request"))
+      {
+        ApiError::bad_gateway(
+          "eBay rejected that ship-from address. Add street, city, and province/state, then try again.",
         )
       } else {
         ApiError::bad_gateway(public_ebay_api_error(status, message))

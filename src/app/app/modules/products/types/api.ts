@@ -91,10 +91,10 @@ export type EbayDraftRequest = {
   marketplace_id: string;
   category_id: string;
   condition_id: string;
-  fulfillment_policy_id: string;
-  payment_policy_id: string;
-  return_policy_id: string;
-  merchant_location_key: string;
+  fulfillment_policy_id?: string;
+  payment_policy_id?: string;
+  return_policy_id?: string;
+  merchant_location_key?: string;
   quantity?: number;
   aspects?: Record<string, unknown>;
   brand?: string;

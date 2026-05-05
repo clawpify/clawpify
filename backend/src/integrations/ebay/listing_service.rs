@@ -5,23 +5,31 @@ use uuid::Uuid;
 
 use super::account::{
   location_options, policy_options, validate_policy_selection, EbayAccount, EbayAccountError,
-  EbayPolicyValidationError,
+  EbayLocationOption, EbayPolicyOption, EbayPolicyValidationError,
 };
 use super::config::EbayConfig;
 use super::inventory::{CreateOfferRequest, EbayInventory, PutInventoryItemRequest};
 use super::token_service::EbayTokenService;
 use crate::crypto::tokens::TokenCrypto;
 use crate::models::consignment_listing::ConsignmentListing;
-use crate::repositories::{channel_connections, listing_publications, listings};
+use crate::repositories::ebay_policy_defaults::EbayPolicyDefaults;
+use crate::repositories::{
+  channel_connections, ebay_policy_defaults, listing_publications, listings,
+};
 
 #[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct EbayDraftRequest {
+  #[serde(default = "default_marketplace_id")]
   pub marketplace_id: String,
   pub category_id: String,
   pub condition_id: String,
+  #[serde(default)]
   pub fulfillment_policy_id: String,
+  #[serde(default)]
   pub payment_policy_id: String,
+  #[serde(default)]
   pub return_policy_id: String,
+  #[serde(default)]
   pub merchant_location_key: Option<String>,
   pub quantity: Option<i64>,
   pub aspects: Option<Value>,
@@ -29,6 +37,10 @@ pub struct EbayDraftRequest {
   pub mpn: Option<String>,
   pub quantity_limit_per_buyer: Option<i64>,
   pub include_catalog_product_details: Option<bool>,
+}
+
+fn default_marketplace_id() -> String {
+  "EBAY_US".to_string()
 }
 
 #[derive(Debug, Serialize, utoipa::ToSchema)]
@@ -103,8 +115,7 @@ impl<'a> EbayListingService<'a> {
       access_token: &bearer,
     };
     let setup = account.seller_setup(&req.marketplace_id, false).await?;
-    let merchant_location_key = validate_draft_policy_selection(&setup, &req)?;
-    req.merchant_location_key = Some(merchant_location_key);
+    resolve_draft_profile(self.pool, org_id, &setup, &mut req).await?;
 
     let inv = EbayInventory {
       cfg: self.cfg,
@@ -261,10 +272,14 @@ impl<'a> EbayListingService<'a> {
   }
 }
 
-fn validate_draft_policy_selection(
-  setup: &Value,
-  req: &EbayDraftRequest,
-) -> Result<String, EbayListingServiceError> {
+struct SellerSetupOptions {
+  fulfillment_policies: Vec<EbayPolicyOption>,
+  payment_policies: Vec<EbayPolicyOption>,
+  return_policies: Vec<EbayPolicyOption>,
+  locations: Vec<EbayLocationOption>,
+}
+
+fn seller_setup_options(setup: &Value) -> SellerSetupOptions {
   let fulfillment_raw = setup
     .get("fulfillment_policies")
     .unwrap_or(&serde_json::Value::Null);
@@ -276,22 +291,135 @@ fn validate_draft_policy_selection(
     .unwrap_or(&serde_json::Value::Null);
   let locations_raw = setup.get("locations").unwrap_or(&serde_json::Value::Null);
 
-  validate_policy_selection(
-    &req.marketplace_id,
-    &policy_options(
+  SellerSetupOptions {
+    fulfillment_policies: policy_options(
       fulfillment_raw,
       "fulfillmentPolicies",
       "fulfillmentPolicyId",
     ),
-    &policy_options(payment_raw, "paymentPolicies", "paymentPolicyId"),
-    &policy_options(return_raw, "returnPolicies", "returnPolicyId"),
-    &location_options(locations_raw),
+    payment_policies: policy_options(payment_raw, "paymentPolicies", "paymentPolicyId"),
+    return_policies: policy_options(return_raw, "returnPolicies", "returnPolicyId"),
+    locations: location_options(locations_raw),
+  }
+}
+
+fn validate_profile(
+  marketplace_id: &str,
+  options: &SellerSetupOptions,
+  fulfillment_policy_id: &str,
+  payment_policy_id: &str,
+  return_policy_id: &str,
+  merchant_location_key: Option<&str>,
+) -> Result<String, EbayListingServiceError> {
+  validate_policy_selection(
+    marketplace_id,
+    &options.fulfillment_policies,
+    &options.payment_policies,
+    &options.return_policies,
+    &options.locations,
+    fulfillment_policy_id,
+    payment_policy_id,
+    return_policy_id,
+    merchant_location_key,
+  )
+  .map_err(policy_validation_error)
+}
+
+async fn resolve_draft_profile(
+  pool: &PgPool,
+  org_id: &str,
+  setup: &Value,
+  req: &mut EbayDraftRequest,
+) -> Result<(), EbayListingServiceError> {
+  let options = seller_setup_options(setup);
+
+  if !req.fulfillment_policy_id.is_empty()
+    || !req.payment_policy_id.is_empty()
+    || !req.return_policy_id.is_empty()
+    || req.merchant_location_key.is_some()
+  {
+    let key = validate_profile(
+      &req.marketplace_id,
+      &options,
+      &req.fulfillment_policy_id,
+      &req.payment_policy_id,
+      &req.return_policy_id,
+      req.merchant_location_key.as_deref(),
+    )?;
+    req.merchant_location_key = Some(key);
+    return Ok(());
+  }
+
+  if let Some(saved) = ebay_policy_defaults::get(pool, org_id, &req.marketplace_id).await? {
+    if let Ok(key) = validate_profile(
+      &req.marketplace_id,
+      &options,
+      &saved.fulfillment_policy_id,
+      &saved.payment_policy_id,
+      &saved.return_policy_id,
+      saved.merchant_location_key.as_deref(),
+    ) {
+      req.fulfillment_policy_id = saved.fulfillment_policy_id;
+      req.payment_policy_id = saved.payment_policy_id;
+      req.return_policy_id = saved.return_policy_id;
+      req.merchant_location_key = Some(key);
+      return Ok(());
+    }
+  }
+
+  let fulfillment = options
+    .fulfillment_policies
+    .iter()
+    .find(|policy| policy.supports_shipping != Some(false))
+    .ok_or_else(|| {
+      EbayListingServiceError::BadRequest("Create an eBay shipping policy first".into())
+    })?;
+  let payment = options.payment_policies.first().ok_or_else(|| {
+    EbayListingServiceError::BadRequest("Create an eBay payment policy first".into())
+  })?;
+  let returns = options.return_policies.first().ok_or_else(|| {
+    EbayListingServiceError::BadRequest("Create an eBay return policy first".into())
+  })?;
+  let location = options.locations.first().ok_or_else(|| {
+    EbayListingServiceError::BadRequest("Add a ship-from address for eBay first".into())
+  })?;
+
+  req.fulfillment_policy_id = fulfillment.id.clone();
+  req.payment_policy_id = payment.id.clone();
+  req.return_policy_id = returns.id.clone();
+  req.merchant_location_key = Some(location.key.clone());
+
+  ebay_policy_defaults::upsert(
+    pool,
+    &EbayPolicyDefaults {
+      org_id: org_id.to_string(),
+      marketplace_id: req.marketplace_id.clone(),
+      fulfillment_policy_id: req.fulfillment_policy_id.clone(),
+      payment_policy_id: req.payment_policy_id.clone(),
+      return_policy_id: req.return_policy_id.clone(),
+      merchant_location_key: req.merchant_location_key.clone(),
+    },
+  )
+  .await?;
+
+  Ok(())
+}
+
+#[cfg(test)]
+fn validate_draft_policy_selection(
+  setup: &Value,
+  req: &EbayDraftRequest,
+) -> Result<String, EbayListingServiceError> {
+  let options = seller_setup_options(setup);
+
+  validate_profile(
+    &req.marketplace_id,
+    &options,
     &req.fulfillment_policy_id,
     &req.payment_policy_id,
     &req.return_policy_id,
     req.merchant_location_key.as_deref(),
   )
-  .map_err(policy_validation_error)
 }
 
 fn policy_validation_error(error: EbayPolicyValidationError) -> EbayListingServiceError {

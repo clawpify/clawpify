@@ -251,33 +251,15 @@ impl<'a> EbayInventory<'a> {
       self.base(),
       urlencoding::encode(&input.merchant_location_key),
     );
-    let mut address = json!({
-      "country": input.country,
-    });
-    if let Some(value) = &input.address_line1 {
-      address["addressLine1"] = json!(value);
-    }
-    if let Some(value) = &input.city {
-      address["city"] = json!(value);
-    }
-    if let Some(value) = &input.state_or_province {
-      address["stateOrProvince"] = json!(value);
-    }
-    if let Some(value) = &input.postal_code {
-      address["postalCode"] = json!(value);
-    }
-
-    let body = json!({
-      "name": input.name,
-      "merchantLocationStatus": "ENABLED",
-      "locationTypes": ["WAREHOUSE"],
-      "location": {
-        "address": address
-      }
-    });
+    let body = create_inventory_location_body(input);
 
     let _: Value = self
-      .send_json(http_client::shared().post(url).json(&body))
+      .send_json(
+        http_client::shared()
+          .post(url)
+          .header("Content-Language", "en-US")
+          .json(&body),
+      )
       .await?;
 
     Ok(())
@@ -382,6 +364,33 @@ fn offer_body(input: &CreateOfferRequest, include_sku: bool) -> Value {
   body
 }
 
+fn create_inventory_location_body(input: &CreateInventoryLocationRequest) -> Value {
+  let mut address = json!({
+    "country": input.country,
+  });
+  if let Some(value) = &input.address_line1 {
+    address["addressLine1"] = json!(value);
+  }
+  if let Some(value) = &input.city {
+    address["city"] = json!(value);
+  }
+  if let Some(value) = &input.state_or_province {
+    address["stateOrProvince"] = json!(value);
+  }
+  if let Some(value) = &input.postal_code {
+    address["postalCode"] = json!(value);
+  }
+
+  json!({
+    "name": input.name,
+    "merchantLocationStatus": "ENABLED",
+    "locationTypes": ["WAREHOUSE"],
+    "location": {
+      "address": address
+    }
+  })
+}
+
 #[cfg(test)]
 mod tests {
   use super::*;
@@ -400,6 +409,18 @@ mod tests {
       merchant_location_key: Some("warehouse".to_string()),
       quantity_limit_per_buyer: Some(1),
       include_catalog_product_details: Some(true),
+    }
+  }
+
+  fn location_request() -> CreateInventoryLocationRequest {
+    CreateInventoryLocationRequest {
+      merchant_location_key: "clawpify-store-ship-from".to_string(),
+      name: "Store ship-from".to_string(),
+      address_line1: None,
+      city: None,
+      state_or_province: None,
+      postal_code: Some("V8W 1B3".to_string()),
+      country: "CA".to_string(),
     }
   }
 
@@ -423,5 +444,17 @@ mod tests {
 
     assert!(body.get("sku").is_none());
     assert_eq!(body["marketplaceId"], "EBAY_US");
+  }
+
+  #[test]
+  fn create_location_body_uses_warehouse_and_postal_address() {
+    let body = create_inventory_location_body(&location_request());
+
+    assert_eq!(body["name"], "Store ship-from");
+    assert_eq!(body["merchantLocationStatus"], "ENABLED");
+    assert_eq!(body["locationTypes"][0], "WAREHOUSE");
+    assert_eq!(body["location"]["address"]["country"], "CA");
+    assert_eq!(body["location"]["address"]["postalCode"], "V8W 1B3");
+    assert!(body["location"]["address"].get("city").is_none());
   }
 }

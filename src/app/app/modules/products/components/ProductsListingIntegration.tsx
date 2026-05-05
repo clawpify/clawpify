@@ -6,17 +6,18 @@ import { useToast } from "../../../../../lib/toast";
 import { copy } from "../../../utils/copy";
 import type {
   ConsignmentListingDto,
+  CreateEbayLocationRequest,
   EbayDraftRequest,
   EbayDraftResponse,
+  EbayLocationOption,
   EbayOAuthStartResponse,
   EbayOAuthStatusResponse,
-  EbayPoliciesResponse,
   EbayPublishResponse,
 } from "../types";
 import {
+  ebayLocationsPath,
   ebayOAuthStartPath,
   ebayOAuthStatusPath,
-  ebayPoliciesPath,
   listingEbayDraftPath,
   listingEbayPublishPath,
 } from "@/utils/networkFns";
@@ -27,6 +28,14 @@ type EbayBusyState = "idle" | "connecting" | "drafting" | "publishing";
 const MARKETPLACE_ID = "EBAY_US";
 const DEFAULT_CATEGORY_ID = "57988";
 const DEFAULT_CONDITION_ID = "USED_EXCELLENT";
+const INITIAL_SHIP_FROM_FORM: CreateEbayLocationRequest = {
+  name: "Store ship-from",
+  address_line1: "",
+  city: "",
+  state_or_province: "",
+  postal_code: "",
+  country: "US",
+};
 
 type Requirement = {
   label: string;
@@ -47,6 +56,11 @@ function ebayListingUrl(listingId: string | null): string | null {
   const id = listingId?.trim();
   if (!id) return null;
   return `https://www.ebay.com/itm/${encodeURIComponent(id)}`;
+}
+
+function inferredCountryFromPostalCode(postalCode: string): string {
+  const compact = postalCode.replace(/\s+/g, "").toUpperCase();
+  return /^[A-Z]\d[A-Z]\d[A-Z]\d$/.test(compact) ? "CA" : "US";
 }
 
 function RequirementRow({ label, ok }: Requirement) {
@@ -121,6 +135,10 @@ function IntegrationDetailsModal({
   canCreateDraft,
   busy,
   error,
+  needsShipFromAddress,
+  needsFullShipFromAddress,
+  shipFromForm,
+  onShipFromFieldChange,
 }: {
   listing: ConsignmentListingDto;
   requirements: Requirement[];
@@ -136,6 +154,10 @@ function IntegrationDetailsModal({
   canCreateDraft: boolean;
   busy: EbayBusyState;
   error: string | null;
+  needsShipFromAddress: boolean;
+  needsFullShipFromAddress: boolean;
+  shipFromForm: CreateEbayLocationRequest;
+  onShipFromFieldChange: (field: keyof CreateEbayLocationRequest, value: string) => void;
 }) {
   const publishedUrl = ebayListingUrl(published?.listing_id ?? null);
   const draftReady = Boolean(draft && !published);
@@ -218,6 +240,66 @@ function IntegrationDetailsModal({
             </div>
           </div>
 
+          {needsShipFromAddress ? (
+            <div className="mt-5 rounded-lg border border-amber-200 bg-amber-50 px-3 py-3">
+              <h3 className="text-sm font-semibold text-amber-900">Ship-from address</h3>
+              <p className="mt-1 text-xs leading-5 text-amber-800">
+                eBay needs this once before Clawpify can create drafts.
+              </p>
+              <div className="mt-3 grid gap-3 sm:grid-cols-[1.4fr_1fr]">
+                <label className="grid gap-1.5 text-sm">
+                  <span className="font-medium text-zinc-700">Label</span>
+                  <input
+                    value={shipFromForm.name}
+                    onChange={(e) => onShipFromFieldChange("name", e.target.value)}
+                    placeholder="Store ship-from"
+                    className="rounded-md border border-zinc-200 bg-white px-3 py-2 text-zinc-900 outline-none transition focus:border-zinc-400"
+                  />
+                </label>
+                <label className="grid gap-1.5 text-sm">
+                  <span className="font-medium text-zinc-700">ZIP / Postal code</span>
+                  <input
+                    value={shipFromForm.postal_code}
+                    onChange={(e) => onShipFromFieldChange("postal_code", e.target.value)}
+                    placeholder="V8W 1B3"
+                    className="rounded-md border border-zinc-200 bg-white px-3 py-2 text-zinc-900 outline-none transition focus:border-zinc-400"
+                  />
+                </label>
+              </div>
+              {needsFullShipFromAddress ? (
+                <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                  <label className="grid gap-1.5 text-sm">
+                    <span className="font-medium text-zinc-700">Street</span>
+                    <input
+                      value={shipFromForm.address_line1}
+                      onChange={(e) => onShipFromFieldChange("address_line1", e.target.value)}
+                      placeholder="123 Main St"
+                      className="rounded-md border border-zinc-200 bg-white px-3 py-2 text-zinc-900 outline-none transition focus:border-zinc-400"
+                    />
+                  </label>
+                  <label className="grid gap-1.5 text-sm">
+                    <span className="font-medium text-zinc-700">City</span>
+                    <input
+                      value={shipFromForm.city}
+                      onChange={(e) => onShipFromFieldChange("city", e.target.value)}
+                      placeholder="Victoria"
+                      className="rounded-md border border-zinc-200 bg-white px-3 py-2 text-zinc-900 outline-none transition focus:border-zinc-400"
+                    />
+                  </label>
+                  <label className="grid gap-1.5 text-sm">
+                    <span className="font-medium text-zinc-700">Province / State</span>
+                    <input
+                      value={shipFromForm.state_or_province}
+                      onChange={(e) => onShipFromFieldChange("state_or_province", e.target.value)}
+                      placeholder="BC"
+                      className="rounded-md border border-zinc-200 bg-white px-3 py-2 text-zinc-900 outline-none transition focus:border-zinc-400"
+                    />
+                  </label>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+
           {published?.listing_id ? (
             <p className="mt-5 rounded-lg border border-emerald-100 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
               {copy.products.detailIntegrationListingId}: {published.listing_id}
@@ -283,6 +365,10 @@ export function ProductsListingIntegration({ listing }: { listing: ConsignmentLi
   const [published, setPublished] = useState<EbayPublishResponse | null>(null);
   const [categoryId, setCategoryId] = useState(DEFAULT_CATEGORY_ID);
   const [conditionId, setConditionId] = useState(DEFAULT_CONDITION_ID);
+  const [needsShipFromAddress, setNeedsShipFromAddress] = useState(false);
+  const [needsFullShipFromAddress, setNeedsFullShipFromAddress] = useState(false);
+  const [shipFromForm, setShipFromForm] =
+    useState<CreateEbayLocationRequest>(INITIAL_SHIP_FROM_FORM);
   const [detailsOpen, setDetailsOpen] = useState(false);
 
   const connected = connectionStatus === "connected";
@@ -307,7 +393,22 @@ export function ProductsListingIntegration({ listing }: { listing: ConsignmentLi
   );
 
   const canCreateDraft =
-    connected && skuOk && titleOk && priceOk && categoryOk && conditionOk && busy === "idle";
+    connected &&
+    skuOk &&
+    titleOk &&
+    priceOk &&
+    categoryOk &&
+    conditionOk &&
+    busy === "idle" &&
+    (!needsShipFromAddress ||
+      Boolean(
+        shipFromForm.name.trim() &&
+          shipFromForm.postal_code.trim() &&
+          (!needsFullShipFromAddress ||
+            (shipFromForm.address_line1.trim() &&
+              shipFromForm.city.trim() &&
+              shipFromForm.state_or_province.trim()))
+      ));
 
   const refreshConnectionStatus = useCallback(async () => {
     setConnectionStatus("loading");
@@ -343,6 +444,13 @@ export function ProductsListingIntegration({ listing }: { listing: ConsignmentLi
     }
   }, [fetchAuth, showToast]);
 
+  const onShipFromFieldChange = useCallback(
+    (field: keyof CreateEbayLocationRequest, value: string) => {
+      setShipFromForm((current) => ({ ...current, [field]: value }));
+    },
+    []
+  );
+
   const createDraft = useCallback(async () => {
     if (!canCreateDraft) {
       setDetailsOpen(true);
@@ -351,32 +459,27 @@ export function ProductsListingIntegration({ listing }: { listing: ConsignmentLi
     setBusy("drafting");
     setError(null);
     try {
-      const policiesRes = await fetchAuth(ebayPoliciesPath(MARKETPLACE_ID));
-      const policies = await readJsonOrError<EbayPoliciesResponse>(policiesRes);
-      if (policies.missing.length > 0) {
-        throw new Error(
-          `Missing eBay setup: ${policies.missing.join(", ")}. Refresh eBay policies in Settings.`
-        );
-      }
-      if (!policies.defaults) {
-        throw new Error(
-          "Choose eBay listing policies in Settings > Integrations > eBay > Listing Details."
-        );
-      }
-      if (!policies.defaults.merchant_location_key) {
-        throw new Error(
-          "Choose an eBay inventory location in Settings > Integrations > eBay > Listing Details."
-        );
+      if (needsShipFromAddress) {
+        const locationBody: CreateEbayLocationRequest = {
+          name: shipFromForm.name.trim(),
+          address_line1: shipFromForm.address_line1.trim(),
+          city: shipFromForm.city.trim(),
+          state_or_province: shipFromForm.state_or_province.trim(),
+          postal_code: shipFromForm.postal_code.trim(),
+          country: inferredCountryFromPostalCode(shipFromForm.postal_code),
+        };
+        const locationRes = await fetchAuth(ebayLocationsPath, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(locationBody),
+        });
+        await readJsonOrError<EbayLocationOption>(locationRes);
       }
 
       const body: EbayDraftRequest = {
         marketplace_id: MARKETPLACE_ID,
         category_id: categoryId.trim(),
         condition_id: conditionId.trim(),
-        fulfillment_policy_id: policies.defaults.fulfillment_policy_id,
-        payment_policy_id: policies.defaults.payment_policy_id,
-        return_policy_id: policies.defaults.return_policy_id,
-        merchant_location_key: policies.defaults.merchant_location_key,
         quantity: 1,
         aspects: {},
       };
@@ -389,16 +492,33 @@ export function ProductsListingIntegration({ listing }: { listing: ConsignmentLi
       const created = await readJsonOrError<EbayDraftResponse>(draftRes);
       setDraft(created);
       setPublished(null);
+      setNeedsShipFromAddress(false);
+      setNeedsFullShipFromAddress(false);
       showToast(copy.products.detailIntegrationDraftCreated);
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Unknown error";
+      const lower = msg.toLowerCase();
+      if (lower.includes("ship-from address")) setNeedsShipFromAddress(true);
+      if (lower.includes("add street")) {
+        setNeedsShipFromAddress(true);
+        setNeedsFullShipFromAddress(true);
+      }
       setError(msg);
       setDetailsOpen(true);
       showToast(`${copy.products.detailIntegrationErrorPrefix} ${msg}`);
     } finally {
       setBusy("idle");
     }
-  }, [canCreateDraft, categoryId, conditionId, fetchAuth, listing.id, showToast]);
+  }, [
+    canCreateDraft,
+    categoryId,
+    conditionId,
+    fetchAuth,
+    listing.id,
+    needsShipFromAddress,
+    shipFromForm,
+    showToast,
+  ]);
 
   const publishDraft = useCallback(async () => {
     if (!draft || busy !== "idle") return;
@@ -520,6 +640,10 @@ export function ProductsListingIntegration({ listing }: { listing: ConsignmentLi
           canCreateDraft={canCreateDraft}
           busy={busy}
           error={error}
+          needsShipFromAddress={needsShipFromAddress}
+          needsFullShipFromAddress={needsFullShipFromAddress}
+          shipFromForm={shipFromForm}
+          onShipFromFieldChange={onShipFromFieldChange}
         />
       ) : null}
     </div>

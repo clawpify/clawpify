@@ -1,42 +1,24 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useAuthenticatedFetch } from "../../../../lib/api";
-import { messageFromErrorBody } from "../../../../lib/messageFromErrorBody";
-import { readJsonOrError } from "../../../../lib/readJsonOrError";
-import { useToast } from "../../../../lib/toast";
-import { SettingsIcon } from "../../../../icons/workspace-icons";
-import { useWorkspaceHeader } from "../../context/WorkspaceHeaderContext";
-import { copy } from "../../utils/copy";
-import {
-  ebayLocationsPath,
-  ebayOAuthStartPath,
-  ebayOAuthStatusPath,
-  ebayPoliciesPath,
-  ebayPolicyDefaultsPath,
-} from "@/utils/networkFns";
-import type {
-  CreateEbayLocationRequest,
-  EbayLocationOption,
-  EbayPoliciesResponse,
-  EbayPolicyDefaults,
-  SaveEbayPolicyDefaultsRequest,
-} from "../products/types";
 import {
   orangeBubbleClassName,
   orangeBubbleStyle,
 } from "@/components/buttonSurface";
-import type { EbaySetupHint, EbayStatus } from "./types";
+import { SettingsIcon } from "../../../../icons/workspace-icons";
+import { useAuthenticatedFetch } from "../../../../lib/api";
+import { messageFromErrorBody } from "../../../../lib/messageFromErrorBody";
+import { readJsonOrError } from "../../../../lib/readJsonOrError";
+import { useToast } from "../../../../lib/toast";
+import {
+  ebayOAuthStartPath,
+  ebayOAuthStatusPath,
+  ebayPoliciesPath,
+} from "@/utils/networkFns";
+import { useWorkspaceHeader } from "../../context/WorkspaceHeaderContext";
+import { copy } from "../../utils/copy";
+import type { EbayPoliciesResponse } from "../products/types";
+import type { EbayStatus } from "./types";
 
 const MARKETPLACE_ID = "EBAY_US";
-const EBAY_BUSINESS_POLICIES_URL = "https://www.ebay.com/bp/manage";
-const INITIAL_EBAY_LOCATION_FORM: CreateEbayLocationRequest = {
-  name: "Store ship-from",
-  address_line1: "",
-  city: "",
-  state_or_province: "",
-  postal_code: "",
-  country: "US",
-};
-
 const SETTINGS_HEADER_CONTEXT = copy.settings.title;
 const SETTINGS_HEADER_CONFIG = {
   context: SETTINGS_HEADER_CONTEXT,
@@ -47,56 +29,15 @@ const SETTINGS_HEADER_CONFIG = {
   ),
 };
 
-function inferredCountryFromPostalCode(postalCode: string): string {
-  const compact = postalCode.replace(/\s+/g, "").toUpperCase();
-  return /^[A-Z]\d[A-Z]\d[A-Z]\d$/.test(compact) ? "CA" : "US";
+function ebayReadinessText(setup: EbayPoliciesResponse | null): string {
+  if (!setup) return "Checking eBay setup...";
+  if (!setup.missing.length) return "Ready to create draft listings.";
+  if (setup.missing.includes("inventory location")) {
+    return "Need ship-from address. Add it when creating the first eBay draft.";
+  }
+  return `Missing eBay setup: ${setup.missing.join(", ")}.`;
 }
 
-// Build a setup warning that keeps eBay policies separate from inventory locations.
-function ebayPolicySetupHint(policies: EbayPoliciesResponse): EbaySetupHint | null {
-  if (!policies.missing.length) return null;
-  const counts = policies.counts ?? {
-    fulfillment: policies.fulfillment_policies.length,
-    payment: policies.payment_policies.length,
-    returns: policies.return_policies.length,
-    locations: policies.locations.length,
-  };
-  const allEmpty =
-    counts.fulfillment === 0 &&
-    counts.payment === 0 &&
-    counts.returns === 0 &&
-    counts.locations === 0;
-
-  if (allEmpty) {
-    return {
-      message: `Missing eBay setup for ${policies.marketplace_id}. Choose business policies and add a ship-from address once.`,
-      showBusinessPoliciesLink: true,
-    };
-  }
-
-  // eBay stores ship-from locations in Inventory API, separate from Account API policies.
-  const missingBusinessPolicies = policies.missing.filter(
-    (item) => item !== "inventory location"
-  );
-  const missingInventoryLocation = policies.missing.includes("inventory location");
-  const parts: string[] = [];
-
-  if (missingBusinessPolicies.length) {
-    parts.push(
-      `Missing eBay business policies for ${policies.marketplace_id}: ${missingBusinessPolicies.join(", ")}.`
-    );
-  }
-  if (missingInventoryLocation) {
-    parts.push("Need a ship-from address for eBay drafts. Add it once below.");
-  }
-
-  return {
-    message: parts.join(" "),
-    showBusinessPoliciesLink: missingBusinessPolicies.length > 0,
-  };
-}
-
-// Render workspace settings and attach the settings header context.
 export function SettingsPage() {
   const { setConfig } = useWorkspaceHeader();
 
@@ -133,40 +74,24 @@ export function SettingsPage() {
   );
 }
 
-// Manage eBay connection state and default listing setup.
 function EbayIntegrationCard() {
   const fetchAuth = useAuthenticatedFetch();
   const { showToast } = useToast();
   const [status, setStatus] = useState<EbayStatus>("loading");
   const [connectLoading, setConnectLoading] = useState(false);
-  const [policies, setPolicies] = useState<EbayPoliciesResponse | null>(null);
-  const [policiesLoading, setPoliciesLoading] = useState(false);
-  const [policiesSaving, setPoliciesSaving] = useState(false);
-  const [locationSaving, setLocationSaving] = useState(false);
-  const [policyError, setPolicyError] = useState<string | null>(null);
-  const [fulfillmentPolicyId, setFulfillmentPolicyId] = useState("");
-  const [paymentPolicyId, setPaymentPolicyId] = useState("");
-  const [returnPolicyId, setReturnPolicyId] = useState("");
-  const [merchantLocationKey, setMerchantLocationKey] = useState("");
-  const [locationForm, setLocationForm] = useState<CreateEbayLocationRequest>(
-    INITIAL_EBAY_LOCATION_FORM
-  );
+  const [setup, setSetup] = useState<EbayPoliciesResponse | null>(null);
+  const [setupLoading, setSetupLoading] = useState(false);
+  const [setupError, setSetupError] = useState<string | null>(null);
   const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  /**
-   * Apply the default policies and inventory location to the UI.
-   * @param next - The eBay policies response from the API.
-   */
-  const applyDefaults = useCallback((next: EbayPoliciesResponse) => {
-    setFulfillmentPolicyId(
-      next.defaults?.fulfillment_policy_id || next.fulfillment_policies[0]?.id || ""
-    );
-    setPaymentPolicyId(next.defaults?.payment_policy_id || next.payment_policies[0]?.id || "");
-    setReturnPolicyId(next.defaults?.return_policy_id || next.return_policies[0]?.id || "");
-    setMerchantLocationKey(next.defaults?.merchant_location_key || next.locations[0]?.key || "");
-  }, []);
+  const connected = status === "connected";
+  const statusText =
+    status === "loading"
+      ? copy.settings.integrationStatusChecking
+      : connected
+        ? copy.settings.integrationStatusConnected
+        : copy.settings.integrationStatusDisconnected;
 
-  // Check whether this workspace has an active eBay connection.
   const refreshStatus = useCallback(async (opts?: { quiet?: boolean }): Promise<EbayStatus> => {
     if (!opts?.quiet) setStatus("loading");
     const res = await fetchAuth(ebayOAuthStatusPath);
@@ -180,35 +105,29 @@ function EbayIntegrationCard() {
     return "disconnected";
   }, [fetchAuth]);
 
-  // Stop OAuth completion polling after connect/reconnect attempts finish.
   const clearStatusPoll = useCallback(() => {
-    if (pollTimerRef.current) {
-      clearInterval(pollTimerRef.current);
-      pollTimerRef.current = null;
-    }
+    if (!pollTimerRef.current) return;
+    clearInterval(pollTimerRef.current);
+    pollTimerRef.current = null;
   }, []);
 
-  // Load eBay business policies plus inventory locations for default selection.
-  const loadPolicies = useCallback(async (): Promise<EbayPoliciesResponse | null> => {
-    setPoliciesLoading(true);
-    setPolicyError(null);
+  const loadSetup = useCallback(async () => {
+    if (!connected) return;
+    setSetupLoading(true);
+    setSetupError(null);
     try {
       const res = await fetchAuth(ebayPoliciesPath(MARKETPLACE_ID));
       const next = await readJsonOrError<EbayPoliciesResponse>(res);
-      setPolicies(next);
-      applyDefaults(next);
-      return next;
+      setSetup(next);
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Could not load eBay policies";
-      setPolicyError(msg);
+      const msg = e instanceof Error ? e.message : "Could not check eBay setup";
+      setSetupError(msg);
       showToast(msg);
-      return null;
     } finally {
-      setPoliciesLoading(false);
+      setSetupLoading(false);
     }
-  }, [applyDefaults, fetchAuth, showToast]);
+  }, [connected, fetchAuth, showToast]);
 
-  // Poll briefly after redirect starts so returning from eBay updates the UI.
   const startStatusPoll = useCallback(() => {
     clearStatusPoll();
     const stopAt = Date.now() + 60_000;
@@ -220,7 +139,6 @@ function EbayIntegrationCard() {
     pollTimerRef.current = setInterval(() => void tick(), 2_000);
   }, [clearStatusPoll, refreshStatus]);
 
-  // Refresh connection status on first render and when user returns to this tab.
   useEffect(() => {
     void refreshStatus();
     const onFocus = () => void refreshStatus({ quiet: true });
@@ -235,31 +153,23 @@ function EbayIntegrationCard() {
     };
   }, [refreshStatus]);
 
-  // Fetch setup only while connected; clear stale setup when disconnected.
   useEffect(() => {
-    if (status === "connected") void loadPolicies();
+    if (connected) void loadSetup();
     if (status === "disconnected") {
-      setPolicies(null);
-      setPolicyError(null);
+      setSetup(null);
+      setSetupError(null);
     }
-  }, [loadPolicies, status]);
+  }, [connected, loadSetup, status]);
 
-  // Clean up any active polling timer when the card unmounts.
   useEffect(() => clearStatusPoll, [clearStatusPoll]);
 
-  // Start eBay OAuth, using reconnect mode to reset stale saved setup.
   const onConnect = useCallback(async () => {
     setConnectLoading(true);
     const reconnect = status === "connected";
     let redirecting = false;
     if (reconnect) {
-      setPolicies(null);
-      setPolicyError(null);
-      setFulfillmentPolicyId("");
-      setPaymentPolicyId("");
-      setReturnPolicyId("");
-      setMerchantLocationKey("");
-      setLocationForm(INITIAL_EBAY_LOCATION_FORM);
+      setSetup(null);
+      setSetupError(null);
       setStatus("loading");
     }
     try {
@@ -285,8 +195,7 @@ function EbayIntegrationCard() {
         return;
       }
 
-      const msg = messageFromErrorBody(payload) ?? `Could not start eBay link (${res.status})`;
-      showToast(msg);
+      showToast(messageFromErrorBody(payload) ?? `Could not start eBay link (${res.status})`);
     } catch (e) {
       showToast(e instanceof Error ? e.message : "Could not start eBay link");
     } finally {
@@ -294,123 +203,6 @@ function EbayIntegrationCard() {
       setConnectLoading(false);
     }
   }, [fetchAuth, refreshStatus, showToast, startStatusPoll, status]);
-
-  const onLocationFieldChange = useCallback(
-    (field: keyof CreateEbayLocationRequest, value: string) => {
-      setLocationForm((current) => ({ ...current, [field]: value }));
-    },
-    []
-  );
-
-  const appendCreatedLocation = useCallback((created: EbayLocationOption) => {
-    setPolicies((current) => {
-      if (!current) return current;
-      const hasLocation = current.locations.some((location) => location.key === created.key);
-      const locations = hasLocation ? current.locations : [...current.locations, created];
-      return {
-        ...current,
-        locations,
-        missing: current.missing.filter((item) => item !== "inventory location"),
-        counts: current.counts ? { ...current.counts, locations: locations.length } : current.counts,
-      };
-    });
-  }, []);
-
-  const onCreateLocation = useCallback(async () => {
-    const body: CreateEbayLocationRequest = {
-      name: locationForm.name.trim(),
-      address_line1: locationForm.address_line1.trim(),
-      city: locationForm.city.trim(),
-      state_or_province: locationForm.state_or_province.trim(),
-      postal_code: locationForm.postal_code.trim(),
-      country: inferredCountryFromPostalCode(locationForm.postal_code),
-    };
-
-    setLocationSaving(true);
-    setPolicyError(null);
-    try {
-      const res = await fetchAuth(ebayLocationsPath, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      const created = await readJsonOrError<EbayLocationOption>(res);
-      appendCreatedLocation(created);
-      setMerchantLocationKey(created.key);
-      const refreshed = await loadPolicies();
-      if (refreshed?.locations.some((location) => location.key === created.key)) {
-        setMerchantLocationKey(created.key);
-      } else {
-        appendCreatedLocation(created);
-      }
-      showToast("eBay ship-from location created.");
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : "Could not create eBay ship-from location";
-      setPolicyError(msg);
-      showToast(msg);
-    } finally {
-      setLocationSaving(false);
-    }
-  }, [appendCreatedLocation, fetchAuth, loadPolicies, locationForm, showToast]);
-
-  // Persist selected policies and ship-from inventory location for future drafts.
-  const onSavePolicies = useCallback(async () => {
-    const body: SaveEbayPolicyDefaultsRequest = {
-      marketplace_id: MARKETPLACE_ID,
-      fulfillment_policy_id: fulfillmentPolicyId,
-      payment_policy_id: paymentPolicyId,
-      return_policy_id: returnPolicyId,
-      merchant_location_key: merchantLocationKey || null,
-    };
-
-    setPoliciesSaving(true);
-    setPolicyError(null);
-    try {
-      const res = await fetchAuth(ebayPolicyDefaultsPath, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      const saved = await readJsonOrError<EbayPolicyDefaults>(res);
-      setPolicies((current) => (current ? { ...current, defaults: saved } : current));
-      showToast("eBay listing defaults saved.");
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : "Could not save eBay listing defaults";
-      setPolicyError(msg);
-      showToast(msg);
-    } finally {
-      setPoliciesSaving(false);
-    }
-  }, [
-    fetchAuth,
-    fulfillmentPolicyId,
-    merchantLocationKey,
-    paymentPolicyId,
-    returnPolicyId,
-    showToast,
-  ]);
-
-  const connected = status === "connected";
-  const policySetupHint = policies ? ebayPolicySetupHint(policies) : null;
-  const missingInventoryLocation = policies?.missing.includes("inventory location") ?? false;
-  const shouldShowLocationForm =
-    connected && (missingInventoryLocation || !policies?.locations.length);
-  const canCreateLocation =
-    connected &&
-    !locationSaving &&
-    Boolean(
-      locationForm.name.trim() && locationForm.postal_code.trim()
-    );
-  const canSavePolicies =
-    connected &&
-    !policiesSaving &&
-    Boolean(fulfillmentPolicyId && paymentPolicyId && returnPolicyId && merchantLocationKey);
-  const statusText =
-    status === "loading"
-      ? copy.settings.integrationStatusChecking
-      : connected
-        ? copy.settings.integrationStatusConnected
-        : copy.settings.integrationStatusDisconnected;
 
   return (
     <div className="p-5">
@@ -454,182 +246,24 @@ function EbayIntegrationCard() {
 
       {connected ? (
         <div className="mt-5 border-t border-zinc-100 pt-5">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <h3 className="text-sm font-semibold text-zinc-950">Listing defaults</h3>
-              <p className="mt-1 max-w-2xl text-sm leading-6 text-zinc-600">
-                Choose default eBay policies for listing drafts.
-              </p>
-            </div>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-sm text-zinc-600">
+              {setupLoading ? "Checking eBay setup..." : ebayReadinessText(setup)}
+            </p>
             <button
               type="button"
-              onClick={() => void loadPolicies()}
-              disabled={policiesLoading}
+              onClick={() => void loadSetup()}
+              disabled={setupLoading}
               className="rounded-md border border-zinc-200 bg-white px-3 py-1.5 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {policiesLoading ? "Refreshing..." : "Refresh setup"}
+              {setupLoading ? "Checking..." : "Check setup"}
             </button>
           </div>
-
-          {policySetupHint ? (
-            <p className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
-              {policySetupHint.message}
-              {policySetupHint.showBusinessPoliciesLink ? (
-                <>
-                  {" "}
-                  <a
-                    href={EBAY_BUSINESS_POLICIES_URL}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="font-medium underline decoration-amber-500 underline-offset-2"
-                  >
-                    Open eBay business policies
-                  </a>
-                  .
-                </>
-              ) : null}
+          {setupError ? (
+            <p className="mt-3 rounded-lg border border-red-100 bg-red-50 px-3 py-2 text-sm text-red-700">
+              {setupError}
             </p>
           ) : null}
-          {policyError ? (
-            <p className="mt-4 rounded-lg border border-red-100 bg-red-50 px-3 py-2 text-sm text-red-700">
-              {policyError}
-            </p>
-          ) : null}
-
-          <div className="mt-4 grid gap-4">
-            <div className="rounded-lg border border-zinc-100 bg-zinc-50/50 p-3">
-              <div>
-                <h4 className="text-sm font-semibold text-zinc-950">Business policies</h4>
-              </div>
-              <div className="mt-3 grid gap-3 md:grid-cols-3">
-                <label className="grid gap-1.5 text-sm">
-                  <span className="font-medium text-zinc-700">Shipping policy</span>
-                  <select
-                    value={fulfillmentPolicyId}
-                    onChange={(e) => setFulfillmentPolicyId(e.target.value)}
-                    className="rounded-md border border-zinc-200 bg-white px-3 py-2 text-zinc-900 outline-none transition focus:border-zinc-400"
-                  >
-                    <option value="">Select shipping policy</option>
-                    {policies?.fulfillment_policies.map((policy) => (
-                      <option key={policy.id} value={policy.id}>
-                        {policy.supports_shipping === false
-                          ? `${policy.name} (local pickup only)`
-                          : policy.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="grid gap-1.5 text-sm">
-                  <span className="font-medium text-zinc-700">Payment policy</span>
-                  <select
-                    value={paymentPolicyId}
-                    onChange={(e) => setPaymentPolicyId(e.target.value)}
-                    className="rounded-md border border-zinc-200 bg-white px-3 py-2 text-zinc-900 outline-none transition focus:border-zinc-400"
-                  >
-                    <option value="">Select payment policy</option>
-                    {policies?.payment_policies.map((policy) => (
-                      <option key={policy.id} value={policy.id}>
-                        {policy.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="grid gap-1.5 text-sm">
-                  <span className="font-medium text-zinc-700">Return policy</span>
-                  <select
-                    value={returnPolicyId}
-                    onChange={(e) => setReturnPolicyId(e.target.value)}
-                    className="rounded-md border border-zinc-200 bg-white px-3 py-2 text-zinc-900 outline-none transition focus:border-zinc-400"
-                  >
-                    <option value="">Select return policy</option>
-                    {policies?.return_policies.map((policy) => (
-                      <option key={policy.id} value={policy.id}>
-                        {policy.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-            </div>
-
-            <div className="rounded-lg border border-zinc-100 bg-white p-3">
-              <div>
-                <h4 className="text-sm font-semibold text-zinc-950">Ship-from address</h4>
-                <p className="mt-1 text-xs leading-5 text-zinc-500">
-                  Used by eBay when creating draft offers.
-                </p>
-              </div>
-              <label className="mt-3 grid gap-1.5 text-sm md:max-w-xl">
-                <span className="font-medium text-zinc-700">Saved address</span>
-                <select
-                  value={merchantLocationKey}
-                  onChange={(e) => setMerchantLocationKey(e.target.value)}
-                  className="rounded-md border border-zinc-200 bg-white px-3 py-2 text-zinc-900 outline-none transition focus:border-zinc-400"
-                >
-                  <option value="">
-                    {policies?.locations.length
-                      ? "Select ship-from address"
-                      : "Add ship-from address below"}
-                  </option>
-                  {policies?.locations.map((location) => (
-                    <option key={location.key} value={location.key}>
-                      {location.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              {shouldShowLocationForm ? (
-                <div className="mt-4 rounded-lg border border-zinc-200 bg-zinc-50/60 p-3">
-                  <div>
-                    <h5 className="text-sm font-semibold text-zinc-950">
-                      Add ship-from address
-                    </h5>
-                  </div>
-                  <div className="mt-3 grid gap-3 md:grid-cols-[1.4fr_1fr]">
-                    <label className="grid gap-1.5 text-sm">
-                      <span className="font-medium text-zinc-700">Label</span>
-                      <input
-                        value={locationForm.name}
-                        onChange={(e) => onLocationFieldChange("name", e.target.value)}
-                        placeholder="Store ship-from"
-                        className="rounded-md border border-zinc-200 bg-white px-3 py-2 text-zinc-900 outline-none transition focus:border-zinc-400"
-                      />
-                    </label>
-                    <label className="grid gap-1.5 text-sm">
-                      <span className="font-medium text-zinc-700">ZIP / Postal code</span>
-                      <input
-                        value={locationForm.postal_code}
-                        onChange={(e) => onLocationFieldChange("postal_code", e.target.value)}
-                        placeholder="78701"
-                        className="rounded-md border border-zinc-200 bg-white px-3 py-2 text-zinc-900 outline-none transition focus:border-zinc-400"
-                      />
-                    </label>
-                  </div>
-                  <div className="mt-3 flex justify-end">
-                    <button
-                      type="button"
-                      disabled={!canCreateLocation}
-                      onClick={() => void onCreateLocation()}
-                      className="rounded-md bg-zinc-950 px-4 py-2 text-sm font-medium text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      {locationSaving ? "Adding..." : "Add address"}
-                    </button>
-                  </div>
-                </div>
-              ) : null}
-            </div>
-          </div>
-
-          <div className="mt-4 flex justify-end">
-            <button
-              type="button"
-              disabled={!canSavePolicies}
-              onClick={() => void onSavePolicies()}
-              className="rounded-md bg-zinc-950 px-4 py-2 text-sm font-medium text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {policiesSaving ? "Saving..." : "Save listing defaults"}
-            </button>
-          </div>
         </div>
       ) : null}
     </div>
