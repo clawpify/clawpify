@@ -4,6 +4,7 @@ import { RUST_API_URL } from "./constants";
 import { messageFromErrorBody } from "./messageFromErrorBody";
 
 function apiUrl(path: string): string {
+  if (typeof window !== "undefined") return path;
   const base = RUST_API_URL;
   if (!base) return path;
   return new URL(path, base).href;

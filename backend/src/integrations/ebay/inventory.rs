@@ -60,10 +60,10 @@ pub struct CreateOfferRequest {
 pub struct CreateInventoryLocationRequest {
   pub merchant_location_key: String,
   pub name: String,
-  pub address_line1: String,
-  pub city: String,
-  pub state_or_province: String,
-  pub postal_code: String,
+  pub address_line1: Option<String>,
+  pub city: Option<String>,
+  pub state_or_province: Option<String>,
+  pub postal_code: Option<String>,
   pub country: String,
 }
 
@@ -240,7 +240,8 @@ impl<'a> EbayInventory<'a> {
     Ok(())
   }
 
-  /// Create a seller ship-from location for eBay Inventory API offers.
+  /// Create a seller ship-from location. eBay requires a seller-defined
+  /// merchantLocationKey plus a physical location for Inventory API offers.
   pub async fn create_inventory_location(
     &self,
     input: &CreateInventoryLocationRequest,
@@ -250,18 +251,28 @@ impl<'a> EbayInventory<'a> {
       self.base(),
       urlencoding::encode(&input.merchant_location_key),
     );
+    let mut address = json!({
+      "country": input.country,
+    });
+    if let Some(value) = &input.address_line1 {
+      address["addressLine1"] = json!(value);
+    }
+    if let Some(value) = &input.city {
+      address["city"] = json!(value);
+    }
+    if let Some(value) = &input.state_or_province {
+      address["stateOrProvince"] = json!(value);
+    }
+    if let Some(value) = &input.postal_code {
+      address["postalCode"] = json!(value);
+    }
+
     let body = json!({
       "name": input.name,
       "merchantLocationStatus": "ENABLED",
       "locationTypes": ["WAREHOUSE"],
       "location": {
-        "address": {
-          "addressLine1": input.address_line1,
-          "city": input.city,
-          "stateOrProvince": input.state_or_province,
-          "postalCode": input.postal_code,
-          "country": input.country,
-        }
+        "address": address
       }
     });
 

@@ -109,9 +109,13 @@ fn default_location_country() -> String {
 #[derive(serde::Deserialize, utoipa::ToSchema)]
 pub struct CreateEbayLocationRequest {
   pub name: String,
+  #[serde(default)]
   pub address_line1: String,
+  #[serde(default)]
   pub city: String,
+  #[serde(default)]
   pub state_or_province: String,
+  #[serde(default)]
   pub postal_code: String,
   #[serde(default = "default_location_country")]
   pub country: String,
@@ -503,15 +507,11 @@ async fn create_ebay_location(
   let state_or_province = cleaned_field(&req.state_or_province);
   let postal_code = cleaned_field(&req.postal_code);
   let country = cleaned_field(&req.country).to_ascii_uppercase();
-  if name.is_empty()
-    || address_line1.is_empty()
-    || city.is_empty()
-    || state_or_province.is_empty()
-    || postal_code.is_empty()
-    || country.is_empty()
-  {
+  let has_postal_address = !postal_code.is_empty();
+  let has_city_region_address = !city.is_empty() && !state_or_province.is_empty();
+  if name.is_empty() || country.is_empty() || (!has_postal_address && !has_city_region_address) {
     return Err(error::bad_request(
-      "name, address_line1, city, state_or_province, postal_code, and country are required",
+      "name, country, and either postal_code or city plus state_or_province are required",
     ));
   }
 
@@ -549,10 +549,12 @@ async fn create_ebay_location(
     .create_inventory_location(&EbayCreateInventoryLocationRequest {
       merchant_location_key: key.clone(),
       name: name.clone(),
-      address_line1: normalized_req.address_line1,
-      city: normalized_req.city,
-      state_or_province: normalized_req.state_or_province,
-      postal_code: normalized_req.postal_code,
+      address_line1: (!normalized_req.address_line1.is_empty())
+        .then_some(normalized_req.address_line1),
+      city: (!normalized_req.city.is_empty()).then_some(normalized_req.city),
+      state_or_province: (!normalized_req.state_or_province.is_empty())
+        .then_some(normalized_req.state_or_province),
+      postal_code: (!normalized_req.postal_code.is_empty()).then_some(normalized_req.postal_code),
       country: normalized_req.country,
     })
     .await

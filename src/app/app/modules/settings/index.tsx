@@ -29,7 +29,7 @@ import type { EbaySetupHint, EbayStatus } from "./types";
 const MARKETPLACE_ID = "EBAY_US";
 const EBAY_BUSINESS_POLICIES_URL = "https://www.ebay.com/bp/manage";
 const INITIAL_EBAY_LOCATION_FORM: CreateEbayLocationRequest = {
-  name: "Clawpify Ship From",
+  name: "Store ship-from",
   address_line1: "",
   city: "",
   state_or_province: "",
@@ -64,7 +64,7 @@ function ebayPolicySetupHint(policies: EbayPoliciesResponse): EbaySetupHint | nu
 
   if (allEmpty) {
     return {
-      message: `eBay returned 0 business policy and ship-from location records for ${policies.marketplace_id}. Make sure the connected eBay account is the same Seller Hub account, policies exist for this marketplace, and create a ship-from location below.`,
+      message: `Missing eBay setup for ${policies.marketplace_id}. Choose business policies and add a ship-from address once.`,
       showBusinessPoliciesLink: true,
     };
   }
@@ -82,45 +82,13 @@ function ebayPolicySetupHint(policies: EbayPoliciesResponse): EbaySetupHint | nu
     );
   }
   if (missingInventoryLocation) {
-    parts.push(
-      `Missing ship-from location for ${policies.marketplace_id}. Create one below, then save listing defaults.`
-    );
+    parts.push("Need a ship-from address for eBay drafts. Add it once below.");
   }
-  parts.push("Business policies and inventory locations are separate eBay setup items.");
 
   return {
     message: parts.join(" "),
     showBusinessPoliciesLink: missingBusinessPolicies.length > 0,
   };
-}
-
-function EbayListingDefaultsGuide() {
-  return (
-    <div className="mt-4 rounded-lg border border-blue-100 bg-blue-50/70 px-3 py-3 text-sm text-blue-950">
-      <p className="font-medium">Setup guide</p>
-      <ol className="mt-2 grid gap-1.5 pl-4 text-blue-900">
-        <li className="list-decimal">
-          Create shipping, payment, and return policies in{" "}
-          <a
-            href={EBAY_BUSINESS_POLICIES_URL}
-            target="_blank"
-            rel="noreferrer"
-            className="font-medium underline decoration-blue-500 underline-offset-2"
-          >
-            eBay business policies
-          </a>
-          .
-        </li>
-        <li className="list-decimal">
-          If no ship-from location appears, create one below for this connected eBay
-          account.
-        </li>
-        <li className="list-decimal">
-          Click Refresh setup, choose each default here, then save listing defaults.
-        </li>
-      </ol>
-    </div>
-  );
 }
 
 // Render workspace settings and attach the settings header context.
@@ -427,9 +395,6 @@ function EbayIntegrationCard() {
     !locationSaving &&
     Boolean(
       locationForm.name.trim() &&
-        locationForm.address_line1.trim() &&
-        locationForm.city.trim() &&
-        locationForm.state_or_province.trim() &&
         locationForm.postal_code.trim() &&
         locationForm.country.trim()
     );
@@ -490,8 +455,7 @@ function EbayIntegrationCard() {
             <div>
               <h3 className="text-sm font-semibold text-zinc-950">Listing defaults</h3>
               <p className="mt-1 max-w-2xl text-sm leading-6 text-zinc-600">
-                Choose the eBay business policies and separate ship-from location Clawpify
-                should use when creating listing drafts.
+                Choose default eBay policies for listing drafts.
               </p>
             </div>
             <button
@@ -503,8 +467,6 @@ function EbayIntegrationCard() {
               {policiesLoading ? "Refreshing..." : "Refresh setup"}
             </button>
           </div>
-
-          <EbayListingDefaultsGuide />
 
           {policySetupHint ? (
             <p className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
@@ -535,9 +497,6 @@ function EbayIntegrationCard() {
             <div className="rounded-lg border border-zinc-100 bg-zinc-50/50 p-3">
               <div>
                 <h4 className="text-sm font-semibold text-zinc-950">Business policies</h4>
-                <p className="mt-1 text-xs leading-5 text-zinc-500">
-                  eBay policies for buyer-facing shipping, payment, and returns.
-                </p>
               </div>
               <div className="mt-3 grid gap-3 md:grid-cols-3">
                 <label className="grid gap-1.5 text-sm">
@@ -592,14 +551,13 @@ function EbayIntegrationCard() {
 
             <div className="rounded-lg border border-zinc-100 bg-white p-3">
               <div>
-                <h4 className="text-sm font-semibold text-zinc-950">Ship-from location</h4>
+                <h4 className="text-sm font-semibold text-zinc-950">Ship-from address</h4>
                 <p className="mt-1 text-xs leading-5 text-zinc-500">
-                  Not a business policy. This is the address eBay uses as the offer
-                  ship-from location.
+                  Used by eBay when creating draft offers.
                 </p>
               </div>
               <label className="mt-3 grid gap-1.5 text-sm md:max-w-xl">
-                <span className="font-medium text-zinc-700">Inventory location</span>
+                <span className="font-medium text-zinc-700">Saved address</span>
                 <select
                   value={merchantLocationKey}
                   onChange={(e) => setMerchantLocationKey(e.target.value)}
@@ -607,8 +565,8 @@ function EbayIntegrationCard() {
                 >
                   <option value="">
                     {policies?.locations.length
-                      ? "Select inventory location"
-                      : "Create an eBay inventory location, then refresh"}
+                      ? "Select ship-from address"
+                      : "Add ship-from address below"}
                   </option>
                   {policies?.locations.map((location) => (
                     <option key={location.key} value={location.key}>
@@ -616,79 +574,42 @@ function EbayIntegrationCard() {
                     </option>
                   ))}
                 </select>
-                <span className="text-xs leading-5 text-zinc-500">
-                  Use a location like Warehouse, Store, or Home office.
-                </span>
               </label>
               {shouldShowLocationForm ? (
                 <div className="mt-4 rounded-lg border border-zinc-200 bg-zinc-50/60 p-3">
                   <div>
                     <h5 className="text-sm font-semibold text-zinc-950">
-                      Create ship-from location
+                      Add ship-from address
                     </h5>
-                    <p className="mt-1 text-xs leading-5 text-zinc-500">
-                      Create a Clawpify ship-from location for this eBay account.
-                    </p>
                   </div>
-                  <div className="mt-3 grid gap-3 md:grid-cols-2">
+                  <div className="mt-3 grid gap-3 md:grid-cols-[1.4fr_1fr_0.7fr]">
                     <label className="grid gap-1.5 text-sm">
-                      <span className="font-medium text-zinc-700">Location name</span>
+                      <span className="font-medium text-zinc-700">Label</span>
                       <input
                         value={locationForm.name}
                         onChange={(e) => onLocationFieldChange("name", e.target.value)}
-                        placeholder="Clawpify Ship From"
+                        placeholder="Store ship-from"
                         className="rounded-md border border-zinc-200 bg-white px-3 py-2 text-zinc-900 outline-none transition focus:border-zinc-400"
                       />
                     </label>
                     <label className="grid gap-1.5 text-sm">
-                      <span className="font-medium text-zinc-700">Street address</span>
+                      <span className="font-medium text-zinc-700">ZIP / Postal code</span>
                       <input
-                        value={locationForm.address_line1}
-                        onChange={(e) => onLocationFieldChange("address_line1", e.target.value)}
-                        placeholder="123 Main St"
+                        value={locationForm.postal_code}
+                        onChange={(e) => onLocationFieldChange("postal_code", e.target.value)}
+                        placeholder="78701"
                         className="rounded-md border border-zinc-200 bg-white px-3 py-2 text-zinc-900 outline-none transition focus:border-zinc-400"
                       />
                     </label>
                     <label className="grid gap-1.5 text-sm">
-                      <span className="font-medium text-zinc-700">City</span>
+                      <span className="font-medium text-zinc-700">Country</span>
                       <input
-                        value={locationForm.city}
-                        onChange={(e) => onLocationFieldChange("city", e.target.value)}
-                        placeholder="Austin"
+                        value={locationForm.country}
+                        onChange={(e) => onLocationFieldChange("country", e.target.value)}
+                        placeholder="US"
                         className="rounded-md border border-zinc-200 bg-white px-3 py-2 text-zinc-900 outline-none transition focus:border-zinc-400"
                       />
                     </label>
-                    <div className="grid gap-3 sm:grid-cols-[1fr_1fr_0.8fr] md:col-span-2">
-                      <label className="grid gap-1.5 text-sm">
-                        <span className="font-medium text-zinc-700">State</span>
-                        <input
-                          value={locationForm.state_or_province}
-                          onChange={(e) =>
-                            onLocationFieldChange("state_or_province", e.target.value)
-                          }
-                          placeholder="TX"
-                          className="rounded-md border border-zinc-200 bg-white px-3 py-2 text-zinc-900 outline-none transition focus:border-zinc-400"
-                        />
-                      </label>
-                      <label className="grid gap-1.5 text-sm">
-                        <span className="font-medium text-zinc-700">ZIP</span>
-                        <input
-                          value={locationForm.postal_code}
-                          onChange={(e) => onLocationFieldChange("postal_code", e.target.value)}
-                          placeholder="78701"
-                          className="rounded-md border border-zinc-200 bg-white px-3 py-2 text-zinc-900 outline-none transition focus:border-zinc-400"
-                        />
-                      </label>
-                      <label className="grid gap-1.5 text-sm">
-                        <span className="font-medium text-zinc-700">Country</span>
-                        <input
-                          value={locationForm.country}
-                          onChange={(e) => onLocationFieldChange("country", e.target.value)}
-                          placeholder="US"
-                          className="rounded-md border border-zinc-200 bg-white px-3 py-2 text-zinc-900 outline-none transition focus:border-zinc-400"
-                        />
-                      </label>
-                    </div>
                   </div>
                   <div className="mt-3 flex justify-end">
                     <button
@@ -697,7 +618,7 @@ function EbayIntegrationCard() {
                       onClick={() => void onCreateLocation()}
                       className="rounded-md bg-zinc-950 px-4 py-2 text-sm font-medium text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
                     >
-                      {locationSaving ? "Creating..." : "Create ship-from location"}
+                      {locationSaving ? "Adding..." : "Add address"}
                     </button>
                   </div>
                 </div>
