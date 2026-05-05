@@ -207,6 +207,34 @@ fn cleaned_field(value: &str) -> String {
     .join(" ")
 }
 
+fn is_canadian_postal_code(value: &str) -> bool {
+  let compact: String = value
+    .chars()
+    .filter(|ch| !ch.is_whitespace())
+    .map(|ch| ch.to_ascii_uppercase())
+    .collect();
+  let chars: Vec<char> = compact.chars().collect();
+  chars.len() == 6
+    && chars[0].is_ascii_alphabetic()
+    && chars[1].is_ascii_digit()
+    && chars[2].is_ascii_alphabetic()
+    && chars[3].is_ascii_digit()
+    && chars[4].is_ascii_alphabetic()
+    && chars[5].is_ascii_digit()
+}
+
+fn inferred_location_country(country: &str, postal_code: &str) -> String {
+  let country = cleaned_field(country).to_ascii_uppercase();
+  if !country.is_empty() {
+    return country;
+  }
+  if is_canadian_postal_code(postal_code) {
+    "CA".to_string()
+  } else {
+    "US".to_string()
+  }
+}
+
 fn location_slug(value: &str) -> String {
   let mut out = String::new();
   let mut last_dash = false;
@@ -506,13 +534,11 @@ async fn create_ebay_location(
   let city = cleaned_field(&req.city);
   let state_or_province = cleaned_field(&req.state_or_province);
   let postal_code = cleaned_field(&req.postal_code);
-  let country = cleaned_field(&req.country).to_ascii_uppercase();
+  let country = inferred_location_country(&req.country, &postal_code);
   let has_postal_address = !postal_code.is_empty();
   let has_city_region_address = !city.is_empty() && !state_or_province.is_empty();
-  if name.is_empty() || country.is_empty() || (!has_postal_address && !has_city_region_address) {
-    return Err(error::bad_request(
-      "name, country, and either postal_code or city plus state_or_province are required",
-    ));
+  if name.is_empty() || (!has_postal_address && !has_city_region_address) {
+    return Err(error::bad_request("name and postal_code are required"));
   }
 
   let cfg = state

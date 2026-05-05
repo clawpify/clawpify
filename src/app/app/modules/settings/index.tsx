@@ -47,6 +47,11 @@ const SETTINGS_HEADER_CONFIG = {
   ),
 };
 
+function inferredCountryFromPostalCode(postalCode: string): string {
+  const compact = postalCode.replace(/\s+/g, "").toUpperCase();
+  return /^[A-Z]\d[A-Z]\d[A-Z]\d$/.test(compact) ? "CA" : "US";
+}
+
 // Build a setup warning that keeps eBay policies separate from inventory locations.
 function ebayPolicySetupHint(policies: EbayPoliciesResponse): EbaySetupHint | null {
   if (!policies.missing.length) return null;
@@ -318,7 +323,7 @@ function EbayIntegrationCard() {
       city: locationForm.city.trim(),
       state_or_province: locationForm.state_or_province.trim(),
       postal_code: locationForm.postal_code.trim(),
-      country: (locationForm.country.trim() || "US").toUpperCase(),
+      country: inferredCountryFromPostalCode(locationForm.postal_code),
     };
 
     setLocationSaving(true);
@@ -394,9 +399,7 @@ function EbayIntegrationCard() {
     connected &&
     !locationSaving &&
     Boolean(
-      locationForm.name.trim() &&
-        locationForm.postal_code.trim() &&
-        locationForm.country.trim()
+      locationForm.name.trim() && locationForm.postal_code.trim()
     );
   const canSavePolicies =
     connected &&
@@ -582,7 +585,7 @@ function EbayIntegrationCard() {
                       Add ship-from address
                     </h5>
                   </div>
-                  <div className="mt-3 grid gap-3 md:grid-cols-[1.4fr_1fr_0.7fr]">
+                  <div className="mt-3 grid gap-3 md:grid-cols-[1.4fr_1fr]">
                     <label className="grid gap-1.5 text-sm">
                       <span className="font-medium text-zinc-700">Label</span>
                       <input
@@ -598,15 +601,6 @@ function EbayIntegrationCard() {
                         value={locationForm.postal_code}
                         onChange={(e) => onLocationFieldChange("postal_code", e.target.value)}
                         placeholder="78701"
-                        className="rounded-md border border-zinc-200 bg-white px-3 py-2 text-zinc-900 outline-none transition focus:border-zinc-400"
-                      />
-                    </label>
-                    <label className="grid gap-1.5 text-sm">
-                      <span className="font-medium text-zinc-700">Country</span>
-                      <input
-                        value={locationForm.country}
-                        onChange={(e) => onLocationFieldChange("country", e.target.value)}
-                        placeholder="US"
                         className="rounded-md border border-zinc-200 bg-white px-3 py-2 text-zinc-900 outline-none transition focus:border-zinc-400"
                       />
                     </label>
