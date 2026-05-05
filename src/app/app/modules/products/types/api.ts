@@ -45,6 +45,15 @@ export type EbayLocationOption = {
   name: string;
 };
 
+export type CreateEbayLocationRequest = {
+  name: string;
+  address_line1: string;
+  city: string;
+  state_or_province: string;
+  postal_code: string;
+  country: string;
+};
+
 export type EbayPolicyDefaults = {
   org_id: string;
   marketplace_id: string;

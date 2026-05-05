@@ -56,6 +56,17 @@ pub struct CreateOfferRequest {
   pub include_catalog_product_details: Option<bool>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CreateInventoryLocationRequest {
+  pub merchant_location_key: String,
+  pub name: String,
+  pub address_line1: String,
+  pub city: String,
+  pub state_or_province: String,
+  pub postal_code: String,
+  pub country: String,
+}
+
 impl<'a> EbayInventory<'a> {
   /**
    * Get the base URL for the eBay API.
@@ -224,6 +235,38 @@ impl<'a> EbayInventory<'a> {
           .header("Content-Language", "en-US")
           .json(&body),
       )
+      .await?;
+
+    Ok(())
+  }
+
+  /// Create a seller ship-from location for eBay Inventory API offers.
+  pub async fn create_inventory_location(
+    &self,
+    input: &CreateInventoryLocationRequest,
+  ) -> Result<(), EbayInventoryError> {
+    let url = format!(
+      "{}/sell/inventory/v1/location/{}",
+      self.base(),
+      urlencoding::encode(&input.merchant_location_key),
+    );
+    let body = json!({
+      "name": input.name,
+      "merchantLocationStatus": "ENABLED",
+      "locationTypes": ["WAREHOUSE"],
+      "location": {
+        "address": {
+          "addressLine1": input.address_line1,
+          "city": input.city,
+          "stateOrProvince": input.state_or_province,
+          "postalCode": input.postal_code,
+          "country": input.country,
+        }
+      }
+    });
+
+    let _: Value = self
+      .send_json(http_client::shared().post(url).json(&body))
       .await?;
 
     Ok(())

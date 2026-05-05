@@ -7,12 +7,15 @@ import { SettingsIcon } from "../../../../icons/workspace-icons";
 import { useWorkspaceHeader } from "../../context/WorkspaceHeaderContext";
 import { copy } from "../../utils/copy";
 import {
+  ebayLocationsPath,
   ebayOAuthStartPath,
   ebayOAuthStatusPath,
   ebayPoliciesPath,
   ebayPolicyDefaultsPath,
 } from "@/utils/networkFns";
 import type {
+  CreateEbayLocationRequest,
+  EbayLocationOption,
   EbayPoliciesResponse,
   EbayPolicyDefaults,
   SaveEbayPolicyDefaultsRequest,
@@ -25,7 +28,14 @@ import type { EbaySetupHint, EbayStatus } from "./types";
 
 const MARKETPLACE_ID = "EBAY_US";
 const EBAY_BUSINESS_POLICIES_URL = "https://www.ebay.com/bp/manage";
-const EBAY_INVENTORY_LOCATIONS_URL = "https://www.ebay.com/sh/settings/locations";
+const INITIAL_EBAY_LOCATION_FORM: CreateEbayLocationRequest = {
+  name: "Clawpify Ship From",
+  address_line1: "",
+  city: "",
+  state_or_province: "",
+  postal_code: "",
+  country: "US",
+};
 
 const SETTINGS_HEADER_CONTEXT = copy.settings.title;
 const SETTINGS_HEADER_CONFIG = {
@@ -54,9 +64,8 @@ function ebayPolicySetupHint(policies: EbayPoliciesResponse): EbaySetupHint | nu
 
   if (allEmpty) {
     return {
-      message: `eBay API returned 0 business policy and inventory location records for ${policies.marketplace_id}. Make sure the connected eBay account is the same Seller Hub account, policies exist for this marketplace, and an inventory location exists in eBay.`,
+      message: `eBay returned 0 business policy and ship-from location records for ${policies.marketplace_id}. Make sure the connected eBay account is the same Seller Hub account, policies exist for this marketplace, and create a ship-from location below.`,
       showBusinessPoliciesLink: true,
-      showInventoryLocationsLink: true,
     };
   }
 
@@ -74,7 +83,7 @@ function ebayPolicySetupHint(policies: EbayPoliciesResponse): EbaySetupHint | nu
   }
   if (missingInventoryLocation) {
     parts.push(
-      `Missing ship-from inventory location for ${policies.marketplace_id}. Create an inventory location in eBay, then refresh.`
+      `Missing ship-from location for ${policies.marketplace_id}. Create one below, then save listing defaults.`
     );
   }
   parts.push("Business policies and inventory locations are separate eBay setup items.");
@@ -82,7 +91,6 @@ function ebayPolicySetupHint(policies: EbayPoliciesResponse): EbaySetupHint | nu
   return {
     message: parts.join(" "),
     showBusinessPoliciesLink: missingBusinessPolicies.length > 0,
-    showInventoryLocationsLink: missingInventoryLocation,
   };
 }
 
@@ -104,16 +112,8 @@ function EbayListingDefaultsGuide() {
           .
         </li>
         <li className="list-decimal">
-          Create an{" "}
-          <a
-            href={EBAY_INVENTORY_LOCATIONS_URL}
-            target="_blank"
-            rel="noreferrer"
-            className="font-medium underline decoration-blue-500 underline-offset-2"
-          >
-            eBay inventory location
-          </a>
-          . This is separate from business policies.
+          If no ship-from location appears, create one below for this connected eBay
+          account.
         </li>
         <li className="list-decimal">
           Click Refresh setup, choose each default here, then save listing defaults.
@@ -169,11 +169,15 @@ function EbayIntegrationCard() {
   const [policies, setPolicies] = useState<EbayPoliciesResponse | null>(null);
   const [policiesLoading, setPoliciesLoading] = useState(false);
   const [policiesSaving, setPoliciesSaving] = useState(false);
+  const [locationSaving, setLocationSaving] = useState(false);
   const [policyError, setPolicyError] = useState<string | null>(null);
   const [fulfillmentPolicyId, setFulfillmentPolicyId] = useState("");
   const [paymentPolicyId, setPaymentPolicyId] = useState("");
   const [returnPolicyId, setReturnPolicyId] = useState("");
   const [merchantLocationKey, setMerchantLocationKey] = useState("");
+  const [locationForm, setLocationForm] = useState<CreateEbayLocationRequest>(
+    INITIAL_EBAY_LOCATION_FORM
+  );
   const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   /**
@@ -212,7 +216,7 @@ function EbayIntegrationCard() {
   }, []);
 
   // Load eBay business policies plus inventory locations for default selection.
-  const loadPolicies = useCallback(async () => {
+  const loadPolicies = useCallback(async (): Promise<EbayPoliciesResponse | null> => {
     setPoliciesLoading(true);
     setPolicyError(null);
     try {
@@ -220,10 +224,12 @@ function EbayIntegrationCard() {
       const next = await readJsonOrError<EbayPoliciesResponse>(res);
       setPolicies(next);
       applyDefaults(next);
+      return next;
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Could not load eBay policies";
       setPolicyError(msg);
       showToast(msg);
+      return null;
     } finally {
       setPoliciesLoading(false);
     }
@@ -280,6 +286,7 @@ function EbayIntegrationCard() {
       setPaymentPolicyId("");
       setReturnPolicyId("");
       setMerchantLocationKey("");
+      setLocationForm(INITIAL_EBAY_LOCATION_FORM);
       setStatus("loading");
     }
     try {
@@ -314,6 +321,64 @@ function EbayIntegrationCard() {
       setConnectLoading(false);
     }
   }, [fetchAuth, refreshStatus, showToast, startStatusPoll, status]);
+
+  const onLocationFieldChange = useCallback(
+    (field: keyof CreateEbayLocationRequest, value: string) => {
+      setLocationForm((current) => ({ ...current, [field]: value }));
+    },
+    []
+  );
+
+  const appendCreatedLocation = useCallback((created: EbayLocationOption) => {
+    setPolicies((current) => {
+      if (!current) return current;
+      const hasLocation = current.locations.some((location) => location.key === created.key);
+      const locations = hasLocation ? current.locations : [...current.locations, created];
+      return {
+        ...current,
+        locations,
+        missing: current.missing.filter((item) => item !== "inventory location"),
+        counts: current.counts ? { ...current.counts, locations: locations.length } : current.counts,
+      };
+    });
+  }, []);
+
+  const onCreateLocation = useCallback(async () => {
+    const body: CreateEbayLocationRequest = {
+      name: locationForm.name.trim(),
+      address_line1: locationForm.address_line1.trim(),
+      city: locationForm.city.trim(),
+      state_or_province: locationForm.state_or_province.trim(),
+      postal_code: locationForm.postal_code.trim(),
+      country: (locationForm.country.trim() || "US").toUpperCase(),
+    };
+
+    setLocationSaving(true);
+    setPolicyError(null);
+    try {
+      const res = await fetchAuth(ebayLocationsPath, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const created = await readJsonOrError<EbayLocationOption>(res);
+      appendCreatedLocation(created);
+      setMerchantLocationKey(created.key);
+      const refreshed = await loadPolicies();
+      if (refreshed?.locations.some((location) => location.key === created.key)) {
+        setMerchantLocationKey(created.key);
+      } else {
+        appendCreatedLocation(created);
+      }
+      showToast("eBay ship-from location created.");
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Could not create eBay ship-from location";
+      setPolicyError(msg);
+      showToast(msg);
+    } finally {
+      setLocationSaving(false);
+    }
+  }, [appendCreatedLocation, fetchAuth, loadPolicies, locationForm, showToast]);
 
   // Persist selected policies and ship-from inventory location for future drafts.
   const onSavePolicies = useCallback(async () => {
@@ -354,6 +419,20 @@ function EbayIntegrationCard() {
 
   const connected = status === "connected";
   const policySetupHint = policies ? ebayPolicySetupHint(policies) : null;
+  const missingInventoryLocation = policies?.missing.includes("inventory location") ?? false;
+  const shouldShowLocationForm =
+    connected && (missingInventoryLocation || !policies?.locations.length);
+  const canCreateLocation =
+    connected &&
+    !locationSaving &&
+    Boolean(
+      locationForm.name.trim() &&
+        locationForm.address_line1.trim() &&
+        locationForm.city.trim() &&
+        locationForm.state_or_province.trim() &&
+        locationForm.postal_code.trim() &&
+        locationForm.country.trim()
+    );
   const canSavePolicies =
     connected &&
     !policiesSaving &&
@@ -444,20 +523,6 @@ function EbayIntegrationCard() {
                   .
                 </>
               ) : null}
-              {policySetupHint.showInventoryLocationsLink ? (
-                <>
-                  {" "}
-                  <a
-                    href={EBAY_INVENTORY_LOCATIONS_URL}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="font-medium underline decoration-amber-500 underline-offset-2"
-                  >
-                    Open eBay inventory locations
-                  </a>
-                  .
-                </>
-              ) : null}
             </p>
           ) : null}
           {policyError ? (
@@ -529,8 +594,8 @@ function EbayIntegrationCard() {
               <div>
                 <h4 className="text-sm font-semibold text-zinc-950">Ship-from location</h4>
                 <p className="mt-1 text-xs leading-5 text-zinc-500">
-                  Not a business policy. eBay uses this Inventory API location as the offer
-                  ship-from address.
+                  Not a business policy. This is the address eBay uses as the offer
+                  ship-from location.
                 </p>
               </div>
               <label className="mt-3 grid gap-1.5 text-sm md:max-w-xl">
@@ -555,6 +620,88 @@ function EbayIntegrationCard() {
                   Use a location like Warehouse, Store, or Home office.
                 </span>
               </label>
+              {shouldShowLocationForm ? (
+                <div className="mt-4 rounded-lg border border-zinc-200 bg-zinc-50/60 p-3">
+                  <div>
+                    <h5 className="text-sm font-semibold text-zinc-950">
+                      Create ship-from location
+                    </h5>
+                    <p className="mt-1 text-xs leading-5 text-zinc-500">
+                      Create a Clawpify ship-from location for this eBay account.
+                    </p>
+                  </div>
+                  <div className="mt-3 grid gap-3 md:grid-cols-2">
+                    <label className="grid gap-1.5 text-sm">
+                      <span className="font-medium text-zinc-700">Location name</span>
+                      <input
+                        value={locationForm.name}
+                        onChange={(e) => onLocationFieldChange("name", e.target.value)}
+                        placeholder="Clawpify Ship From"
+                        className="rounded-md border border-zinc-200 bg-white px-3 py-2 text-zinc-900 outline-none transition focus:border-zinc-400"
+                      />
+                    </label>
+                    <label className="grid gap-1.5 text-sm">
+                      <span className="font-medium text-zinc-700">Street address</span>
+                      <input
+                        value={locationForm.address_line1}
+                        onChange={(e) => onLocationFieldChange("address_line1", e.target.value)}
+                        placeholder="123 Main St"
+                        className="rounded-md border border-zinc-200 bg-white px-3 py-2 text-zinc-900 outline-none transition focus:border-zinc-400"
+                      />
+                    </label>
+                    <label className="grid gap-1.5 text-sm">
+                      <span className="font-medium text-zinc-700">City</span>
+                      <input
+                        value={locationForm.city}
+                        onChange={(e) => onLocationFieldChange("city", e.target.value)}
+                        placeholder="Austin"
+                        className="rounded-md border border-zinc-200 bg-white px-3 py-2 text-zinc-900 outline-none transition focus:border-zinc-400"
+                      />
+                    </label>
+                    <div className="grid gap-3 sm:grid-cols-[1fr_1fr_0.8fr] md:col-span-2">
+                      <label className="grid gap-1.5 text-sm">
+                        <span className="font-medium text-zinc-700">State</span>
+                        <input
+                          value={locationForm.state_or_province}
+                          onChange={(e) =>
+                            onLocationFieldChange("state_or_province", e.target.value)
+                          }
+                          placeholder="TX"
+                          className="rounded-md border border-zinc-200 bg-white px-3 py-2 text-zinc-900 outline-none transition focus:border-zinc-400"
+                        />
+                      </label>
+                      <label className="grid gap-1.5 text-sm">
+                        <span className="font-medium text-zinc-700">ZIP</span>
+                        <input
+                          value={locationForm.postal_code}
+                          onChange={(e) => onLocationFieldChange("postal_code", e.target.value)}
+                          placeholder="78701"
+                          className="rounded-md border border-zinc-200 bg-white px-3 py-2 text-zinc-900 outline-none transition focus:border-zinc-400"
+                        />
+                      </label>
+                      <label className="grid gap-1.5 text-sm">
+                        <span className="font-medium text-zinc-700">Country</span>
+                        <input
+                          value={locationForm.country}
+                          onChange={(e) => onLocationFieldChange("country", e.target.value)}
+                          placeholder="US"
+                          className="rounded-md border border-zinc-200 bg-white px-3 py-2 text-zinc-900 outline-none transition focus:border-zinc-400"
+                        />
+                      </label>
+                    </div>
+                  </div>
+                  <div className="mt-3 flex justify-end">
+                    <button
+                      type="button"
+                      disabled={!canCreateLocation}
+                      onClick={() => void onCreateLocation()}
+                      className="rounded-md bg-zinc-950 px-4 py-2 text-sm font-medium text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {locationSaving ? "Creating..." : "Create ship-from location"}
+                    </button>
+                  </div>
+                </div>
+              ) : null}
             </div>
           </div>
 

@@ -164,6 +164,8 @@ export function ebayPoliciesPath(marketplaceId = "EBAY_US"): string {
   return `/api/ebay/policies?${params.toString()}`;
 }
 
+export const ebayLocationsPath = "/api/ebay/locations";
+
 export const ebayPolicyDefaultsPath = "/api/ebay/policies/defaults";
 
 export function listingEbayDraftPath(listingId: string): string {

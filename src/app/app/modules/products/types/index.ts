@@ -1,6 +1,7 @@
 export type { ConsignmentListingDto } from "./listing";
 export type {
   CreateListingBody,
+  CreateEbayLocationRequest,
   EbayDraftRequest,
   EbayDraftResponse,
   EbayPoliciesResponse,

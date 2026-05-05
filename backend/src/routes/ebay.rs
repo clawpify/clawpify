@@ -2,7 +2,7 @@ use axum::{
   extract::{Query, State},
   middleware,
   response::{IntoResponse, Redirect, Response},
-  routing::{get, put},
+  routing::{get, post, put},
   Json, Router,
 };
 use serde::{Deserialize, Serialize};
@@ -16,6 +16,10 @@ use crate::integrations::ebay::account::{
   EbayAccountError, EbayLocationOption, EbayPolicyOption,
 };
 use crate::integrations::ebay::error_utils::{ebay_error_message, public_ebay_api_error};
+use crate::integrations::ebay::inventory::{
+  CreateInventoryLocationRequest as EbayCreateInventoryLocationRequest, EbayInventory,
+  EbayInventoryError,
+};
 use crate::integrations::ebay::oauth::{self, EbayOAuthError};
 use crate::integrations::ebay::state_token::{self, StateTokenError};
 use crate::integrations::ebay::token_service::EbayTokenService;
@@ -98,11 +102,27 @@ pub struct SaveEbayPolicyDefaultsRequest {
   pub merchant_location_key: Option<String>,
 }
 
+fn default_location_country() -> String {
+  "US".to_string()
+}
+
+#[derive(serde::Deserialize, utoipa::ToSchema)]
+pub struct CreateEbayLocationRequest {
+  pub name: String,
+  pub address_line1: String,
+  pub city: String,
+  pub state_or_province: String,
+  pub postal_code: String,
+  #[serde(default = "default_location_country")]
+  pub country: String,
+}
+
 pub fn routes() -> Router<AppState> {
   let protected = Router::new()
     .route("/oauth/ebay/start", get(ebay_oauth_start))
     .route("/oauth/ebay/status", get(ebay_oauth_status))
     .route("/ebay/seller/setup", get(ebay_seller_setup))
+    .route("/ebay/locations", post(create_ebay_location))
     .route("/ebay/policies", get(ebay_policies))
     .route("/ebay/policies/defaults", put(save_ebay_policy_defaults))
     .route_layer(middleware::from_fn(mw::require_internal_auth));
@@ -173,6 +193,55 @@ pub struct EbaySellerSetupResponse {
 
 fn default_marketplace_id() -> String {
   "EBAY_US".to_string()
+}
+
+fn cleaned_field(value: &str) -> String {
+  value
+    .trim()
+    .split_whitespace()
+    .collect::<Vec<_>>()
+    .join(" ")
+}
+
+fn location_slug(value: &str) -> String {
+  let mut out = String::new();
+  let mut last_dash = false;
+  for ch in value.trim().to_ascii_lowercase().chars() {
+    if ch.is_ascii_alphanumeric() {
+      out.push(ch);
+      last_dash = false;
+    } else if !last_dash {
+      out.push('-');
+      last_dash = true;
+    }
+  }
+  let slug = out.trim_matches('-').to_string();
+  if slug.is_empty() {
+    "location".to_string()
+  } else {
+    slug
+  }
+}
+
+fn short_location_hash(input: &str) -> String {
+  let mut hash = 0x811c9dc5_u32;
+  for byte in input.as_bytes() {
+    hash ^= u32::from(*byte);
+    hash = hash.wrapping_mul(0x01000193);
+  }
+  format!("{hash:08x}")
+}
+
+fn merchant_location_key(req: &CreateEbayLocationRequest) -> String {
+  let seed = format!(
+    "{}|{}|{}|{}|{}|{}",
+    req.name, req.address_line1, req.city, req.state_or_province, req.postal_code, req.country
+  );
+  let hash = short_location_hash(&seed);
+  let slug = location_slug(&req.name);
+  let max_slug_len = 36_usize.saturating_sub("clawpify--".len() + hash.len());
+  let slug: String = slug.chars().take(max_slug_len.max(1)).collect();
+  format!("clawpify-{slug}-{hash}")
 }
 
 fn settings_redirect(origin: &str, value: &str) -> Result<String, ApiError> {
@@ -412,6 +481,87 @@ async fn ebay_policies(
 }
 
 #[utoipa::path(
+  post,
+  path = "/ebay/locations",
+  tag = "ebay",
+  security(("internal_user" = []), ("internal_org" = [])),
+  request_body = CreateEbayLocationRequest,
+  responses(
+    (status = 200, description = "Created eBay inventory location", body = EbayLocationOption),
+    (status = 400, description = "Bad request", body = ErrorEnvelope),
+    (status = 502, description = "eBay API failed", body = ErrorEnvelope)
+  )
+)]
+async fn create_ebay_location(
+  State(state): State<AppState>,
+  org: OrgId,
+  Json(req): Json<CreateEbayLocationRequest>,
+) -> Result<Json<EbayLocationOption>, ApiError> {
+  let name = cleaned_field(&req.name);
+  let address_line1 = cleaned_field(&req.address_line1);
+  let city = cleaned_field(&req.city);
+  let state_or_province = cleaned_field(&req.state_or_province);
+  let postal_code = cleaned_field(&req.postal_code);
+  let country = cleaned_field(&req.country).to_ascii_uppercase();
+  if name.is_empty()
+    || address_line1.is_empty()
+    || city.is_empty()
+    || state_or_province.is_empty()
+    || postal_code.is_empty()
+    || country.is_empty()
+  {
+    return Err(error::bad_request(
+      "name, address_line1, city, state_or_province, postal_code, and country are required",
+    ));
+  }
+
+  let cfg = state
+    .ebay_config
+    .as_ref()
+    .ok_or_else(|| error::internal("eBay not configured"))?;
+  let crypto = state
+    .token_crypto
+    .as_ref()
+    .ok_or_else(|| error::internal("CHANNEL_ENCRYPTION_KEY / token crypto"))?;
+  let bearer = EbayTokenService {
+    pool: &state.pool,
+    cfg,
+    crypto,
+  }
+  .bearer_for_org(org.as_ref())
+  .await
+  .map_err(|e| ApiError::bad_request(e.to_string()))?;
+
+  let normalized_req = CreateEbayLocationRequest {
+    name: name.clone(),
+    address_line1,
+    city,
+    state_or_province,
+    postal_code,
+    country,
+  };
+  let key = merchant_location_key(&normalized_req);
+  let inventory = EbayInventory {
+    cfg,
+    access_token: &bearer,
+  };
+  inventory
+    .create_inventory_location(&EbayCreateInventoryLocationRequest {
+      merchant_location_key: key.clone(),
+      name: name.clone(),
+      address_line1: normalized_req.address_line1,
+      city: normalized_req.city,
+      state_or_province: normalized_req.state_or_province,
+      postal_code: normalized_req.postal_code,
+      country: normalized_req.country,
+    })
+    .await
+    .map_err(map_inventory_err)?;
+
+  Ok(Json(EbayLocationOption { key, name }))
+}
+
+#[utoipa::path(
   put,
   path = "/ebay/policies/defaults",
   tag = "ebay",
@@ -626,6 +776,26 @@ fn map_account_err(e: EbayAccountError) -> ApiError {
   }
 }
 
+fn map_inventory_err(e: EbayInventoryError) -> ApiError {
+  match e {
+    EbayInventoryError::Api { status, body } => {
+      let message = ebay_error_message(&body).unwrap_or(body);
+      let lower = message.to_ascii_lowercase();
+      if lower.contains("scope") || lower.contains("authorization") || lower.contains("oauth") {
+        ApiError::bad_gateway(
+          "Reconnect eBay so Clawpify can create ship-from locations for this seller account.",
+        )
+      } else {
+        ApiError::bad_gateway(public_ebay_api_error(status, message))
+      }
+    }
+    EbayInventoryError::Http(_)
+    | EbayInventoryError::Json(_)
+    | EbayInventoryError::MissingField(_)
+    | EbayInventoryError::RequestClone => ApiError::bad_gateway(e.to_string()),
+  }
+}
+
 #[derive(utoipa::OpenApi)]
 #[openapi(
   paths(
@@ -634,6 +804,7 @@ fn map_account_err(e: EbayAccountError) -> ApiError {
     ebay_oauth_callback,
     ebay_seller_setup,
     ebay_policies,
+    create_ebay_location,
     save_ebay_policy_defaults
   ),
   components(schemas(
@@ -644,7 +815,9 @@ fn map_account_err(e: EbayAccountError) -> ApiError {
     EbaySellerSetupResponse,
     EbayPolicyCounts,
     EbayPoliciesResponse,
+    CreateEbayLocationRequest,
     SaveEbayPolicyDefaultsRequest,
+    EbayLocationOption,
     EbayPolicyDefaults
   ))
 )]
