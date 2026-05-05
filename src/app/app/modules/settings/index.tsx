@@ -25,6 +25,7 @@ import type { EbaySetupHint, EbayStatus } from "./types";
 
 const MARKETPLACE_ID = "EBAY_US";
 const EBAY_BUSINESS_POLICIES_URL = "https://www.ebay.com/bp/manage";
+const EBAY_INVENTORY_LOCATIONS_URL = "https://www.ebay.com/sh/settings/locations";
 
 const SETTINGS_HEADER_CONTEXT = copy.settings.title;
 const SETTINGS_HEADER_CONFIG = {
@@ -81,6 +82,43 @@ function ebayPolicySetupHint(policies: EbayPoliciesResponse): EbaySetupHint | nu
     message: parts.join(" "),
     showBusinessPoliciesLink: missingBusinessPolicies.length > 0,
   };
+}
+
+function EbayListingDefaultsGuide() {
+  return (
+    <div className="mt-4 rounded-lg border border-blue-100 bg-blue-50/70 px-3 py-3 text-sm text-blue-950">
+      <p className="font-medium">Setup guide</p>
+      <ol className="mt-2 grid gap-1.5 pl-4 text-blue-900">
+        <li className="list-decimal">
+          Create shipping, payment, and return policies in{" "}
+          <a
+            href={EBAY_BUSINESS_POLICIES_URL}
+            target="_blank"
+            rel="noreferrer"
+            className="font-medium underline decoration-blue-500 underline-offset-2"
+          >
+            eBay business policies
+          </a>
+          .
+        </li>
+        <li className="list-decimal">
+          Create an{" "}
+          <a
+            href={EBAY_INVENTORY_LOCATIONS_URL}
+            target="_blank"
+            rel="noreferrer"
+            className="font-medium underline decoration-blue-500 underline-offset-2"
+          >
+            eBay inventory location
+          </a>
+          . This is separate from business policies.
+        </li>
+        <li className="list-decimal">
+          Click Refresh setup, choose each default here, then save listing defaults.
+        </li>
+      </ol>
+    </div>
+  );
 }
 
 // Render workspace settings and attach the settings header context.
@@ -385,6 +423,8 @@ function EbayIntegrationCard() {
             </button>
           </div>
 
+          <EbayListingDefaultsGuide />
+
           {policySetupHint ? (
             <p className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
               {policySetupHint.message}
@@ -465,7 +505,11 @@ function EbayIntegrationCard() {
                 onChange={(e) => setMerchantLocationKey(e.target.value)}
                 className="rounded-md border border-zinc-200 bg-white px-3 py-2 text-zinc-900 outline-none transition focus:border-zinc-400"
               >
-                <option value="">Select inventory location</option>
+                <option value="">
+                  {policies?.locations.length
+                    ? "Select inventory location"
+                    : "Create an eBay inventory location, then refresh"}
+                </option>
                 {policies?.locations.map((location) => (
                   <option key={location.key} value={location.key}>
                     {location.name}
@@ -473,7 +517,8 @@ function EbayIntegrationCard() {
                 ))}
               </select>
               <span className="text-xs leading-5 text-zinc-500">
-                eBay Inventory API location used as the ship-from address for offers.
+                Ship-from address for offers. Use a location like Warehouse, Store, or Home
+                office.
               </span>
             </label>
           </div>
